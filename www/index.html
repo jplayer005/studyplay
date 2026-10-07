@@ -703,7 +703,6 @@ body.keyboard-notes-open .notes-mobile-box .notes-list{display:none;}
       <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">L</span></div><span class="shortcut-desc">Ciclar loop da aula (1× / infinito / desativado)</span></div>
       <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">I</span></div><span class="shortcut-desc">Picture-in-Picture</span></div>
       <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">R</span></div><span class="shortcut-desc">Abrir / fechar modo revisão</span></div>
-      <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">T</span></div><span class="shortcut-desc">Iniciar / pausar transcrição</span></div>
       <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">?</span></div><span class="shortcut-desc">Mostrar esta lista</span></div>
     </div>
     <div class="modal-actions"><button class="modal-btn secondary" onclick="document.getElementById('shortcuts-modal').classList.remove('active')">Fechar</button></div>
@@ -1313,6 +1312,11 @@ function fileType(n){
 }
 function escH(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function fmtTime(s){ s=Math.floor(s||0); const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=s%60; return h?`${h}:${String(m).padStart(2,'0')}:${String(sc).padStart(2,'0')}`:`${m}:${String(sc).padStart(2,'0')}`; }
+/* Data local (AAAA-MM-DD). toISOString() usa UTC e, no Brasil, vira o dia às 21h. */
+function localDate(d){
+  d = d || new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2); }
 
 function naturalSort(a, b){
@@ -1350,21 +1354,45 @@ mq.addEventListener('change', ()=>{ if(currentTheme==='auto') applyTheme('auto')
 /* ═══════════════════════════════════════════
    LOCAL STORAGE
 ═══════════════════════════════════════════ */
-function buildStorageKey(){
+/* Chave do curso no localStorage.
+   Antes era recalculada a cada chamada a partir das 5 primeiras aulas NA ORDEM
+   ATUAL — reordenar módulos mudava a chave e o progresso "sumia". Agora a chave é
+   calculada UMA vez ao abrir o curso (ordem original) e congelada em _courseKey.
+   A fórmula é idêntica à antiga, então o progresso já salvo continua válido. */
+let _courseKey = null;
+function legacyStorageKey(){
   if(!lessons.length) return LS_KEY+'_default';
   const sig = lessons.slice(0,5).map(l=>l.name).join('|');
   try{ return LS_KEY+'_'+btoa(unescape(encodeURIComponent(sig))).slice(0,20); }
   catch(e){ return LS_KEY+'_default'; }
 }
+function buildStorageKey(){ return _courseKey || legacyStorageKey(); }
+function freezeCourseKey(){ _courseKey = legacyStorageKey(); }
+
+/* Identificador único de cada aula para salvar progresso.
+   Aulas com nome único usam só o nome (compatível com dados antigos).
+   Nomes repetidos (ex.: "Aula 01" em vários módulos) ganham o caminho do arquivo
+   (ou a ordem de ocorrência), senão o progresso de uma marcava todas. */
+function assignLessonKeys(){
+  const count = new Map();
+  lessons.forEach(l=>count.set(l.name,(count.get(l.name)||0)+1));
+  const seen = new Map();
+  lessons.forEach(l=>{
+    if(count.get(l.name)===1){ l.key = l.name; return; }
+    const n = (seen.get(l.name)||0)+1; seen.set(l.name,n);
+    const p = l.file && l.file._path;
+    l.key = l.name+' ⟨'+(p||('#'+n))+'⟩';
+  });
+}
 function saveToStorage(){
   try{
     const positions = {};
-    lessons.forEach(l=>{ const t=lessonTimes[l.idx]; if(t&&t>2) positions[l.name]=t; });
+    lessons.forEach(l=>{ const t=lessonTimes[l.idx]; if(t&&t>2) positions[l.key||l.name]=t; });
     const data = {
-      done:[...done].map(i=>lessons[i]?lessons[i].name:null).filter(Boolean),
-      favorites:[...favorites].map(i=>lessons[i]?.name).filter(Boolean),
+      done:[...done].map(i=>lessons[i]?(lessons[i].key||lessons[i].name):null).filter(Boolean),
+      favorites:[...favorites].map(i=>lessons[i]?(lessons[i].key||lessons[i].name):null).filter(Boolean),
       positions, speedIdx,
-      currentName: currentIdx>=0&&lessons[currentIdx] ? lessons[currentIdx].name : null,
+      currentName: currentIdx>=0&&lessons[currentIdx] ? (lessons[currentIdx].key||lessons[currentIdx].name) : null,
       savedAt: Date.now(), studyStats, notes, chapters,
       studyHistory
     };
@@ -1377,7 +1405,7 @@ function loadFromStorage(){
 }
 function applyStoredProgress(data){
   if(!data) return;
-  const nameToIdx = new Map(lessons.map(l=>[l.name, l.idx]));
+  const nameToIdx = new Map(lessons.map(l=>[l.key||l.name, l.idx]));
   done = new Set();
   (data.done||[]).forEach(name=>{ const i=nameToIdx.get(name); if(i!==undefined) done.add(i); });
   favorites = new Set();
@@ -1756,7 +1784,7 @@ function closeHistorySession(){
   if(watched < 2) return;
   const lesson = lessons[historySessionLesson];
   if(!lesson) return;
-  const date = new Date(historySessionStart).toISOString().slice(0,10);
+  const date = localDate(new Date(historySessionStart));
   const time = new Date(historySessionStart).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   studyHistory.push({
     id: uid(),
@@ -1812,8 +1840,8 @@ function renderHistoryPane(){
 }
 
 function formatDateLabel(dateStr){
-  const today = new Date().toISOString().slice(0,10);
-  const yesterday = new Date(Date.now()-86400000).toISOString().slice(0,10);
+  const today = localDate();
+  const yesterday = localDate(new Date(Date.now()-86400000));
   if(dateStr===today) return 'Hoje';
   if(dateStr===yesterday) return 'Ontem';
   const d = new Date(dateStr+'T12:00:00');
@@ -1834,7 +1862,7 @@ function startStatsTimer(){
   statsTimer = setInterval(()=>{
     if(!video.paused && !video.ended){
       studyStats.totalWatchedSec = (studyStats.totalWatchedSec||0)+1;
-      const today = new Date().toISOString().slice(0,10);
+      const today = localDate();
       studyStats.dailySec = studyStats.dailySec||{};
       studyStats.dailySec[today] = (studyStats.dailySec[today]||0)+1;
       studyStats.lastStudyDate = today;
@@ -1851,15 +1879,15 @@ function openStats(){
 
 function renderStatsModal(activeTab){
   const total    = studyStats.totalWatchedSec||0;
-  const today    = new Date().toISOString().slice(0,10);
+  const today    = localDate();
   const todaySec = (studyStats.dailySec||{})[today]||0;
   const pct      = lessons.length ? Math.round(done.size/lessons.length*100) : 0;
   let streak = 0;
   const daily = studyStats.dailySec||{};
   let d = new Date(); d.setHours(0,0,0,0);
-  while(true){ const k=d.toISOString().slice(0,10); if(daily[k]&&daily[k]>0){streak++;d.setDate(d.getDate()-1);}else break; if(streak>365)break; }
+  while(true){ const k=localDate(d); if(daily[k]&&daily[k]>0){streak++;d.setDate(d.getDate()-1);}else break; if(streak>365)break; }
   const days7=[]; const now=new Date(); now.setHours(0,0,0,0);
-  for(let i=6;i>=0;i--){ const dd=new Date(now); dd.setDate(dd.getDate()-i); const k=dd.toISOString().slice(0,10); days7.push({label:dd.toLocaleDateString('pt-BR',{weekday:'short'}),sec:daily[k]||0}); }
+  for(let i=6;i>=0;i--){ const dd=new Date(now); dd.setDate(dd.getDate()-i); const k=dlocalDate(d); days7.push({label:dd.toLocaleDateString('pt-BR',{weekday:'short'}),sec:daily[k]||0}); }
   const maxSec = Math.max(...days7.map(d=>d.sec),1);
 
   const statsHTML = `
@@ -2258,10 +2286,27 @@ function exportNotes(){
   [...notes].sort((a,b)=>a.ts-b.ts).forEach(n=>{ if(!byLesson[n.lessonName]) byLesson[n.lessonName]=[]; byLesson[n.lessonName].push(n); });
   let md = `# Notas de Estudo\nExportado em ${new Date().toLocaleString('pt-BR')}\n\n`;
   Object.entries(byLesson).forEach(([lesson,ns])=>{ md+=`## ${lesson}\n\n`; ns.forEach(n=>{md+=`**[${n.tsLabel}]** ${n.text}\n\n`;}); });
-  const blob = new Blob([md],{type:'text/markdown'});
+  saveTextFile('notas_videoaulas_'+localDate()+'.md','text/markdown',md)
+    .then(ok=>{ if(ok) toast('Notas exportadas ✓'); });
+}
+
+/* ═══════════════════════════════════════════
+   SALVAR ARQUIVO (APK: seletor nativo / web: download)
+═══════════════════════════════════════════ */
+async function saveTextFile(filename, mime, text){
+  if(Platform.isCapacitor){
+    const vf = window.Capacitor?.Plugins?.VideoFolder;
+    if(vf && typeof vf.saveTextFile==='function'){
+      try{ await vf.saveTextFile({filename, mime, content:text}); return true; }
+      catch(e){ if(String(e&&e.message||e).includes('cancelled')) return false; /* cai no fallback */ }
+    }
+  }
+  const blob = new Blob([text],{type:mime});
   const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a'); a.href=url; a.download='notas_videoaulas_'+new Date().toISOString().slice(0,10)+'.md'; a.click(); URL.revokeObjectURL(url);
-  toast('Notas exportadas ✓');
+  const a    = document.createElement('a'); a.href=url; a.download=filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 4000);
+  return true;
 }
 
 /* ═══════════════════════════════════════════
@@ -2273,10 +2318,9 @@ function exportProgress(){
   saveToStorage(); const data=loadFromStorage();
   if(!data){ toast('Nenhum progresso para exportar'); return; }
   data.lessonNames = lessons.map(l=>l.name); data.exportedAt = new Date().toISOString();
-  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  const url  = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url;
-  a.download = 'videoaulas_progresso_'+new Date().toISOString().slice(0,10)+'.json'; a.click(); URL.revokeObjectURL(url);
-  closeProgressModal(); toast('Progresso exportado ✓');
+  closeProgressModal();
+  saveTextFile('videoaulas_progresso_'+localDate()+'.json','application/json',JSON.stringify(data,null,2))
+    .then(ok=>{ if(ok) toast('Progresso exportado ✓'); });
 }
 function triggerImport(){ closeProgressModal(); document.getElementById('import-input').click(); }
 function importProgress(event){
@@ -2464,7 +2508,7 @@ async function openFolder(){
   }
   loadNewCourse();
 }
-async function loadNewCourse(){ closeModal(); _nativePlaylistMode=false; await pickAndLoadFolder(false); }
+async function loadNewCourse(){ closeModal(); _nativePlaylistMode=false; _courseKey=null; await pickAndLoadFolder(false); }
 async function addModules()   { closeModal(); _nativePlaylistMode=false; await pickAndLoadFolder(true);  }
 
 async function pickAndLoadFolder(merge){
@@ -2506,35 +2550,48 @@ async function pickAndLoadFolder(merge){
    para restauração instantânea sem re-escanear a pasta.
    Chamada após processNativeFiles() em carga nova (merge=false).
 ───────────────────────────────────────────────────────────── */
+function _serFile(f){
+  return {_uri:f._uri||'',_native:true,name:f.name||'',size:f.size||0,
+          _displayName:f._displayName||null,_path:f._path||null};
+}
 function saveNativeSessionCache(treeUri, rootName){
   try{
-    const entry={treeUri, rootName, savedAt:Date.now(), isModular};
+    const entry={treeUri, rootName, savedAt:Date.now(), isModular, courseKey:_courseKey||null};
+    const nativeOnly = f=>f && f._uri;
     if(isModular){
       function serMod(m){
         return {
           name:m.name,
-          lessons:(m.lessons||[]).map(f=>({
-            _uri:f._uri||'',_native:true,
-            name:f.name||'',size:f.size||0,
-            _displayName:f._displayName||null
-          })),
+          lessons:(m.lessons||[]).filter(nativeOnly).map(_serFile),
+          extras:(m.extras||[]).filter(e=>nativeOnly(e.file)).map(e=>({name:e.name,file:_serFile(e.file)})),
           subModules:(m.subModules||[]).map(serMod)
         };
       }
       entry.modulesCache=modules.map(serMod);
     } else {
-      entry.lessonsCache=lessons.map(l=>({
+      entry.lessonsCache=lessons.filter(l=>nativeOnly(l.file)).map(l=>({
         name:l.name,
         _uri:l.file._uri||'',
         fname:l.file.name||'',
-        size:l.file.size||0
+        size:l.file.size||0,
+        path:l.file._path||null
       }));
+      entry.extrasCache=extraFiles.filter(e=>nativeOnly(e.file)).map(e=>({name:e.name,file:_serFile(e.file)}));
     }
     localStorage.setItem('splay_native_session', JSON.stringify(entry));
   }catch(e){
     /* quota exceeded — salva ao menos treeUri para o fallback lento */
-    try{ localStorage.setItem('splay_native_session', JSON.stringify({treeUri,rootName,savedAt:Date.now()})); }catch(e2){}
+    try{ localStorage.setItem('splay_native_session', JSON.stringify({treeUri,rootName,savedAt:Date.now(),courseKey:_courseKey||null})); }catch(e2){}
   }
+}
+/* Atualiza o cache da sessão atual (ex.: depois de "Acrescentar módulos"),
+   mantendo a pasta raiz original. */
+function refreshNativeSessionCache(){
+  if(!Platform.isCapacitor) return;
+  try{
+    const sess=JSON.parse(localStorage.getItem('splay_native_session')||'null');
+    if(sess && sess.treeUri) saveNativeSessionCache(sess.treeUri, sess.rootName||'');
+  }catch(e){}
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -2550,32 +2607,38 @@ function quickRestore(sess){
 
   lessons=[]; modules=[]; done=new Set();
   isModular=!!sess.isModular;
+  _courseKey = sess.courseKey || null;
   document.body.classList.toggle('is-modular', isModular);
 
+  const deserFile = f=>({_uri:f._uri,_native:true,name:f.name,size:f.size||0,
+                         _displayName:f._displayName||null,_path:f._path||null});
   if(isModular){
     function deserMod(raw){
       return {
         name:raw.name,
-        lessons:(raw.lessons||[]).map(f=>({
-          _uri:f._uri,_native:true,
-          name:f.name,size:f.size||0,
-          _displayName:f._displayName||null
-        })),
-        extras:[],
+        lessons:(raw.lessons||[]).map(deserFile),
+        extras:(raw.extras||[]).map(e=>({name:e.name,file:deserFile(e.file)})),
         subModules:(raw.subModules||[]).map(deserMod)
       };
     }
     modules=sess.modulesCache.map(deserMod);
     rebuildLessonsFromModules();
+    if(!_courseKey) freezeCourseKey();
     applyModuleOrder(loadModuleOrder());
     rebuildLessonsFromModules();
   } else {
     lessons=sess.lessonsCache.map((l,i)=>({
-      file:{_uri:l._uri,_native:true,name:l.fname||'',size:l.size||0},
+      file:{_uri:l._uri,_native:true,name:l.fname||'',size:l.size||0,_path:l.path||null},
       url:l._uri,
       name:l.name,
       idx:i
     }));
+    extraFiles=(sess.extrasCache||[]).map(e=>{
+      const f=deserFile(e.file);
+      return {name:e.name,file:f,type:fileType(e.name),url:_fileUrl(f)};
+    });
+    assignLessonKeys();
+    if(!_courseKey) freezeCourseKey();
   }
 
   buildSortedLessons();
@@ -2619,7 +2682,7 @@ async function processNativeFiles(nativeFiles, rootName, merge){
         node=node.children[d];
       }
       const fname=parts[parts.length-1];
-      const nobj={name:fname, _uri:f.uri, _native:true, size:f.size||0};
+      const nobj={name:fname, _uri:f.uri, _native:true, size:f.size||0, _path:f.relativePath};
       const isVid=isVideo(fname)||(f.mimeType&&f.mimeType.startsWith('video/'));
       const isCnt=!isVid&&(isContent(fname)||f.mimeType==='application/pdf'||f.mimeType==='text/html');
       if(isVid)      { node.videos.push(nobj); count++; }
@@ -2659,6 +2722,7 @@ async function processNativeFiles(nativeFiles, rootName, merge){
     });
     if(!newMod){ toast('Nenhum vídeo encontrado na pasta selecionada'); return; }
 
+    if(!_courseKey) freezeCourseKey();
     const normalized=normalizeModules([newMod]);
 
     if(!isModular){
@@ -2689,6 +2753,7 @@ async function processNativeFiles(nativeFiles, rootName, merge){
       _nativePlaylistMode = false;
       playLesson(currentIdx);
     }
+    refreshNativeSessionCache();
     const newItems=normalized.reduce((s,m)=>s+countFilesInRawModule(m),0);
     toast(`"${newMod.name}" adicionado — ${newItems} item(s)`);
     return;
@@ -2714,6 +2779,7 @@ async function processNativeFiles(nativeFiles, rootName, merge){
   modules=normalizedModules; lessons=[]; done=new Set();
   isModular=true; document.body.classList.add('is-modular');
   rebuildLessonsFromModules();
+  freezeCourseKey();
   applyModuleOrder(loadModuleOrder());
   rebuildLessonsFromModules();
   buildSortedLessons();
@@ -2783,6 +2849,7 @@ async function processDirectory(dir, merge){
         extras:     modExtras,
         subModules: subMods
       };
+      if(!_courseKey) freezeCourseKey();
       const normalized = normalizeModules([newMod]);
       if(!isModular){
         if(lessons.length>0){
@@ -2823,6 +2890,7 @@ async function processDirectory(dir, merge){
       isModular = true;
       document.body.classList.add('is-modular');
       rebuildLessonsFromModules();
+      freezeCourseKey();
       applyModuleOrder(loadModuleOrder());
       rebuildLessonsFromModules();
       const stored = loadFromStorage();
@@ -2905,6 +2973,9 @@ async function readDirFlat(dirHandle, outFiles, outExtras, depth, onFile){
 
 function _fileUrl(f){ return f._uri ? f._uri : URL.createObjectURL(f._webFile || f); }
 
+/* Mapa objeto-de-arquivo → aula. Casar aulas pelo NOME do arquivo misturava
+   aulas de módulos diferentes que têm o mesmo nome (ex.: "Aula 01.mp4"). */
+let _lessonByFile = new Map();
 function rebuildLessonsFromModules(){
   lessons = []; let idx=0;
   function add(mod){
@@ -2917,11 +2988,13 @@ function rebuildLessonsFromModules(){
     (mod.subModules||[]).forEach(add);
   }
   modules.forEach(add);
+  assignLessonKeys();
+  _lessonByFile = new Map(lessons.map(l=>[l.file,l]));
 }
 
 function getResumeIdx(stored){
   if(!stored||!stored.currentName) return 0;
-  const i = lessons.findIndex(l=>l.name===stored.currentName);
+  const i = lessons.findIndex(l=>(l.key||l.name)===stored.currentName);
   return i>=0?i:0;
 }
 
@@ -2942,11 +3015,14 @@ function loadFiles(files, merge, extras=[]){
     lessons   = vids.map((f,i)=>({file:f, url:_fileUrl(f), name:f.name.replace(/\.[^.]+$/,''), idx:i}));
     extraFiles= extras.map(e=>({...e, type:fileType(e.name), url:_fileUrl(e.file)}));
     isModular=false; modules=[]; document.body.classList.remove('is-modular');
-    const stored=loadFromStorage(); if(stored) applyStoredProgress(stored);
+    assignLessonKeys();
+    freezeCourseKey();
+    const stored0=loadFromStorage(); if(stored0) applyStoredProgress(stored0);
   } else {
     const off = lessons.length;
     lessons    = [...lessons,...vids.map((f,i)=>({file:f, url:_fileUrl(f), name:f.name.replace(/\.[^.]+$/,''), idx:off+i}))];
     extraFiles = [...extraFiles,...extras.map(e=>({...e, type:fileType(e.name), url:_fileUrl(e.file)}))];
+    assignLessonKeys();
   }
   buildSortedLessons();
   renderPlaylist(sortedLessons);
@@ -3059,9 +3135,8 @@ function renderModularPlaylist(){
       renderExtraItems(body, eu, (depth+1)*12);
     }
 
-    const byFile = new Map(lessons.map(l=>[l.file.name, l]));
     for(const f of mod.lessons){
-      const l=byFile.get(f.name); if(l) body.appendChild(buildLessonItem(l, (depth+1)*12));
+      const l=_lessonByFile.get(f); if(l) body.appendChild(buildLessonItem(l, (depth+1)*12));
     }
 
     (mod.subModules||[]).forEach(sub=>renderMod(sub, body, depth+1, mod.subModules));
@@ -3077,8 +3152,7 @@ function renderModularPlaylist(){
 }
 
 function collectModuleLessonIdxs(mod){
-  const byFile = new Map(lessons.map(l=>[l.file.name, l]));
-  const idxs   = mod.lessons.map(f=>byFile.get(f.name)).filter(Boolean).map(l=>l.idx);
+  const idxs   = mod.lessons.map(f=>_lessonByFile.get(f)).filter(Boolean).map(l=>l.idx);
   (mod.subModules||[]).forEach(sub=>idxs.push(...collectModuleLessonIdxs(sub)));
   return idxs;
 }
@@ -3464,7 +3538,7 @@ async function playLesson(idx){
   updatePlaylistActive(); scrollToActive();
   startStatsTimer();
   startHistorySession(idx);
-  const today=new Date().toISOString().slice(0,10);
+  const today=localDate();
   if(studyStats.lastStudyDate!==today) studyStats.sessionsCount=(studyStats.sessionsCount||0)+1;
 }
 
@@ -3526,13 +3600,19 @@ function togglePlay(){
 video.addEventListener('ended', ()=>{
   /* Em modo playlist nativa o ExoPlayer avança automaticamente;
      trackChanged cuida da UI e do loop — não interferir aqui */
-  if(_nativePlaylistMode) return;
+  if(_nativePlaylistMode){
+    /* Última aula da fila terminou: marca como concluída (sem inverter) */
+    if(currentIdx>=0){ lessonTimes[currentIdx]=0; closeHistorySession(); setDone(currentIdx,true); }
+    return;
+  }
   /* Loop da aula atual — 3 estados: 0=off 1=repetir 1× 2=infinito */
   if(_loopLesson===2){ video.currentTime=0; video.play().catch(()=>{}); return; }
   if(_loopLesson===1){ _loopLesson=0; updateLoopUI(); video.currentTime=0; video.play().catch(()=>{}); return; }
   if(currentIdx>=0) lessonTimes[currentIdx]=0;
   closeHistorySession();
-  markDone();
+  /* Ao terminar, a aula SEMPRE fica concluída. markDone() alterna o estado e
+     desmarcava a aula já marcada automaticamente aos 90%. */
+  setDone(currentIdx,true);
   setTimeout(()=>nextLesson(), 800);
 });
 
@@ -3569,16 +3649,26 @@ function cycleSpeed(){
 
 function setVol(v){ video.volume=parseFloat(v); }
 
+/* setDone: define o estado de conclusão de forma explícita (sem alternar) */
+function setDone(idx, value, silent){
+  if(idx<0||idx>=lessons.length) return;
+  const had = done.has(idx);
+  if(value) done.add(idx); else done.delete(idx);
+  if(had===!!value) return;
+  if(!silent) toast(value ? 'Aula concluída! ✓' : 'Marcação removida');
+  updateDoneCount(); updatePlaylistActive();
+  const thumb=document.querySelector('#lesson-'+idx+' .lesson-thumb');
+  if(thumb) thumb.className='lesson-thumb'+(value?' done':'');
+  if(idx===currentIdx){
+    const ml=document.getElementById('mark-btn').querySelector('.mark-label');
+    if(ml) ml.textContent=value?'✓ Concluída':'Marcar concluída';
+  }
+  saveToStorage();
+}
+/* markDone: botão "Marcar concluída" / atalho M (alterna) */
 function markDone(){
   if(currentIdx<0) return;
-  done.has(currentIdx) ? done.delete(currentIdx) : done.add(currentIdx);
-  if(done.has(currentIdx)) toast('Aula concluída! ✓'); else toast('Marcação removida');
-  updateDoneCount(); updatePlaylistActive();
-  const thumb=document.querySelector('#lesson-'+currentIdx+' .lesson-thumb');
-  if(thumb) thumb.className='lesson-thumb'+(done.has(currentIdx)?' done':'');
-  const ml=document.getElementById('mark-btn').querySelector('.mark-label');
-  if(ml) ml.textContent=done.has(currentIdx)?'✓ Concluída':'Marcar concluída';
-  saveToStorage();
+  setDone(currentIdx, !done.has(currentIdx));
 }
 
 function updateDoneCount(){ doneCount.textContent=done.size; }
@@ -4323,7 +4413,7 @@ function installNativePlayer(plugin){
   def('currentTime', {
     get: ()=> vs.currentTime,
     /* frameMode=true → passa exact:true para ExoPlayer usar SeekParameters.EXACT (frame-accurate) */
-    set: (v)=>{ vs.currentTime=v; plugin.seekTo({position:v, exact: !!frameMode}).catch(()=>{}); }
+    set: (v)=>{ vs.currentTime=v; plugin.seekTo({position:v, exact: !!frameMode}).catch(()=>{}); video.dispatchEvent(new Event('timeupdate')); }
   });
   def('duration',     { get:()=> vs.duration });
   def('paused',       { get:()=> vs.paused   });
@@ -4457,12 +4547,20 @@ function installNativePlayer(plugin){
       try{
         const {index, position} = await plugin.getCurrentIndex();
         const absIdx = _nativePlaylistStartIdx + index;
-        if(absIdx !== currentIdx && absIdx >= 0 && absIdx < lessons.length){
-          currentIdx = absIdx;
+        if(absIdx >= 0 && absIdx < lessons.length){
+          if(absIdx !== currentIdx){
+            /* O índice avançou sem que o JS soubesse (não marca nada como concluído:
+               pode ter sido "próxima" pela notificação) */
+            currentIdx = absIdx;
+            startHistorySession(absIdx);
+          }
           const nl = lessons[absIdx];
           vs.src = nl.file._uri || nl.url || '';
           vs.currentTime = position || 0;
+          /* Sempre redesenha: o trackChanged recebido em segundo plano atualiza o
+             índice mas não a tela. */
           updateNowTitle(nl.name);
+          updateDoneCount();
           updatePlaylistActive();
           scrollToActive();
           saveToStorage();
@@ -4533,6 +4631,16 @@ function installNativePlayer(plugin){
       if(_audioOnly) plugin.hide().catch(()=>{});
       return;
     }
+    /* Avanço automático (a aula anterior terminou): registra conclusão, zera a
+       posição e fecha a sessão de histórico — mesmo com o app em segundo plano. */
+    const prevIdx = currentIdx;
+    if(e.auto && prevIdx>=0 && prevIdx!==absIdx){
+      lessonTimes[prevIdx] = 0;
+      closeHistorySession();
+      done.add(prevIdx);
+      if(document.visibilityState==='visible'){ updateDoneCount(); }
+    }
+    if(prevIdx!==absIdx) startHistorySession(absIdx);
     currentIdx = absIdx;
     const nl = lessons[absIdx];
     /* Re-aplica modo áudio se ativo (ExoPlayer pode reexibir o PlayerView ao trocar faixa) */
@@ -4583,6 +4691,7 @@ function installNativePlayer(plugin){
   /* ── Botões Anterior / Próximo da notificação de mídia ────────────────────
      O PlaybackService dispara esses eventos via BroadcastReceiver quando o
      usuário toca nos botões da notificação na barra de status.               */
+  plugin.addListener('sleepTimerFired', ()=>{ _onSleepFired(_sleepMinutes); });
   plugin.addListener('prevTrack', ()=>{ prevLesson(); });
   plugin.addListener('nextTrack', ()=>{ nextLesson(); });
 
@@ -4701,8 +4810,17 @@ window.addEventListener('pipModeChanged', (e)=>{
         if(document.getElementById('review-overlay').classList.contains('active')){ closeReviewMode(); return; }
         if(document.getElementById('settings-modal').classList.contains('active')){ document.getElementById('settings-modal').classList.remove('active'); return; }
         if(document.getElementById('unified-more-menu').classList.contains('open')){ closeMoreMenu(); return; }
-        if(document.querySelector('.modal-overlay.active')){ closeModal(); return; }
+        /* Qualquer modal genérico aberto (Estatísticas, Progresso, Tema, Atalhos,
+           Configurações, diálogos): fecha o que estiver visível. Antes só o diálogo
+           genérico era fechado e os demais ficavam presos. */
+        const _openModal = document.querySelector('.modal-overlay.active');
+        if(_openModal){
+          _openModal.classList.remove('active');
+          window._nativeShowPlayer?.();
+          return;
+        }
         if(document.querySelector('.xlsx-modal.active')){ closeXlsx(); return; }
+        if(document.querySelector('.sidebar.mobile-open')){ closeMobileSidebar(); return; }
         if(document.querySelector('.notes-mobile-modal.active')){ document.getElementById('notes-mobile-modal').classList.remove('active'); return; }
         if(document.getElementById('drive-modal').classList.contains('active')){ closeDriveModal(); return; }
         /* 3. Nada aberto → duplo toque para sair */
@@ -4863,26 +4981,41 @@ function openSleepTimer(){
   ]);
 }
 
+/* No APK o timer roda no PlaybackService (serviço nativo): o setTimeout do
+   JavaScript é congelado pelo Android com a tela desligada. Na web, usa setTimeout. */
+function _nativeSleep(){
+  return Platform.isCapacitor ? window.Capacitor?.Plugins?.VideoPlayer : null;
+}
+function _onSleepFired(min){
+  if(_sleepTimer){ clearTimeout(_sleepTimer); }
+  _sleepTimer = null; _sleepMinutes = 0; _sleepEndTime = 0;
+  document.getElementById('sleep-btn')?.classList.remove('active-ctrl');
+  showModal('⏱ Timer de sono',
+    `Reprodução pausada após ${min||'alguns'} minuto(s). Boa noite! 🌙`,
+    [{label:'Continuar', cls:'primary', action:()=>{ closeModal(); video.play().catch(()=>{}); }},
+     {label:'OK', cls:'secondary', action:closeModal}]
+  );
+}
 function setSleepTimer(min){
   clearSleepTimer();
   _sleepMinutes = min;
   _sleepEndTime = Date.now() + min * 60000;
-  _sleepTimer = setTimeout(()=>{
-    video.pause();
-    _sleepTimer = null; _sleepMinutes = 0; _sleepEndTime = 0;
-    document.getElementById('sleep-btn')?.classList.remove('active-ctrl');
-    showModal('⏱ Timer de sono',
-      `Reprodução pausada após ${min} minuto(s). Boa noite! 🌙`,
-      [{label:'Continuar', cls:'primary', action:()=>{ closeModal(); video.play().catch(()=>{}); }},
-       {label:'OK', cls:'secondary', action:closeModal}]
-    );
-  }, min * 60000);
+  const np = _nativeSleep();
+  if(np && typeof np.setSleepTimer==='function'){
+    np.setSleepTimer({minutes:min}).catch(()=>{});
+    _sleepTimer = -1; /* marcador: timer ativo no lado nativo */
+  } else {
+    _sleepTimer = setTimeout(()=>{ video.pause(); _onSleepFired(min); }, min * 60000);
+  }
   document.getElementById('sleep-btn')?.classList.add('active-ctrl');
   toast(`⏱ Pausa em ${min} min`);
 }
 
 function clearSleepTimer(){
-  if(_sleepTimer){ clearTimeout(_sleepTimer); _sleepTimer = null; }
+  if(_sleepTimer && _sleepTimer!==-1){ clearTimeout(_sleepTimer); }
+  const np = _nativeSleep();
+  if(_sleepTimer===-1 && np && typeof np.setSleepTimer==='function') np.setSleepTimer({minutes:0}).catch(()=>{});
+  _sleepTimer = null;
   _sleepMinutes = 0; _sleepEndTime = 0;
   document.getElementById('sleep-btn')?.classList.remove('active-ctrl');
 }
@@ -4909,27 +5042,24 @@ function clearCrashLog(){
   toast('Log de erros limpo ✓');
 }
 
-function rateApp(e){
-  e.preventDefault();
-  if(Platform.isCapacitor){
-    const pkg = 'com.jcorelabs.studyplay';
-    try{
-      window.Capacitor?.Plugins?.App?.openUrl?.({url:'market://details?id='+pkg});
-    }catch(_){
-      window.open('https://play.google.com/store/apps/details?id='+pkg,'_blank');
-    }
-  } else {
-    toast('Disponível apenas no app Android');
+async function openLink(url){
+  const vf = Platform.isCapacitor ? window.Capacitor?.Plugins?.VideoFolder : null;
+  if(vf && typeof vf.openUrl==='function'){
+    try{ await vf.openUrl({url}); return true; }catch(_){}
   }
+  window.open(url,'_blank');
+  return false;
 }
-
+async function rateApp(e){
+  e.preventDefault();
+  if(!Platform.isCapacitor){ toast('Disponível apenas no app Android'); return; }
+  const pkg = 'com.jcorelabs.studyplay';
+  const ok = await openLink('market://details?id='+pkg);
+  if(!ok) openLink('https://play.google.com/store/apps/details?id='+pkg);
+}
 function openExternalLink(e, url){
   e.preventDefault();
-  if(Platform.isCapacitor){
-    try{ window.Capacitor?.Plugins?.Browser?.open({url}); }catch(_){}
-  } else {
-    window.open(url,'_blank');
-  }
+  openLink(url);
 }
 
 /* ═══════════════════════════════════════════
@@ -4996,7 +5126,6 @@ function openExternalLink(e, url){
 window.addEventListener('beforeunload', ()=>{
   if(currentIdx>=0 && video.currentTime>2) lessonTimes[currentIdx]=video.currentTime;
   closeHistorySession();
-  if(isTranscribing) stopTranscription(true);
   saveToStorage();
   // Sync síncrono no Drive ao fechar (best-effort via sendBeacon)
   if(driveToken && lessons.length){

@@ -108,6 +108,7 @@ public class VideoPlayerPlugin extends Plugin {
     private int areaLeft, areaTop, areaWidth, areaHeight;
 
     private final Handler  handler        = new Handler(Looper.getMainLooper());
+    private       long     lastSentPos    = -1;
     private       Runnable timeUpdateTask = null;
 
     // ── Ciclo de vida ─────────────────────────────────────────────────────────
@@ -346,6 +347,22 @@ public class VideoPlayerPlugin extends Plugin {
             if (p != null) p.setVolume(vol);
         });
         call.resolve();
+    }
+
+    /** setSleepTimer({minutes}) — 0 cancela. O timer roda no PlaybackService. */
+    @PluginMethod
+    public void setSleepTimer(PluginCall call) {
+        final int minutes = call.getInt("minutes", 0);
+        getActivity().runOnUiThread(() -> PlaybackService.setSleepTimer(minutes));
+        call.resolve();
+    }
+
+    /** getSleepTimer() → {remainingMs} */
+    @PluginMethod
+    public void getSleepTimer(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("remainingMs", PlaybackService.getSleepRemainingMs());
+        call.resolve(ret);
     }
 
     @PluginMethod
@@ -835,10 +852,13 @@ public class VideoPlayerPlugin extends Plugin {
         timeUpdateTask = new Runnable() {
             @Override public void run() {
                 ExoPlayer p = PlaybackService.getPlayer();
-                if (p != null && p.isPlaying()) {
+                if (p != null) {
                     long pos = p.getCurrentPosition();
                     long dur = p.getDuration();
-                    if (dur > 0) {
+                    // Tocando: envia sempre. Pausado: só quando a posição mudou
+                    // (busca com o vídeo parado), senão a barra não acompanhava.
+                    if (dur > 0 && (p.isPlaying() || pos != lastSentPos)) {
+                        lastSentPos = pos;
                         JSObject e = new JSObject();
                         e.put("currentTime", pos / 1000.0);
                         e.put("duration",    dur / 1000.0);

@@ -64,6 +64,46 @@ public class PlaybackService extends MediaSessionService {
     public static final String ACTION_NOTIF_PLAY_PAUSE = "com.jcorelabs.studyplay.NOTIF_PLAY_PAUSE";
     public static final String ACTION_NOTIF_DISMISS    = "com.jcorelabs.studyplay.NOTIF_DISMISS";
 
+    // ── Timer de sono nativo ──────────────────────────────────────────────
+    // O setTimeout do JavaScript é congelado pelo Android com a tela desligada,
+    // justamente quando o timer de sono é usado. Aqui ele roda no serviço.
+    private final Handler sleepHandler = new Handler(Looper.getMainLooper());
+    private Runnable sleepRunnable = null;
+    private long     sleepEndAt    = 0;
+
+    public static void setSleepTimer(int minutes) {
+        PlaybackService s = instance;
+        if (s != null) s.startSleep(minutes);
+    }
+
+    /** Milissegundos restantes do timer (0 = sem timer ativo). */
+    public static long getSleepRemainingMs() {
+        PlaybackService s = instance;
+        if (s == null || s.sleepRunnable == null) return 0;
+        return Math.max(0, s.sleepEndAt - System.currentTimeMillis());
+    }
+
+    private void startSleep(int minutes) {
+        cancelSleep();
+        if (minutes <= 0) return;
+        final long ms = minutes * 60_000L;
+        sleepEndAt = System.currentTimeMillis() + ms;
+        sleepRunnable = () -> {
+            sleepRunnable = null;
+            sleepEndAt = 0;
+            if (player != null) player.pause();
+            VideoPlayerPlugin vp = VideoPlayerPlugin.instance;
+            if (vp != null) vp.firePluginEvent("sleepTimerFired", new JSObject());
+        };
+        sleepHandler.postDelayed(sleepRunnable, ms);
+    }
+
+    private void cancelSleep() {
+        if (sleepRunnable != null) sleepHandler.removeCallbacks(sleepRunnable);
+        sleepRunnable = null;
+        sleepEndAt = 0;
+    }
+
     /** Acesso direto do plugin (mesmo processo, mesma thread). */
     public static volatile PlaybackService instance;
 
@@ -312,6 +352,7 @@ public class PlaybackService extends MediaSessionService {
     @androidx.annotation.OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)
     @Override
     public void onDestroy() {
+        cancelSleep();
         if (notifActionReceiver != null) {
             try { unregisterReceiver(notifActionReceiver); } catch (Exception ignored) {}
             notifActionReceiver = null;
