@@ -615,6 +615,10 @@ body.is-modular .btn-organize{display:flex;}
   .module-title{font-size:13px;}
 
   .controls-bar{padding:8px 12px 6px;}
+  /* Digitando na busca (teclado aberto): recolhe os controles e encolhe o vídeo
+     para sobrar espaço para os resultados. */
+  body.search-open .controls-bar{display:none;}
+  body.search-open .video-wrapper{aspect-ratio:auto;height:92px;}
   .now-title{font-size:13px;}
   .ctrl-row{flex-direction:column;align-items:stretch;gap:6px;}
   .ctrl-main{display:flex;align-items:center;justify-content:space-between;gap:6px;}
@@ -1613,8 +1617,9 @@ function endDrag(){
       const insertAt = position==='before' ? newTgt : newTgt+1;
       moduleDragArr.splice(insertAt, 0, moved);
 
-      // Reconstrói índices de aulas e re-renderiza
-      rebuildLessonsFromModules();
+      // Reconstrói índices de aulas (mantendo concluídas/favoritas/posições nas MESMAS
+      // aulas) e re-renderiza. Antes só renumerava e o progresso ficava nos números antigos.
+      rebuildLessonsKeepingState();
       buildSortedLessons();
       renderModularPlaylist();
       updatePlaylistActive();
@@ -2013,9 +2018,17 @@ let _audioOnly=false;
 
 /* Playlist nativa (ExoPlayer gerencia a fila sem precisar do WebView):
    _nativePlaylistMode    = true quando setPlaylist foi usado para carregar aulas
-   _nativePlaylistStartIdx= índice em lessons[] correspondente ao item 0 da fila do ExoPlayer */
+   _nativeQueue           = arquivos da fila do ExoPlayer (mesma ordem da fila nativa) */
 let _nativePlaylistMode    = false;
-let _nativePlaylistStartIdx = 0;
+let _nativeQueue = [];   /* arquivos da fila do ExoPlayer, na ordem em que foi criada */
+/* A fila nativa é guardada como lista de ARQUIVOS (não como deslocamento): se os
+   módulos forem reordenados com o app tocando, o índice da fila continua apontando
+   para a aula certa. */
+function queueIndexOfLesson(idx){ return lessons[idx] ? _nativeQueue.indexOf(lessons[idx].file) : -1; }
+function lessonIdxFromQueue(qi){
+  const f = _nativeQueue[qi];
+  return f ? lessons.findIndex(l=>l.file===f) : -1;
+}
 /**
  * Retorna true se o player nativo pode usar setPlaylist para todas as aulas
  * a partir de idx. Requer:
@@ -3077,6 +3090,35 @@ function rebuildLessonsFromModules(){
   _lessonByFile = new Map(lessons.map(l=>[l.file,l]));
 }
 
+/* Reconstrói a lista de aulas (após reordenar módulos) e move o estado que está
+   guardado por NÚMERO de aula (concluídas, favoritas, posições, durações, aula atual)
+   para os novos números, usando o objeto do arquivo como identidade. */
+function rebuildLessonsKeepingState(){
+  const old = lessons.slice();
+  const fileOf = i => (old[i] ? old[i].file : null);
+  const doneF = new Set([...done].map(fileOf).filter(Boolean));
+  const favF  = new Set([...favorites].map(fileOf).filter(Boolean));
+  const timeF = new Map(), durF = new Map();
+  old.forEach(l=>{
+    if(lessonTimes[l.idx]!=null)     timeF.set(l.file, lessonTimes[l.idx]);
+    if(lessonDurations[l.idx]!=null) durF.set(l.file, lessonDurations[l.idx]);
+  });
+  const curF = currentIdx>=0 ? fileOf(currentIdx) : null;
+
+  rebuildLessonsFromModules();
+
+  Object.keys(lessonTimes).forEach(k=>delete lessonTimes[k]);
+  Object.keys(lessonDurations).forEach(k=>delete lessonDurations[k]);
+  done = new Set(); favorites = new Set();
+  lessons.forEach(l=>{
+    if(doneF.has(l.file)) done.add(l.idx);
+    if(favF.has(l.file))  favorites.add(l.idx);
+    if(timeF.has(l.file)) lessonTimes[l.idx] = timeF.get(l.file);
+    if(durF.has(l.file))  lessonDurations[l.idx] = durF.get(l.file);
+    if(curF && l.file===curF) currentIdx = l.idx;
+  });
+}
+
 function getResumeIdx(stored){
   if(!stored||!stored.currentName) return 0;
   const i = lessons.findIndex(l=>(l.key||l.name)===stored.currentName);
@@ -3578,22 +3620,22 @@ async function playLesson(idx){
 
      seekToItem: se já estamos em modo playlist e o destino está dentro da fila atual,
      usa seekToItem() para evitar recriar a playlist e o race condition do trackChanged
-     (trackChanged dispara antes do await resolver, usando o _nativePlaylistStartIdx antigo). */
+     (trackChanged dispara antes do await resolver, usando a fila antiga). */
   const plug = Platform.isCapacitor ? window.Capacitor?.Plugins?.VideoPlayer : null;
-  if(_nativePlaylistMode && idx >= _nativePlaylistStartIdx && plug && typeof plug.seekToItem==='function'){
+  const _qi = (_nativePlaylistMode && plug && typeof plug.seekToItem==='function') ? queueIndexOfLesson(idx) : -1;
+  if(_qi >= 0){
     /* Navega dentro da playlist existente — sem recriar a fila */
-    const playlistIdx = idx - _nativePlaylistStartIdx;
-    plug.seekToItem({index: playlistIdx}).catch(()=>{});
+    plug.seekToItem({index: _qi}).catch(()=>{});
     if(_audioOnly) plug.hide().catch(()=>{}); // preserva modo áudio entre trocas
     window._nativePlayerSkipSrc && window._nativePlayerSkipSrc();
     video.src=l.url; // atualiza vs.src sem acionar loadVideo
   } else if(canNativePlaylist(idx)){
     const items=lessons.slice(idx).map(lo=>({uri:lo.file._uri, title:lo.name, artist:lo.module||'StudyPlay'}));
     try{
-      /* ⚠ Defina _nativePlaylistStartIdx ANTES do await para que o evento trackChanged
-         (disparado pelo Java durante setMediaItems, antes do resolve) use o índice correto */
+      /* ⚠ Defina _nativeQueue ANTES do await para que o evento trackChanged
+         (disparado pelo Java durante setMediaItems, antes do resolve) use a fila correta */
       _nativePlaylistMode=true;
-      _nativePlaylistStartIdx=idx;
+      _nativeQueue=lessons.slice(idx).map(lo=>lo.file);
       await plug.setPlaylist({items});
       if(_audioOnly) plug.hide().catch(()=>{}); // preserva modo áudio ao criar nova playlist
       /* Atualiza vs.src sem acionar loadVideo novamente (flag interna) */
@@ -3720,9 +3762,17 @@ function findModuleByName(mods, name){
   return null;
 }
 
+/* Rola SÓ a lista de aulas até a aula atual. scrollIntoView() também rola
+   contêineres "overflow:hidden" acima (cortando partes da tela). */
 function scrollToActive(){
   const el=document.getElementById('lesson-'+currentIdx);
-  if(el) el.scrollIntoView({behavior:'smooth', block:'nearest'});
+  const pl=playlistEl;
+  if(!el||!pl) return;
+  const r=el.getBoundingClientRect(), pr=pl.getBoundingClientRect();
+  if(r.height===0) return;                       /* módulo recolhido */
+  if(r.top<pr.top || r.bottom>pr.bottom){
+    pl.scrollTo({top: pl.scrollTop + (r.top-pr.top) - pr.height/3, behavior:'smooth'});
+  }
 }
 
 function togglePlay(){
@@ -3846,6 +3896,15 @@ function updateFavBtn(){
 /* ═══════════════════════════════════════════
    BUSCA E SIDEBAR
 ═══════════════════════════════════════════ */
+(function(){
+  const inp = document.getElementById('search-input');
+  if(!inp) return;
+  let t = null;
+  inp.addEventListener('focus', ()=>{ clearTimeout(t); document.body.classList.add('search-open'); });
+  /* atraso: o toque num resultado precisa chegar antes de o layout voltar ao normal */
+  inp.addEventListener('blur',  ()=>{ t = setTimeout(()=>document.body.classList.remove('search-open'), 300); });
+})();
+
 let _filterTimer = null;
 function filterLessonsDebounced(){
   clearTimeout(_filterTimer);
@@ -4463,7 +4522,7 @@ function installNativePlayer(plugin){
     if(_audioOnly) return;
     /* Mini player quando teclado de notas está aberto */
     if(document.body.classList.contains('keyboard-notes-open')){
-      const hdr = document.querySelector('header')?.offsetHeight || 54;
+      const hdr = document.querySelector('header')?.offsetHeight || 0;   /* 0 quando o cabeçalho está oculto (horizontal) */
       const w   = window.innerWidth;
       const h   = Math.min(180, Math.round(w * 0.45));
       plugin.updateRect({x:0, y:hdr, w:w, h:h}).catch(()=>{});
@@ -4702,7 +4761,7 @@ function installNativePlayer(plugin){
     if(_nativePlaylistMode && typeof plugin.getCurrentIndex==='function'){
       try{
         const {index, position} = await plugin.getCurrentIndex();
-        const absIdx = _nativePlaylistStartIdx + index;
+        const absIdx = lessonIdxFromQueue(index);
         if(absIdx >= 0 && absIdx < lessons.length){
           if(absIdx !== currentIdx){
             /* O índice avançou sem que o JS soubesse (não marca nada como concluído:
@@ -4777,11 +4836,11 @@ function installNativePlayer(plugin){
      o WebView volta ao foco. Atualiza currentIdx, título e UI da playlist.           */
   plugin.addListener('trackChanged', (e)=>{
     if(!_nativePlaylistMode) return;
-    const absIdx = _nativePlaylistStartIdx + (e.index||0);
+    const absIdx = lessonIdxFromQueue(e.index||0);
     if(absIdx < 0 || absIdx >= lessons.length) return;
     /* Loop: ExoPlayer avançou para próxima faixa, mas loop está ativo → volta à atual */
     if(_loopLesson > 0 && absIdx !== currentIdx){
-      const selfPlaylistIdx = currentIdx - _nativePlaylistStartIdx;
+      const selfPlaylistIdx = queueIndexOfLesson(currentIdx);
       if(selfPlaylistIdx >= 0) plugin.seekToItem({index: selfPlaylistIdx}).catch(()=>{});
       if(_loopLesson===1){ _loopLesson=0; updateLoopUI(); }
       if(_audioOnly) plugin.hide().catch(()=>{});
@@ -4841,7 +4900,7 @@ function installNativePlayer(plugin){
      Reseta o modo playlist para que a próxima reprodução use loadVideo single. */
   plugin.addListener('playerDestroyed', ()=>{
     _nativePlaylistMode    = false;
-    _nativePlaylistStartIdx = 0;
+    _nativeQueue = [];
   });
 
   /* ── Botões Anterior / Próximo da notificação de mídia ────────────────────
