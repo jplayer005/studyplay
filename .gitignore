@@ -2,7 +2,7 @@ node_modules/
 *.apk
 *.aab
 *.log
-.claude/
+.claude/settings.local.json
 android/local.properties
 android/.gradle/
 android/build/
