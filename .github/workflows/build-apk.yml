@@ -10,6 +10,10 @@ on:
 jobs:
   apk:
     runs-on: ubuntu-latest
+    env:
+      # Usadas só para decidir se o envio ao Firebase roda (segredos não podem ser lidos direto em "if")
+      FB_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+      FB_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
     steps:
       - uses: actions/checkout@v4
 
@@ -61,3 +65,18 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
+
+      # Envio ao Firebase App Distribution (app "App Tester" do celular).
+      # Só roda se os dois segredos existirem no repositório:
+      #   FIREBASE_APP_ID               ID do app Android no Firebase (1:123...:android:abc...)
+      #   FIREBASE_SERVICE_ACCOUNT      conteúdo do JSON da chave de serviço
+      - name: Enviar ao App Tester (Firebase)
+        if: ${{ env.FB_APP_ID != '' && env.FB_SA != '' }}
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+          appId: ${{ secrets.FIREBASE_APP_ID }}
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          testers: jcorelabs@gmail.com
+          file: android/app/build/outputs/apk/debug/app-debug.apk
+          releaseNotes: "StudyPlay 2.1.0 (debug) - ${{ github.event.head_commit.message }}"
+
