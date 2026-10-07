@@ -1,0 +1,3371 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>VideoAulas — Plataforma Local</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── TEMAS ── */
+:root,[data-theme="dark"] {
+  --bg:#0d0f14; --bg2:#13161e; --bg3:#1a1e2a; --bg4:#222636;
+  --accent:#6c63ff; --accent2:#a78bfa; --accent3:#38bdf8;
+  --text:#e8eaf0; --text2:#9ca3af; --text3:#6b7280;
+  --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.13);
+  --green:#34d399; --amber:#fbbf24; --red:#f87171; --pink:#f472b6;
+  --chapter-line:rgba(108,99,255,.5);
+  --sidebar:340px; --header-h:54px;
+  --safe-b:env(safe-area-inset-bottom,0px); --safe-t:env(safe-area-inset-top,0px);
+}
+[data-theme="light"] {
+  --bg:#f0f2f8; --bg2:#ffffff; --bg3:#f4f6fb; --bg4:#e8ecf4;
+  --accent:#6c63ff; --accent2:#5b52e8; --accent3:#0ea5e9;
+  --text:#1a1d2e; --text2:#4b5563; --text3:#9ca3af;
+  --border:rgba(0,0,0,0.08); --border2:rgba(0,0,0,0.15);
+  --green:#059669; --amber:#d97706; --red:#dc2626; --pink:#db2777;
+  --chapter-line:rgba(108,99,255,.6);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{height:100%;}
+body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);height:100dvh;display:flex;flex-direction:column;overflow:hidden;-webkit-tap-highlight-color:transparent;transition:background .25s,color .25s;}
+
+/* ── TOPBAR ── */
+header{display:flex;align-items:center;gap:8px;padding:0 14px;padding-top:var(--safe-t);height:calc(var(--header-h) + var(--safe-t));background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;z-index:20;}
+.logo{display:flex;align-items:center;gap:9px;font-weight:600;font-size:15px;letter-spacing:-.3px;}
+.logo-icon{width:30px;height:30px;background:linear-gradient(135deg,var(--accent),var(--accent3));border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.logo-icon svg{width:16px;height:16px;fill:white;}
+.header-spacer{flex:1;}
+.btn-load{display:flex;align-items:center;gap:8px;background:var(--accent);color:white;border:none;border-radius:8px;padding:0 13px;height:34px;font-family:'Sora',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:opacity .2s;white-space:nowrap;}
+.btn-load:hover{opacity:.85;}
+.btn-icon{display:flex;align-items:center;justify-content:center;width:32px;height:32px;min-width:32px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:background .2s;flex-shrink:0;}
+.btn-icon:hover{background:var(--bg4);}
+.btn-icon svg{width:15px;height:15px;stroke:var(--text2);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.btn-icon.active-btn{background:rgba(108,99,255,.2);border-color:rgba(108,99,255,.4);}
+.btn-icon.active-btn svg{stroke:var(--accent2);}
+.progress-badge{font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text3);background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 10px;white-space:nowrap;}
+.progress-badge span{color:var(--green);font-weight:500;}
+
+/* ── MAIN ── */
+.main{display:flex;flex:1;overflow:hidden;min-height:0;}
+
+/* ── SIDEBAR ── */
+.sidebar{width:var(--sidebar);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;}
+.sidebar-header{padding:14px 14px 11px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.sidebar-title-row{display:flex;align-items:center;gap:6px;margin-bottom:9px;}
+.sidebar-title{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:var(--text3);flex:1;}
+.btn-collapse-all{display:none;align-items:center;gap:4px;font-family:'Sora',sans-serif;font-size:10px;font-weight:500;color:var(--text3);background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:0 8px;height:24px;cursor:pointer;transition:background .15s,color .15s;white-space:nowrap;flex-shrink:0;}
+.btn-collapse-all:hover{background:var(--bg4);color:var(--text2);}
+.btn-collapse-all svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s;}
+.btn-collapse-all.expanded svg{transform:rotate(180deg);}
+body.is-modular .btn-collapse-all{display:flex;}
+
+
+.search-box{display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:0 10px;height:34px;}
+.search-box svg{width:13px;height:13px;stroke:var(--text3);fill:none;stroke-width:1.8;stroke-linecap:round;flex-shrink:0;}
+.search-box input{flex:1;background:none;border:none;outline:none;font-family:'Sora',sans-serif;font-size:12px;color:var(--text);min-width:0;}
+.search-box input::placeholder{color:var(--text3);}
+.playlist{flex:1;overflow-y:auto;padding:8px;}
+.playlist::-webkit-scrollbar{width:4px;}
+.playlist::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px;}
+
+/* ── MÓDULOS ── */
+.module-header{display:flex;align-items:center;gap:7px;padding:7px 9px;border-radius:8px;cursor:pointer;background:var(--bg3);border:1px solid var(--border);margin-bottom:2px;user-select:none;transition:background .15s,border-color .15s,opacity .15s;}
+.module-header:hover{background:var(--bg4);}
+.module-arrow{width:13px;height:13px;stroke:var(--text3);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s;flex-shrink:0;}
+.module-header.collapsed .module-arrow{transform:rotate(-90deg);}
+.module-title{flex:1;font-size:12px;font-weight:600;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.module-count{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3);background:var(--bg4);border-radius:4px;padding:2px 6px;white-space:nowrap;flex-shrink:0;}
+.module-done-badge{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--green);background:rgba(52,211,153,.12);border-radius:4px;padding:2px 5px;white-space:nowrap;flex-shrink:0;}
+.module-body.collapsed{display:none;}
+/* drag handle */
+.module-drag-handle{display:flex;align-items:center;justify-content:center;width:18px;height:18px;flex-shrink:0;cursor:grab;opacity:.35;transition:opacity .15s;}
+.module-drag-handle:hover{opacity:.8;}
+.module-drag-handle:active{cursor:grabbing;}
+.module-drag-handle svg{width:12px;height:12px;stroke:var(--text2);fill:none;stroke-width:2;stroke-linecap:round;}
+/* drag wrapper */
+.module-wrap{position:relative;transition:margin .1s;}
+.module-wrap.drag-over-top::before,.module-wrap.drag-over-bottom::after{content:'';display:block;height:3px;background:var(--accent);border-radius:2px;margin:1px 0;}
+.module-wrap.drag-over-top::before{margin-bottom:3px;}
+.module-wrap.drag-over-bottom::after{margin-top:3px;}
+.module-wrap.dragging>.module-header{opacity:.35;border-style:dashed;}
+.module-wrap.dragging>.module-body{display:none !important;}
+/* touch ghost */
+#drag-ghost{position:fixed;pointer-events:none;z-index:9999;background:var(--bg2);border:1px solid var(--accent);border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;color:var(--accent2);font-family:'Sora',sans-serif;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 8px 24px rgba(0,0,0,.4);opacity:.92;display:none;}
+.section-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);padding:10px 8px 6px;}
+.lesson-item{display:flex;align-items:center;gap:9px;padding:8px 9px;border-radius:8px;cursor:pointer;transition:background .15s;border:1px solid transparent;margin-bottom:2px;}
+.lesson-item:hover{background:var(--bg3);}
+.lesson-item.active{background:rgba(108,99,255,.15);border-color:rgba(108,99,255,.3);}
+.lesson-num{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3);width:20px;flex-shrink:0;text-align:right;}
+.lesson-thumb{width:48px;height:30px;background:var(--bg4);border-radius:5px;flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;}
+.lesson-thumb video{width:100%;height:100%;object-fit:cover;}
+.lesson-thumb.done::after{content:'';position:absolute;inset:0;background:rgba(52,211,153,.25);border-radius:5px;}
+.lesson-thumb.file-icon{background:var(--bg3);border:1px solid var(--border);}
+.lesson-thumb.file-icon svg{width:18px;height:18px;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;}
+.lesson-info{flex:1;min-width:0;}
+.lesson-name{font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;margin-bottom:2px;}
+.lesson-item.active .lesson-name{color:var(--accent2);}
+.lesson-meta{font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--text3);}
+.lesson-resume{font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--amber);margin-top:1px;}
+.lesson-status{flex-shrink:0;width:18px;height:18px;border-radius:50%;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;}
+.lesson-status.done{background:var(--green);border-color:var(--green);}
+.lesson-status.done svg{width:9px;height:9px;stroke:#0d0f14;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;}
+.lesson-status.playing{border-color:var(--accent);}
+.lesson-status.playing span{width:6px;height:6px;background:var(--accent);border-radius:50%;display:block;animation:pulse 1.2s infinite;}
+.extra-item{display:flex;align-items:center;gap:9px;padding:6px 9px;border-radius:8px;cursor:pointer;transition:background .15s;border:1px solid transparent;margin-bottom:2px;}
+.extra-item:hover{background:var(--bg3);border-color:var(--border);}
+.extra-icon{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.extra-icon.pdf{background:rgba(248,113,113,.15);}
+.extra-icon.web{background:rgba(56,189,248,.15);}
+.extra-icon.xlsx{background:rgba(52,211,153,.15);}
+.extra-icon.docx{background:rgba(96,165,250,.15);}
+.extra-icon.other{background:rgba(167,139,250,.15);}
+.extra-icon svg{width:14px;height:14px;}
+.extra-icon.pdf svg{stroke:var(--red);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.extra-icon.web svg{stroke:var(--accent3);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.extra-icon.xlsx svg{stroke:var(--green);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.extra-icon.docx svg{stroke:#60a5fa;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.extra-icon.other svg{stroke:var(--accent2);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.extra-name{font-size:11px;font-weight:500;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(.7);}}
+
+/* ── PLAYER ── */
+.player-area{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+.video-wrapper{flex:1;display:flex;align-items:center;justify-content:center;background:#000;position:relative;min-height:0;}
+video#main-video{max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain;}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:var(--text3);text-align:center;padding:40px;}
+.empty-icon{width:72px;height:72px;background:var(--bg3);border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);}
+.empty-icon svg{width:32px;height:32px;stroke:var(--text3);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;}
+.empty-state h2{font-size:16px;font-weight:500;color:var(--text2);}
+.empty-state p{font-size:13px;line-height:1.6;max-width:280px;}
+.empty-state .hint{font-size:11px;color:var(--accent2);font-weight:500;}
+.content-wrapper{flex:1;display:none;flex-direction:column;background:var(--bg);min-height:0;}
+.content-wrapper.active{display:flex;}
+.content-frame{flex:1;border:none;background:var(--bg2);}
+
+
+/* ── REVIEW MODE OVERLAY ── */
+#review-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:250;flex-direction:column;overflow:hidden;}
+#review-overlay.active{display:flex;}
+.review-header{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0;}
+.review-title{flex:1;font-size:15px;font-weight:600;color:var(--text);}
+.review-subtitle{font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;}
+.review-body{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:6px;}
+.review-body::-webkit-scrollbar{width:4px;}
+.review-body::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px;}
+.review-item{display:flex;align-items:center;gap:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;cursor:pointer;transition:border-color .15s,background .15s;}
+.review-item:hover{border-color:var(--border2);background:var(--bg4);}
+.review-item.active-rev{border-color:rgba(108,99,255,.5);background:rgba(108,99,255,.1);}
+.review-item-num{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3);width:24px;flex-shrink:0;text-align:right;}
+.review-item-ts{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent2);width:48px;flex-shrink:0;}
+.review-item-info{flex:1;min-width:0;}
+.review-item-label{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.review-item-lesson{font-size:10px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.review-item-type{font-size:9px;font-family:'JetBrains Mono',monospace;padding:2px 6px;border-radius:4px;flex-shrink:0;}
+.review-item-type.chapter{background:rgba(108,99,255,.15);color:var(--accent2);}
+.review-item-type.note{background:rgba(167,139,250,.15);color:var(--pink);}
+.review-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;gap:12px;text-align:center;}
+.review-empty svg{width:36px;height:36px;stroke:var(--text3);fill:none;stroke-width:1.5;opacity:.4;}
+.review-empty p{font-size:13px;color:var(--text3);line-height:1.6;}
+.review-controls{padding:12px 16px;border-top:1px solid var(--border);background:var(--bg2);display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;}
+.review-filter-btn{display:flex;align-items:center;gap:5px;font-family:'Sora',sans-serif;font-size:11px;font-weight:500;color:var(--text3);background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:0 10px;height:28px;cursor:pointer;transition:background .15s;white-space:nowrap;}
+.review-filter-btn:hover{background:var(--bg4);}
+.review-filter-btn.active-filter{background:rgba(108,99,255,.15);border-color:rgba(108,99,255,.3);color:var(--accent2);}
+.review-nav{display:flex;gap:6px;margin-left:auto;}
+.review-nav-btn{display:flex;align-items:center;justify-content:center;width:30px;height:30px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;cursor:pointer;transition:background .15s;}
+.review-nav-btn:hover{background:var(--bg4);}
+.review-nav-btn svg{width:13px;height:13px;stroke:var(--text2);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+
+/* ── HISTÓRICO ── */
+.history-list{display:flex;flex-direction:column;gap:4px;}
+.history-day{margin-bottom:10px;}
+.history-day-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);padding:6px 2px 4px;border-bottom:1px solid var(--border);margin-bottom:6px;}
+.history-entry{display:flex;align-items:center;gap:10px;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;margin-bottom:3px;cursor:pointer;transition:border-color .15s;}
+.history-entry:hover{border-color:var(--border2);}
+.history-entry-time{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3);width:42px;flex-shrink:0;}
+.history-entry-name{flex:1;font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.history-entry-dur{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent2);white-space:nowrap;}
+.history-entry-play{width:22px;height:22px;border-radius:5px;background:rgba(108,99,255,.15);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.history-entry-play svg{width:10px;height:10px;fill:var(--accent2);stroke:none;}
+
+
+/* ── TRANSCRIÇÃO ── */
+.transcription-modal-box{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;width:100%;max-width:520px;padding:22px;display:flex;flex-direction:column;gap:14px;max-height:90vh;overflow-y:auto;}
+.transcription-status{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:'JetBrains Mono',monospace;}
+.transcription-dot{width:8px;height:8px;border-radius:50%;background:var(--text3);flex-shrink:0;}
+.transcription-dot.active{background:var(--red);animation:pulse 1s infinite;}
+.transcription-dot.paused{background:var(--amber);}
+.transcription-text-area{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;min-height:180px;max-height:300px;overflow-y:auto;font-size:13px;color:var(--text);line-height:1.7;white-space:pre-wrap;word-break:break-word;}
+.transcription-text-area::-webkit-scrollbar{width:4px;}
+.transcription-text-area::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px;}
+.transcription-interim{color:var(--text3);font-style:italic;}
+.transcription-controls{display:flex;gap:8px;flex-wrap:wrap;}
+.transcription-lang-select{flex:1;min-width:120px;height:34px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'Sora',sans-serif;font-size:12px;padding:0 8px;outline:none;cursor:pointer;}
+.transcription-lang-select:focus{border-color:rgba(108,99,255,.4);}
+
+/* ── LOADING ── */
+#loading-overlay{display:none;position:fixed;inset:0;background:rgba(13,15,20,.88);z-index:400;align-items:center;justify-content:center;flex-direction:column;gap:16px;}
+#loading-overlay.active{display:flex;}
+.loading-spinner{width:40px;height:40px;border:3px solid var(--bg4);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-text{font-size:13px;color:var(--text2);font-family:'JetBrains Mono',monospace;}
+.loading-sub{font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;}
+
+/* ── CONTROLS ── */
+.controls-bar{background:var(--bg2);border-top:1px solid var(--border);padding:9px 14px 11px;flex-shrink:0;}
+.now-playing{display:flex;align-items:center;gap:9px;margin-bottom:7px;}
+.now-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--accent);flex-shrink:0;}
+.now-title{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* ── SEEKBAR COM CAPÍTULOS ── */
+.progress-row{display:flex;align-items:center;gap:9px;margin-bottom:7px;}
+.time-label{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text3);flex-shrink:0;min-width:38px;}
+.time-label.right{text-align:right;}
+.seekbar{flex:1;height:4px;background:var(--bg4);border-radius:4px;position:relative;cursor:pointer;}
+@media(pointer:coarse){.seekbar{height:8px;}.seekbar-fill::after{width:16px;height:16px;right:-8px;}}
+.seekbar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent3));border-radius:4px;width:0%;pointer-events:none;position:relative;}
+.seekbar-fill::after{content:'';position:absolute;right:-5px;top:50%;transform:translateY(-50%);width:10px;height:10px;background:white;border-radius:50%;box-shadow:0 0 0 2px var(--accent);}
+.chapter-marker{position:absolute;top:0;width:2px;height:100%;background:var(--chapter-line);border-radius:1px;pointer-events:none;z-index:1;}
+.ab-region{position:absolute;top:0;height:100%;background:rgba(251,191,36,.25);pointer-events:none;z-index:1;}
+.ab-point{position:absolute;top:50%;transform:translateY(-50%);width:8px;height:8px;background:var(--amber);border-radius:50%;pointer-events:none;z-index:2;}
+.chapter-tooltip{position:absolute;bottom:calc(100% + 8px);transform:translateX(-50%);background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:4px 8px;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--text2);white-space:nowrap;pointer-events:none;z-index:10;display:none;}
+.seekbar:hover .chapter-tooltip{display:block;}
+
+/* ── CTRL ROW ── */
+.ctrl-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.ctrl-btn{width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:var(--bg3);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:background .15s;flex-shrink:0;}
+.ctrl-btn:hover{background:var(--bg4);}
+.ctrl-btn.primary{background:var(--accent);border-color:transparent;}
+.ctrl-btn.primary:hover{background:#5b52e8;}
+.ctrl-btn svg{width:15px;height:15px;stroke:var(--text2);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.ctrl-btn.primary svg{stroke:white;}
+.ctrl-btn.active-ctrl{background:rgba(251,191,36,.15);border-color:rgba(251,191,36,.4);}
+.ctrl-btn.active-ctrl svg{stroke:var(--amber);}
+
+.ctrl-btn.active-ctrl-green{background:rgba(52,211,153,.15);border-color:rgba(52,211,153,.4);}
+.ctrl-btn.active-ctrl-green svg{stroke:var(--green);}
+.speed-btn{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:var(--text2);background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:0 10px;height:34px;cursor:pointer;transition:background .15s;}
+.speed-btn:hover{background:var(--bg4);}
+.vol-row{display:flex;align-items:center;gap:6px;margin-left:auto;}
+.vol-row svg{width:13px;height:13px;stroke:var(--text3);fill:none;stroke-width:1.8;stroke-linecap:round;}
+.vol-slider{width:70px;height:4px;-webkit-appearance:none;appearance:none;background:var(--bg4);border-radius:4px;outline:none;cursor:pointer;}
+.vol-slider::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;background:var(--text2);border-radius:50%;cursor:pointer;}
+.mark-done-btn{display:flex;align-items:center;gap:6px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.25);color:var(--green);border-radius:8px;padding:0 11px;height:34px;font-family:'Sora',sans-serif;font-size:11px;font-weight:500;cursor:pointer;transition:background .15s;flex-shrink:0;}
+.mark-done-btn:hover{background:rgba(52,211,153,.18);}
+.mark-done-btn svg{width:12px;height:12px;stroke:var(--green);fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;}
+
+/* ── FRAME A FRAME badge ── */
+#frame-badge{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent3);background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.25);border-radius:5px;padding:2px 8px;height:34px;display:none;align-items:center;gap:5px;white-space:nowrap;}
+
+/* ── AB LABEL ── */
+.ab-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--amber);background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.25);border-radius:5px;padding:2px 8px;height:34px;display:flex;align-items:center;gap:5px;white-space:nowrap;}
+
+/* ── NOTAS ── */
+.notes-panel{width:300px;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;transition:width .25s;}
+.notes-panel.hidden{width:0;border-left:none;}
+.notes-header{display:flex;align-items:center;gap:8px;padding:12px 14px 10px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.notes-title{flex:1;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--text3);}
+.notes-export-btn{display:flex;align-items:center;gap:5px;font-family:'Sora',sans-serif;font-size:11px;font-weight:500;color:var(--accent2);background:rgba(108,99,255,.1);border:1px solid rgba(108,99,255,.2);border-radius:6px;padding:0 9px;height:26px;cursor:pointer;transition:background .15s;white-space:nowrap;}
+.notes-export-btn:hover{background:rgba(108,99,255,.18);}
+.notes-list{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:4px;}
+.notes-list::-webkit-scrollbar{width:4px;}
+.notes-list::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px;}
+.note-item{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 10px;cursor:pointer;transition:border-color .15s;}
+.note-item:hover{border-color:var(--border2);}
+.note-ts{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent2);margin-bottom:4px;display:flex;align-items:center;justify-content:space-between;}
+.note-lesson-tag{font-size:9px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;}
+.note-text{font-size:12px;color:var(--text2);line-height:1.5;white-space:pre-wrap;word-break:break-word;}
+.note-del{width:18px;height:18px;display:flex;align-items:center;justify-content:center;border-radius:4px;background:transparent;border:none;cursor:pointer;flex-shrink:0;opacity:.5;}
+.note-del:hover{background:rgba(248,113,113,.2);opacity:1;}
+.note-del svg{width:11px;height:11px;stroke:var(--red);fill:none;stroke-width:2;stroke-linecap:round;}
+.notes-input-area{padding:10px 12px;border-top:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;gap:7px;}
+.notes-ts-row{display:flex;align-items:center;gap:6px;}
+.notes-ts-badge{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent2);background:rgba(108,99,255,.1);border:1px solid rgba(108,99,255,.2);border-radius:5px;padding:2px 7px;}
+.notes-snap-btn{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3);background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:2px 7px;cursor:pointer;transition:background .15s;}
+.notes-snap-btn:hover{background:var(--bg4);}
+.notes-textarea{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:8px 10px;font-family:'Sora',sans-serif;font-size:12px;color:var(--text);resize:none;outline:none;min-height:60px;max-height:100px;line-height:1.5;}
+.notes-textarea:focus{border-color:rgba(108,99,255,.4);}
+.notes-textarea::placeholder{color:var(--text3);}
+.notes-add-btn{align-self:flex-end;display:flex;align-items:center;gap:5px;background:var(--accent);color:white;border:none;border-radius:7px;padding:0 12px;height:30px;font-family:'Sora',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:opacity .2s;}
+.notes-add-btn:hover{opacity:.85;}
+.notes-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px;gap:8px;}
+.notes-empty svg{width:28px;height:28px;stroke:var(--text3);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;opacity:.5;}
+.notes-empty p{font-size:11px;color:var(--text3);text-align:center;line-height:1.5;}
+
+/* ── NOTAS MOBILE MODAL ── */
+.notes-mobile-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:350;align-items:flex-end;justify-content:center;}
+.notes-mobile-modal.active{display:flex;}
+.notes-mobile-box{background:var(--bg2);border-top:1px solid var(--border2);border-radius:16px 16px 0 0;width:100%;max-height:85dvh;display:flex;flex-direction:column;padding-bottom:var(--safe-b);}
+
+/* ── XLSX VIEWER ── */
+.xlsx-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:300;align-items:center;justify-content:center;padding:20px;}
+.xlsx-modal.active{display:flex;}
+.xlsx-box{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;width:100%;max-width:900px;max-height:85vh;display:flex;flex-direction:column;overflow:hidden;}
+.xlsx-header{display:flex;align-items:center;gap:10px;padding:15px 18px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.xlsx-title{flex:1;font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.xlsx-tabs{display:flex;gap:4px;padding:8px 12px;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;}
+.xlsx-tab{font-size:11px;font-weight:500;color:var(--text2);background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 12px;cursor:pointer;transition:background .15s;}
+.xlsx-tab.active{background:rgba(108,99,255,.2);border-color:rgba(108,99,255,.4);color:var(--accent2);}
+.xlsx-content{flex:1;overflow:auto;padding:12px;}
+.xlsx-content::-webkit-scrollbar{width:5px;height:5px;}
+.xlsx-content::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px;}
+.xlsx-table{border-collapse:collapse;font-size:12px;font-family:'JetBrains Mono',monospace;}
+.xlsx-table th{background:var(--bg3);color:var(--text2);font-weight:600;padding:6px 10px;border:1px solid var(--border);text-align:left;white-space:nowrap;position:sticky;top:0;z-index:1;}
+.xlsx-table td{padding:5px 10px;border:1px solid var(--border);color:var(--text);white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis;}
+.xlsx-table tr:nth-child(even) td{background:rgba(255,255,255,.02);}
+.xlsx-table tr:hover td{background:rgba(108,99,255,.07);}
+.xlsx-close{width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer;flex-shrink:0;}
+.xlsx-close:hover{background:var(--bg4);}
+.xlsx-close svg{width:13px;height:13px;stroke:var(--text2);fill:none;stroke-width:2;stroke-linecap:round;}
+
+/* ── MODAL GENÉRICO ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center;padding:16px;}
+.modal-overlay.active{display:flex;}
+.modal-box{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;width:100%;max-width:480px;padding:22px;display:flex;flex-direction:column;gap:14px;}
+.modal-title{font-size:15px;font-weight:600;color:var(--text);}
+.modal-desc{font-size:13px;color:var(--text2);line-height:1.6;}
+.modal-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.modal-btn{flex:1;min-width:110px;height:38px;border-radius:8px;border:1px solid var(--border);font-family:'Sora',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:opacity .2s;display:flex;align-items:center;justify-content:center;gap:6px;}
+.modal-btn:hover{opacity:.85;}
+.modal-btn.primary{background:var(--accent);color:white;border-color:transparent;}
+.modal-btn.secondary{background:var(--bg3);color:var(--text2);}
+.modal-btn.danger{background:rgba(248,113,113,.15);color:var(--red);border-color:rgba(248,113,113,.3);}
+
+/* ── PROGRESS MODAL ── */
+.progress-modal-box{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;width:100%;max-width:430px;padding:22px;display:flex;flex-direction:column;gap:12px;max-height:90vh;overflow-y:auto;}
+.progress-modal-title{font-size:15px;font-weight:600;color:var(--text);}
+.progress-option{display:flex;align-items:center;gap:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:13px 15px;cursor:pointer;transition:border-color .15s;}
+.progress-option:hover{border-color:var(--border2);}
+.progress-option-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.progress-option-icon.export{background:rgba(108,99,255,.15);}
+.progress-option-icon.import{background:rgba(56,189,248,.15);}
+.progress-option-icon svg{width:16px;height:16px;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.progress-option-icon.export svg{stroke:var(--accent2);}
+.progress-option-icon.import svg{stroke:var(--accent3);}
+.progress-option-info{flex:1;}
+.progress-option-label{font-size:13px;font-weight:500;color:var(--text);margin-bottom:2px;}
+.progress-option-desc{font-size:11px;color:var(--text3);line-height:1.4;}
+.progress-close-row{display:flex;justify-content:flex-end;}
+
+/* ── STATS ── */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:13px 15px;}
+.stat-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:5px;}
+.stat-value{font-size:22px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--text);line-height:1;}
+.stat-sub{font-size:10px;color:var(--text3);margin-top:3px;}
+.stat-bar-wrap{background:var(--bg4);border-radius:4px;height:5px;margin-top:8px;overflow:hidden;}
+.stat-bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent3));border-radius:4px;transition:width .5s;}
+.stats-section-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin:4px 0 2px;}
+.stats-tab-row{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:10px;}
+.stats-tab{font-size:11px;font-weight:500;color:var(--text3);padding:6px 12px;cursor:pointer;border-bottom:2px solid transparent;transition:color .15s,border-color .15s;}
+.stats-tab:hover{color:var(--text2);}
+.stats-tab.active-tab{color:var(--accent2);border-bottom-color:var(--accent2);}
+.stats-pane{display:none;}
+.stats-pane.active-pane{display:block;}
+
+/* ── SHORTCUTS ── */
+.shortcuts-list{display:flex;flex-direction:column;gap:4px;}
+.shortcut-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);}
+.shortcut-row:last-child{border-bottom:none;}
+.shortcut-key{display:flex;gap:4px;flex-shrink:0;}
+.kbd{font-family:'JetBrains Mono',monospace;font-size:11px;background:var(--bg4);border:1px solid var(--border2);border-radius:5px;padding:2px 7px;color:var(--text2);white-space:nowrap;}
+.shortcut-desc{font-size:12px;color:var(--text2);}
+
+/* ── THEME TOGGLE ── */
+.theme-toggle-row{display:flex;align-items:center;gap:6px;padding:4px 2px;}
+.theme-btn{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:500;color:var(--text3);background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 10px;cursor:pointer;transition:background .15s;white-space:nowrap;}
+.theme-btn:hover{background:var(--bg4);}
+.theme-btn.active-theme{background:rgba(108,99,255,.15);border-color:rgba(108,99,255,.3);color:var(--accent2);}
+.theme-btn svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+
+/* ── CHAPTER PANEL ── */
+.chapter-list{display:flex;flex-direction:column;gap:3px;padding:8px;}
+.chapter-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;cursor:pointer;transition:background .15s;border:1px solid transparent;}
+.chapter-item:hover{background:var(--bg3);border-color:var(--border);}
+.chapter-item.active-ch{background:rgba(108,99,255,.12);border-color:rgba(108,99,255,.25);}
+.chapter-ts{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent2);flex-shrink:0;min-width:38px;}
+.chapter-name{font-size:12px;color:var(--text2);}
+.chapter-item.active-ch .chapter-name{color:var(--accent2);}
+.chapter-del{width:18px;height:18px;display:flex;align-items:center;justify-content:center;border-radius:4px;background:transparent;border:none;cursor:pointer;flex-shrink:0;opacity:.4;margin-left:auto;}
+.chapter-del:hover{background:rgba(248,113,113,.2);opacity:1;}
+.chapter-del svg{width:10px;height:10px;stroke:var(--red);fill:none;stroke-width:2;stroke-linecap:round;}
+
+
+/* ── GOOGLE DRIVE SYNC ── */
+.drive-btn{display:flex;align-items:center;gap:6px;font-family:'Sora',sans-serif;font-size:12px;font-weight:500;border:none;border-radius:8px;padding:0 11px;height:32px;cursor:pointer;transition:all .2s;white-space:nowrap;flex-shrink:0;}
+.drive-btn.disconnected{background:var(--bg3);border:1px solid var(--border);color:var(--text3);}
+.drive-btn.disconnected:hover{background:var(--bg4);color:var(--text2);}
+.drive-btn.connected{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.25);color:var(--green);}
+.drive-btn.connected:hover{background:rgba(52,211,153,.2);}
+.drive-btn.syncing{background:rgba(108,99,255,.12);border:1px solid rgba(108,99,255,.3);color:var(--accent2);}
+.drive-btn svg{width:14px;height:14px;flex-shrink:0;}
+.drive-sync-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:background .3s;}
+.drive-sync-dot.ok{background:var(--green);}
+.drive-sync-dot.syncing{background:var(--accent2);animation:pulse 1s infinite;}
+.drive-sync-dot.error{background:var(--red);}
+
+#drive-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+#drive-modal.active{display:flex;}
+.drive-modal-box{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;width:100%;max-width:400px;padding:24px;display:flex;flex-direction:column;gap:16px;}
+.drive-modal-title{font-size:16px;font-weight:600;color:var(--text);}
+.drive-modal-desc{font-size:13px;color:var(--text3);line-height:1.6;}
+.drive-modal-status{display:flex;align-items:center;gap:10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--text2);}
+.drive-modal-status .drive-sync-dot{width:9px;height:9px;}
+.drive-info-row{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--text3);}
+.drive-info-val{font-family:'JetBrains Mono',monospace;color:var(--text2);}
+.drive-modal-actions{display:flex;gap:8px;flex-wrap:wrap;}
+
+/* ── DROPZONE ── */
+#drop-overlay{display:none;position:fixed;inset:0;background:rgba(108,99,255,.18);backdrop-filter:blur(4px);z-index:99;align-items:center;justify-content:center;}
+#drop-overlay.active{display:flex;}
+.drop-box{width:340px;text-align:center;border:2px dashed var(--accent);border-radius:16px;padding:40px 32px;color:var(--text2);}
+.drop-box svg{width:48px;height:48px;stroke:var(--accent2);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;margin-bottom:12px;}
+.drop-box h3{font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px;}
+.drop-box p{font-size:13px;line-height:1.6;}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:24px;right:24px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:11px 15px;font-size:13px;color:var(--text2);transform:translateY(60px);opacity:0;transition:all .3s;z-index:500;pointer-events:none;max-width:calc(100vw - 48px);}
+#toast.show{transform:translateY(0);opacity:1;}
+
+/* ── FAB mobile ── */
+#mobile-sidebar-toggle{display:none;position:fixed;bottom:80px;left:12px;width:40px;height:40px;background:var(--accent);border-radius:50%;border:none;z-index:30;cursor:pointer;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(108,99,255,.4);}
+#mobile-sidebar-toggle svg{width:18px;height:18px;stroke:white;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+#mobile-notes-fab{display:none;position:fixed;bottom:80px;right:12px;width:40px;height:40px;background:var(--bg2);border:1px solid var(--border2);border-radius:50%;z-index:30;cursor:pointer;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,.3);}
+#mobile-notes-fab svg{width:18px;height:18px;stroke:var(--accent2);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+/* FAB Transcrição mobile */
+#transcription-fab{display:none;position:fixed;width:40px;height:40px;background:var(--bg2);border:1px solid var(--border2);border-radius:50%;z-index:30;cursor:pointer;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,.3);}
+#transcription-fab svg{width:18px;height:18px;stroke:var(--accent2);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+#transcription-fab.recording{background:rgba(248,113,113,.15);border-color:rgba(248,113,113,.4);}
+#transcription-fab.recording svg{stroke:var(--red);}
+#sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:25;}
+
+/* ── RESPONSIVE ── */
+@media(min-width:560px) and (max-width:899px){:root{--sidebar:260px;}}
+@media(min-width:900px) and (max-width:1024px){:root{--sidebar:280px;}}
+
+@media(max-width:559px){
+  :root{--sidebar:82vw;--header-h:50px;}
+  /* ── HEADER SCROLL HORIZONTAL MOBILE ── */
+  header{
+    gap:6px;
+    padding:0 10px;
+    padding-top:var(--safe-t);
+    height:calc(var(--header-h) + var(--safe-t));
+    overflow-x:auto;
+    overflow-y:hidden;
+    scrollbar-width:none;
+    flex-wrap:nowrap;
+    -webkit-overflow-scrolling:touch;
+  }
+  header::-webkit-scrollbar{display:none;}
+  .header-spacer{display:none;}
+  .logo{gap:5px;font-size:13px;flex-shrink:0;}
+  .logo-icon{width:26px;height:26px;border-radius:6px;}
+  .logo-icon svg{width:12px;height:12px;}
+  .logo-text{display:none;}
+  .progress-badge{font-size:9px;padding:3px 6px;flex-shrink:0;}
+  .btn-icon{width:28px;height:28px;min-width:28px;border-radius:7px;flex-shrink:0;}
+  .btn-icon svg{width:13px;height:13px;}
+  /* Todos os botões visíveis com scroll — nenhum oculto */
+  #shortcuts-btn{flex-shrink:0;}
+  #notes-toggle-btn{display:flex;flex-shrink:0;}
+  #transcription-btn{display:flex;flex-shrink:0;}
+  /* FABs mobile ficam disponíveis como alternativa, mas agora header scrollável resolve */
+  #mobile-notes-fab{display:none;}
+  #transcription-fab{display:flex;bottom:calc(18px + var(--safe-b) + 58px + 52px);right:12px;}
+  .btn-load{height:28px;padding:0 8px;font-size:11px;border-radius:7px;gap:4px;flex-shrink:0;}
+  .sidebar{position:fixed !important;top:0;left:0;z-index:40;width:min(82vw,300px) !important;height:100dvh !important;transform:translateX(-100%);transition:transform .26s cubic-bezier(.4,0,.2,1) !important;border-right:1px solid var(--border2) !important;}
+  .sidebar.mobile-open{transform:translateX(0) !important;}
+  #sidebar-backdrop.active{display:block;}
+  #mobile-sidebar-toggle{display:flex;}
+  .notes-panel{display:none !important;}
+  .lesson-thumb{display:none;}
+  .lesson-name{font-size:11px;}
+  .lesson-meta,.lesson-resume{font-size:9px;}
+  .lesson-status{width:15px;height:15px;}
+  .controls-bar{padding:8px 11px;padding-bottom:calc(8px + var(--safe-b));}
+  .ctrl-row{gap:4px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;}
+  .ctrl-row::-webkit-scrollbar{display:none;}
+  .ctrl-btn{width:30px;height:30px;border-radius:7px;}
+  .ctrl-btn svg{width:13px;height:13px;}
+  .speed-btn{font-size:10px;padding:0 7px;height:30px;}
+  .mark-done-btn{padding:0 7px;height:30px;font-size:11px;}
+  .mark-done-btn .mark-label{display:none;}
+  .vol-row{display:none;}
+  .ab-label{display:none;}
+  #mobile-sidebar-toggle{bottom:calc(18px + var(--safe-b) + 58px);}
+  #mobile-notes-fab{bottom:calc(18px + var(--safe-b) + 58px);}
+  #toast{bottom:calc(20px + var(--safe-b));right:14px;font-size:12px;}
+  .stats-grid{grid-template-columns:1fr;}
+  .theme-btn span{display:none;}
+  .transcription-modal-box{max-height:80vh;}
+  .transcription-controls{gap:6px;}
+}
+@media(max-width:559px) and (orientation:landscape){
+  #mobile-sidebar-toggle{display:none;}
+  #mobile-notes-fab{display:none;}
+  #transcription-fab{display:none;}
+  #sidebar-backdrop{display:none !important;}
+  .controls-bar{padding:5px 11px;padding-bottom:calc(5px + var(--safe-b));}
+}
+</style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div id="drag-ghost"></div>
+
+<div id="loading-overlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loading-text">Lendo arquivos…</div>
+  <div class="loading-sub" id="loading-sub"></div>
+</div>
+
+<div id="drop-overlay">
+  <div class="drop-box">
+    <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    <h3>Soltar arquivos aqui</h3>
+    <p>Solte vídeos ou uma pasta de videoaulas</p>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- Modal genérico -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title" id="modal-title"></div>
+    <div class="modal-desc" id="modal-desc"></div>
+    <div class="modal-actions" id="modal-actions"></div>
+  </div>
+</div>
+
+<!-- Modal progresso -->
+<div class="modal-overlay" id="progress-modal">
+  <div class="progress-modal-box">
+    <div class="progress-modal-title">Progresso do curso</div>
+    <div class="progress-option" onclick="exportProgress()">
+      <div class="progress-option-icon export"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+      <div class="progress-option-info"><div class="progress-option-label">Exportar progresso</div><div class="progress-option-desc">Salva aulas concluídas, posições e velocidade em arquivo JSON</div></div>
+    </div>
+    <div class="progress-option" onclick="triggerImport()">
+      <div class="progress-option-icon import"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+      <div class="progress-option-info"><div class="progress-option-label">Importar progresso</div><div class="progress-option-desc">Restaura um arquivo JSON exportado anteriormente</div></div>
+    </div>
+    <div class="progress-close-row"><button class="modal-btn secondary" style="flex:0;min-width:80px;" onclick="closeProgressModal()">Fechar</button></div>
+  </div>
+</div>
+
+<!-- Modal estatísticas -->
+<div class="modal-overlay" id="stats-modal">
+  <div class="progress-modal-box" style="max-width:560px;">
+    <div class="progress-modal-title">Estatísticas de estudo</div>
+    <div id="stats-content"></div>
+    <div class="progress-close-row"><button class="modal-btn secondary" style="flex:0;min-width:80px;" onclick="document.getElementById('stats-modal').classList.remove('active')">Fechar</button></div>
+  </div>
+</div>
+
+<!-- Modal atalhos -->
+<div class="modal-overlay" id="shortcuts-modal">
+  <div class="modal-box" style="max-width:440px;">
+    <div class="modal-title">Atalhos de teclado</div>
+    <div class="shortcuts-list">
+      <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">Espaço</span></div><span class="shortcut-desc">Play / Pause</span></div>
+      <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">←</span></div><span class="shortcut-desc">Voltar 10 segundos</span></div>
+      <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">→</span></div><span class="shortcut-desc">Avançar 10 segundos</span></div>
+      <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">↑</span></div><span class="shortcut-desc">Aumentar volume</span></div>
+      <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">↓</span></div><span class="shortcut-desc">Diminuir volume</span></div>
+      <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">&lt;</span> <span class="kbd">&gt;</span></div><span class="shortcut-desc">Frame anterior / próximo frame</span></div>
+      <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">N</span></div><span class="shortcut-desc">Próxima aula</span></div>
+      <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">P</span></div><span class="shortcut-desc">Aula anterior</span></div>
+      <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">M</span></div><span class="shortcut-desc">Marcar aula como concluída</span></div>
+      <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">C</span></div><span class="shortcut-desc">Adicionar capítulo no timestamp atual</span></div>
+      <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">[ ]</span></div><span class="shortcut-desc">Definir ponto A / ponto B do loop</span></div>
+      <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">Esc</span></div><span class="shortcut-desc">Cancelar loop A-B / fechar revisão</span></div>
+      <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">A</span></div><span class="shortcut-desc">Adicionar nota no timestamp atual</span></div>
+      <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">S</span></div><span class="shortcut-desc">Abrir / fechar painel de notas</span></div>
+      <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">I</span></div><span class="shortcut-desc">Picture-in-Picture</span></div>
+      <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">R</span></div><span class="shortcut-desc">Abrir / fechar modo revisão</span></div>
+      <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">T</span></div><span class="shortcut-desc">Iniciar / pausar transcrição</span></div>
+      <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">?</span></div><span class="shortcut-desc">Mostrar esta lista</span></div>
+    </div>
+    <div class="modal-actions"><button class="modal-btn secondary" onclick="document.getElementById('shortcuts-modal').classList.remove('active')">Fechar</button></div>
+  </div>
+</div>
+
+<!-- Modal tema -->
+<div class="modal-overlay" id="theme-modal">
+  <div class="modal-box" style="max-width:340px;">
+    <div class="modal-title">Aparência</div>
+    <div class="theme-toggle-row">
+      <button class="theme-btn" id="theme-dark-btn" onclick="setTheme('dark')">
+        <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <span>Escuro</span>
+      </button>
+      <button class="theme-btn" id="theme-light-btn" onclick="setTheme('light')">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <span>Claro</span>
+      </button>
+      <button class="theme-btn" id="theme-auto-btn" onclick="setTheme('auto')">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20" opacity=".3"/><path d="M12 2a10 10 0 0 1 0 20V2z" fill="currentColor" stroke="none"/></svg>
+        <span>Auto</span>
+      </button>
+    </div>
+    <div class="modal-actions"><button class="modal-btn secondary" onclick="document.getElementById('theme-modal').classList.remove('active')">Fechar</button></div>
+  </div>
+</div>
+
+
+<!-- Modal Transcrição Automática -->
+<div class="modal-overlay" id="transcription-modal">
+  <div class="transcription-modal-box">
+    <div class="modal-title">🎙 Transcrição Automática</div>
+    <div class="transcription-status">
+      <div class="transcription-dot" id="transcription-dot"></div>
+      <span id="transcription-status-text">Parado — clique em Iniciar para começar</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
+        <span style="font-size:11px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.8px;">Transcrição</span>
+        <span id="transcription-word-count" style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--text3);">0 palavras</span>
+      </div>
+      <div class="transcription-text-area" id="transcription-output">
+        <span style="color:var(--text3);font-style:italic;">A transcrição aparecerá aqui conforme você fala…</span>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <label style="font-size:11px;color:var(--text3);white-space:nowrap;">Idioma:</label>
+        <select class="transcription-lang-select" id="transcription-lang" onchange="onTranscriptionLangChange()">
+          <option value="pt-BR">🇧🇷 Português (Brasil)</option>
+          <option value="pt-PT">🇵🇹 Português (Portugal)</option>
+          <option value="en-US">🇺🇸 English (US)</option>
+          <option value="en-GB">🇬🇧 English (UK)</option>
+          <option value="es-ES">🇪🇸 Español</option>
+          <option value="fr-FR">🇫🇷 Français</option>
+          <option value="de-DE">🇩🇪 Deutsch</option>
+          <option value="it-IT">🇮🇹 Italiano</option>
+          <option value="ja-JP">🇯🇵 日本語</option>
+          <option value="zh-CN">🇨🇳 中文 (简体)</option>
+        </select>
+      </div>
+      <div class="transcription-controls">
+        <button class="modal-btn primary" id="transcription-start-btn" onclick="toggleTranscription()" style="flex:0;min-width:110px;">
+          ▶ Iniciar
+        </button>
+        <button class="modal-btn secondary" onclick="copyTranscription()" style="flex:0;min-width:80px;">
+          ⎘ Copiar
+        </button>
+        <button class="modal-btn secondary" onclick="exportTranscription()" style="flex:0;min-width:90px;">
+          ↓ Exportar
+        </button>
+        <button class="modal-btn danger" onclick="clearTranscription()" style="flex:0;min-width:80px;">
+          ✕ Limpar
+        </button>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--text3);line-height:1.6;background:var(--bg3);border-radius:7px;padding:10px 12px;border:1px solid var(--border);">
+      💡 <strong style="color:var(--text2);">Como usar:</strong> Clique em Iniciar e fale próximo ao microfone. A transcrição é feita localmente pelo navegador usando reconhecimento de voz. Funciona melhor no Chrome e Edge. Use o atalho <span style="font-family:'JetBrains Mono',monospace;background:var(--bg4);padding:1px 5px;border-radius:3px;">T</span> para iniciar/pausar rapidamente.
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn secondary" onclick="closeTranscriptionModal()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- XLSX Viewer -->
+<div class="xlsx-modal" id="xlsx-modal">
+  <div class="xlsx-box">
+    <div class="xlsx-header">
+      <span class="xlsx-title" id="xlsx-modal-title">Planilha</span>
+      <div class="xlsx-close" onclick="closeXlsx()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+    </div>
+    <div class="xlsx-tabs" id="xlsx-tabs"></div>
+    <div class="xlsx-content" id="xlsx-content"></div>
+  </div>
+</div>
+
+<!-- Notas mobile modal (bottom sheet) -->
+<div class="notes-mobile-modal" id="notes-mobile-modal">
+  <div class="notes-mobile-box">
+    <div class="notes-header">
+      <span class="notes-title">Notas</span>
+      <button class="notes-export-btn" onclick="exportNotes()">
+        <svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Exportar
+      </button>
+      <button class="notes-snap-btn" style="margin-left:4px;" onclick="document.getElementById('notes-mobile-modal').classList.remove('active')">✕</button>
+    </div>
+    <div class="notes-list" id="notes-list-mobile"></div>
+    <div class="notes-input-area">
+      <div class="notes-ts-row">
+        <span class="notes-ts-badge" id="note-ts-badge-mobile">0:00</span>
+        <button class="notes-snap-btn" onclick="snapNoteTimestamp(true)">atualizar</button>
+      </div>
+      <textarea class="notes-textarea" id="note-textarea-mobile" placeholder="Escreva uma nota para este momento…" rows="3"></textarea>
+      <button class="notes-add-btn" onclick="addNote(true)">+ Adicionar nota</button>
+    </div>
+  </div>
+</div>
+
+<!-- Review Mode Overlay -->
+<div id="review-overlay">
+  <div class="review-header">
+    <div>
+      <div class="review-title">Modo Revisão</div>
+      <div class="review-subtitle" id="review-subtitle-label">0 pontos de revisão</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <button class="review-filter-btn active-filter" id="rev-filter-all" onclick="setReviewFilter('all',this)">Todos</button>
+      <button class="review-filter-btn" id="rev-filter-chapters" onclick="setReviewFilter('chapters',this)">
+        <svg viewBox="0 0 24 24" style="width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Capítulos
+      </button>
+      <button class="review-filter-btn" id="rev-filter-notes" onclick="setReviewFilter('notes',this)">
+        <svg viewBox="0 0 24 24" style="width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Notas
+      </button>
+      <button class="modal-btn secondary" style="flex:0;min-width:auto;padding:0 12px;height:32px;font-size:12px;" onclick="closeReviewMode()">✕ Fechar</button>
+    </div>
+  </div>
+  <div class="review-body" id="review-body"></div>
+  <div class="review-controls">
+    <span style="font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;" id="review-pos-label">—</span>
+    <div class="review-nav">
+      <div class="review-nav-btn" onclick="reviewNav(-1)" title="Anterior">
+        <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      </div>
+      <div class="review-nav-btn" onclick="reviewNav(1)" title="Próximo">
+        <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="import-input" accept=".json" style="display:none" onchange="importProgress(event)">
+<div id="sidebar-backdrop" onclick="closeMobileSidebar()"></div>
+
+<!-- Modal Google Drive -->
+<div id="drive-modal">
+  <div class="drive-modal-box">
+    <div class="drive-modal-title">☁ Google Drive Sync</div>
+    <div class="drive-modal-desc" id="drive-modal-desc">Conecte sua conta Google para salvar e sincronizar automaticamente seu progresso, notas, capítulos e histórico de estudo.</div>
+    <div class="drive-modal-status">
+      <div class="drive-sync-dot" id="drive-modal-dot"></div>
+      <span id="drive-modal-status-text">Desconectado</span>
+    </div>
+    <div id="drive-modal-info" style="display:none;flex-direction:column;gap:8px;">
+      <div class="drive-info-row"><span>Conta</span><span class="drive-info-val" id="drive-info-email">—</span></div>
+      <div class="drive-info-row"><span>Arquivo</span><span class="drive-info-val">videoaulas-progress.json</span></div>
+      <div class="drive-info-row"><span>Último sync</span><span class="drive-info-val" id="drive-info-lastsync">—</span></div>
+    </div>
+    <div class="drive-modal-actions" id="drive-modal-actions">
+      <button class="modal-btn primary" id="drive-connect-btn" onclick="driveConnect()">Conectar com Google</button>
+      <button class="modal-btn secondary" onclick="closeDriveModal()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg></div>
+    <span class="logo-text">VideoAulas</span>
+  </div>
+  <div class="header-spacer"></div>
+  <div class="progress-badge">Concluídas: <span id="done-count">0</span> / <span id="total-count">0</span></div>
+
+  <button class="btn-icon" onclick="openStats()" title="Estatísticas e histórico de estudo">
+    <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+  </button>
+
+  <!-- Modo Revisão -->
+  <button class="btn-icon" id="review-btn" onclick="openReviewMode()" title="Modo revisão (R)">
+    <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/><polyline points="12 7 12 12 15 15"/></svg>
+  </button>
+
+
+  <!-- Transcrição automática -->
+  <button class="btn-icon" id="transcription-btn" onclick="openTranscriptionModal()" title="Transcrição automática (T)">
+    <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+  </button>
+
+  <button class="btn-icon" id="theme-btn-header" onclick="document.getElementById('theme-modal').classList.add('active')" title="Tema claro/escuro">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+  </button>
+
+  <button class="btn-icon" id="shortcuts-btn" onclick="document.getElementById('shortcuts-modal').classList.add('active')" title="Atalhos de teclado (?)">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+  </button>
+
+  <button class="btn-icon" id="notes-toggle-btn" onclick="toggleNotesPanel()" title="Painel de notas (S)">
+    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+  </button>
+
+  <button class="btn-icon" onclick="openProgressModal()" title="Exportar / Importar progresso">
+    <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+  </button>
+
+  <!-- Google Drive Sync Button -->
+  <button class="drive-btn disconnected" id="drive-header-btn" onclick="openDriveModal()" title="Sincronizar com Google Drive">
+    <div class="drive-sync-dot" id="drive-header-dot"></div>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12A10 10 0 1 1 12 2"/><path d="M22 2L12 12"/><path d="M16 2h6v6"/></svg>
+    <span id="drive-header-label">Drive</span>
+  </button>
+
+  <button class="btn-load" onclick="openFolder()">
+    <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:white;fill:none;stroke-width:2;stroke-linecap:round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+    Abrir Pasta
+  </button>
+
+  <button class="btn-icon" onclick="toggleSidebar()" title="Ocultar/mostrar playlist">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+  </button>
+</header>
+
+<div class="main">
+  <!-- SIDEBAR -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-title-row">
+        <div class="sidebar-title">Playlist</div>
+        <button class="btn-collapse-all expanded" id="btn-collapse-all" onclick="toggleCollapseAll()" title="Recolher / expandir todos os módulos">
+          <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          <span id="collapse-all-label">Recolher</span>
+        </button>
+      </div>
+
+      <div class="search-box">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" placeholder="Buscar aula…" id="search-input" oninput="filterLessons()">
+      </div>
+    </div>
+    <div class="playlist" id="playlist">
+      <div class="empty-state" style="padding:32px 16px;">
+        <div class="empty-icon" style="width:48px;height:48px;">
+          <svg viewBox="0 0 24 24" style="width:22px;height:22px;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <p style="font-size:12px;text-align:center;color:var(--text3);">Abra uma pasta com seus vídeos</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLAYER -->
+  <div class="player-area">
+    <div class="video-wrapper" id="video-wrapper">
+      <div class="empty-state" id="empty-state">
+        <div class="empty-icon"><svg viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div>
+        <h2>Nenhum vídeo carregado</h2>
+        <p>Clique em <strong style="color:var(--accent2)">Abrir Pasta</strong> ou arraste uma pasta de videoaulas para começar</p>
+        <p class="hint">Suporta .mp4 · .webm · .mkv · .avi · .mov · .xlsx · .csv · .pdf · .html · .docx</p>
+      </div>
+      <video id="main-video" style="display:none;" controls preload="metadata" playsinline></video>
+
+    </div>
+
+    <div class="controls-bar">
+      <div class="now-playing">
+        <span class="now-label">▶ Agora</span>
+        <span class="now-title" id="now-title">—</span>
+      </div>
+      <div class="progress-row">
+        <span class="time-label" id="time-cur">0:00</span>
+        <div class="seekbar" id="seekbar" onclick="seekClick(event)" onmousemove="seekbarHover(event)" onmouseleave="seekbarLeave()">
+          <div class="ab-region" id="ab-region" style="display:none;"></div>
+          <div class="seekbar-fill" id="seekbar-fill"></div>
+          <div id="chapter-markers"></div>
+          <div class="chapter-tooltip" id="chapter-tooltip"></div>
+        </div>
+        <span class="time-label right" id="time-dur">0:00</span>
+      </div>
+      <div class="ctrl-row">
+        <button class="ctrl-btn" onclick="prevLesson()" title="Anterior (P)">
+          <svg viewBox="0 0 24 24"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
+        </button>
+        <!-- Frame anterior -->
+        <button class="ctrl-btn" id="frame-prev-btn" onclick="stepFrame(-1)" title="Frame anterior (&lt;)">
+          <svg viewBox="0 0 24 24"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+        </button>
+        <button class="ctrl-btn" onclick="skipTime(-10)" title="-10s (←)">
+          <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
+        </button>
+        <button class="ctrl-btn primary" id="play-btn" onclick="togglePlay()" title="Play/Pause (Espaço)">
+          <svg id="play-icon" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </button>
+        <button class="ctrl-btn" onclick="skipTime(10)" title="+10s (→)">
+          <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-4.5"/></svg>
+        </button>
+        <!-- Próximo frame -->
+        <button class="ctrl-btn" id="frame-next-btn" onclick="stepFrame(1)" title="Próximo frame (&gt;)">
+          <svg viewBox="0 0 24 24"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+        </button>
+        <button class="ctrl-btn" onclick="nextLesson()" title="Próxima (N)">
+          <svg viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+        </button>
+        <button class="speed-btn" id="speed-btn" onclick="cycleSpeed()" title="Velocidade">1×</button>
+        <button class="ctrl-btn" id="ab-btn" onclick="abCycle()" title="Loop A-B ([  ])">
+          <svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        </button>
+        <button class="ctrl-btn" id="chapter-btn" onclick="addChapterAtCurrent()" title="Adicionar capítulo aqui (C)">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </button>
+        <button class="ctrl-btn" id="pip-btn" onclick="togglePiP()" title="Picture-in-Picture (I)" style="display:none;">
+          <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="10" y="10" width="11" height="7" rx="1" fill="none" stroke-width="1.8"/></svg>
+        </button>
+
+        <div class="ab-label" id="ab-label" style="display:none;">
+          <span id="ab-label-text">A-B</span>
+        </div>
+        <!-- Frame badge -->
+        <div id="frame-badge">
+          <svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          <span id="frame-badge-text">fr</span>
+        </div>
+        <button class="mark-done-btn" onclick="markDone()" id="mark-btn">
+          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          <span class="mark-label">Marcar concluída</span>
+        </button>
+        <div class="vol-row">
+          <svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+          <input type="range" class="vol-slider" id="vol-slider" min="0" max="1" step="0.02" value="1" oninput="setVol(this.value)">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAINEL DE NOTAS (desktop) -->
+  <div class="notes-panel hidden" id="notes-panel">
+    <div class="notes-header">
+      <span class="notes-title">Notas</span>
+      <button class="notes-export-btn" onclick="exportNotes()">
+        <svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Exportar
+      </button>
+    </div>
+    <div class="notes-list" id="notes-list"></div>
+    <div class="notes-input-area">
+      <div class="notes-ts-row">
+        <span class="notes-ts-badge" id="note-ts-badge">0:00</span>
+        <button class="notes-snap-btn" onclick="snapNoteTimestamp(false)">atualizar</button>
+      </div>
+      <textarea class="notes-textarea" id="note-textarea" placeholder="Escreva uma nota para este momento…" rows="3"></textarea>
+      <button class="notes-add-btn" onclick="addNote(false)">+ Adicionar nota</button>
+    </div>
+  </div>
+</div>
+
+<!-- FABs mobile -->
+<button id="transcription-fab" onclick="openTranscriptionModal()" title="Transcrição automática">
+  <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+</button>
+<button id="mobile-sidebar-toggle" onclick="openMobileSidebar()">
+  <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+</button>
+<button id="mobile-notes-fab" onclick="openMobileNotes()" title="Notas">
+  <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+</button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+/* ═══════════════════════════════════════════
+   CONSTANTES E ESTADO GLOBAL
+═══════════════════════════════════════════ */
+const VIDEO_EXTS = ['mp4','webm','mkv','avi','mov','m4v','ogv','flv'];
+const PDF_EXTS   = ['pdf'];
+const WEB_EXTS   = ['html','htm','url'];
+const XLSX_EXTS  = ['xlsx','xls','ods','csv'];
+const DOCX_EXTS  = ['docx','doc','pptx','ppt'];
+const OTHER_EXTS = ['txt','zip','mp3','ogg','wav','m4a'];
+const ALL_CONTENT_EXTS = [...PDF_EXTS,...WEB_EXTS,...XLSX_EXTS,...DOCX_EXTS,...OTHER_EXTS];
+const LS_KEY   = 'videoaulas_v3';
+const MAX_DEPTH = 6;
+
+let lessons     = [];
+let modules     = [];
+let extraFiles  = [];
+let sortedLessons = [];
+let currentIdx  = -1;
+let speeds      = [0.5,0.75,1.0,1.25,1.5,1.75,2.0], speedIdx = 2;
+let done        = new Set();
+let sidebarVisible = true, notesPanelVisible = false;
+let isModular   = false;
+let collapsedModules = {};
+let currentDirHandle = null;
+let xlsxSheets  = {};
+let saveTimer   = null;
+const lessonTimes = {};
+
+// Estatísticas
+let studyStats = {totalWatchedSec:0,sessionsCount:0,lastStudyDate:null,dailySec:{}};
+let statsTimer = null;
+
+// Notas
+let notes = [];
+let noteTimestamp = 0, noteMobileTimestamp = 0;
+
+// Loop A-B
+let abState = 0, abA = 0, abB = 0;
+
+// Capítulos
+let chapters = [];
+
+
+// Tema
+let currentTheme = 'auto';
+
+// ── FRAME A FRAME ──
+const FRAME_RATE = 30;
+let frameMode = false;
+
+
+// ── MODO REVISÃO ──
+let reviewItems = [];
+let reviewFilter = 'all';
+let reviewCurrentIdx = -1;
+
+// ── HISTÓRICO DE ESTUDO ──
+let studyHistory = [];
+let historySessionStart = null;
+let historySessionLesson = -1;
+let historySessionSec = 0;
+
+// ── TRANSCRIÇÃO ──
+let recognition = null;
+let isTranscribing = false;
+let transcriptionPaused = false;
+let transcriptionFinalText = '';
+let transcriptionInterimText = '';
+
+const video      = document.getElementById('main-video');
+const emptyState = document.getElementById('empty-state');
+const playlistEl = document.getElementById('playlist');
+const nowTitle   = document.getElementById('now-title');
+const seekFill   = document.getElementById('seekbar-fill');
+const timeCur    = document.getElementById('time-cur');
+const timeDur    = document.getElementById('time-dur');
+const playIcon   = document.getElementById('play-icon');
+const doneCount  = document.getElementById('done-count');
+const totalCount = document.getElementById('total-count');
+
+
+/* ═══════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════ */
+function ext(n){ return (n||'').split('.').pop().toLowerCase(); }
+function isVideo(n)  { return VIDEO_EXTS.includes(ext(n)); }
+function isPDF(n)    { return PDF_EXTS.includes(ext(n)); }
+function isWeb(n)    { return WEB_EXTS.includes(ext(n)); }
+function isXlsx(n)   { return XLSX_EXTS.includes(ext(n)); }
+function isDocx(n)   { return DOCX_EXTS.includes(ext(n)); }
+function isOther(n)  { return OTHER_EXTS.includes(ext(n)); }
+function isContent(n){ return ALL_CONTENT_EXTS.includes(ext(n)); }
+function isMobile()  { return window.innerWidth <= 559; }
+
+function fileType(n){
+  if (isPDF(n))  return 'pdf';
+  if (isXlsx(n)) return 'xlsx';
+  if (isDocx(n)) return 'docx';
+  if (isWeb(n))  return 'web';
+  return 'other';
+}
+function escH(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtTime(s){ s=Math.floor(s||0); const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=s%60; return h?`${h}:${String(m).padStart(2,'0')}:${String(sc).padStart(2,'0')}`:`${m}:${String(sc).padStart(2,'0')}`; }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2); }
+
+function naturalSort(a, b){
+  return String(a).localeCompare(String(b), undefined, {numeric:true, sensitivity:'base'});
+}
+
+/* ═══════════════════════════════════════════
+   TEMA
+═══════════════════════════════════════════ */
+const mq = window.matchMedia('(prefers-color-scheme:dark)');
+function applyTheme(t){
+  const effective = t==='auto' ? (mq.matches?'dark':'light') : t;
+  document.documentElement.setAttribute('data-theme', effective);
+  const hbtn = document.getElementById('theme-btn-header');
+  if(effective==='dark'){
+    hbtn.innerHTML=`<svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:var(--text2);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
+  } else {
+    hbtn.innerHTML=`<svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:var(--text2);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
+  }
+  ['dark','light','auto'].forEach(k=>{
+    document.getElementById('theme-'+k+'-btn').classList.toggle('active-theme', k===t);
+  });
+}
+function setTheme(t){
+  currentTheme = t;
+  applyTheme(t);
+  try{ localStorage.setItem('videoaulas_theme', t); }catch(e){}
+}
+mq.addEventListener('change', ()=>{ if(currentTheme==='auto') applyTheme('auto'); });
+(function(){
+  try{ const saved=localStorage.getItem('videoaulas_theme'); if(saved) currentTheme=saved; }catch(e){}
+  applyTheme(currentTheme);
+})();
+
+/* ═══════════════════════════════════════════
+   LOCAL STORAGE
+═══════════════════════════════════════════ */
+function buildStorageKey(){
+  if(!lessons.length) return LS_KEY+'_default';
+  const sig = lessons.slice(0,5).map(l=>l.name).join('|');
+  try{ return LS_KEY+'_'+btoa(unescape(encodeURIComponent(sig))).slice(0,20); }
+  catch(e){ return LS_KEY+'_default'; }
+}
+function saveToStorage(){
+  try{
+    const positions = {};
+    lessons.forEach(l=>{ const t=lessonTimes[l.idx]; if(t&&t>2) positions[l.name]=t; });
+    const data = {
+      done:[...done].map(i=>lessons[i]?lessons[i].name:null).filter(Boolean),
+      positions, speedIdx,
+      currentName: currentIdx>=0&&lessons[currentIdx] ? lessons[currentIdx].name : null,
+      savedAt: Date.now(), studyStats, notes, chapters,
+      studyHistory
+    };
+    localStorage.setItem(buildStorageKey(), JSON.stringify(data));
+  }catch(e){}
+}
+function loadFromStorage(){
+  try{ const r=localStorage.getItem(buildStorageKey()); return r?JSON.parse(r):null; }
+  catch(e){ return null; }
+}
+function applyStoredProgress(data){
+  if(!data) return;
+  const nameToIdx = new Map(lessons.map(l=>[l.name, l.idx]));
+  done = new Set();
+  (data.done||[]).forEach(name=>{ const i=nameToIdx.get(name); if(i!==undefined) done.add(i); });
+  if(data.speedIdx!==undefined){
+    speedIdx = data.speedIdx; video.playbackRate = speeds[speedIdx];
+    const s = speeds[speedIdx];
+    document.getElementById('speed-btn').textContent = (s%1===0?s.toFixed(0):s.toFixed(2).replace(/0+$/,''))+'×';
+  }
+  (data.positions?Object.entries(data.positions):[]).forEach(([name,t])=>{
+    const i = nameToIdx.get(name); if(i!==undefined) lessonTimes[i]=t;
+  });
+  if(data.studyStats)   studyStats = Object.assign(studyStats, data.studyStats);
+  if(data.notes)        { notes=data.notes; renderNotes(); }
+  if(data.chapters)     chapters = data.chapters;
+  if(data.studyHistory) studyHistory = data.studyHistory;
+  updateDoneCount();
+}
+
+
+function buildSortedLessons(){
+  sortedLessons = [...lessons];
+}
+
+/* ═══════════════════════════════════════════
+   ORDENAÇÃO MANUAL DE MÓDULOS (drag-and-drop)
+═══════════════════════════════════════════ */
+let moduleDragSrc = null;   // wrap element sendo arrastado
+let moduleDragMod = null;   // objeto módulo sendo arrastado
+let moduleDragArr = null;   // array (modules) de onde veio
+let touchStartY   = 0;
+let touchGhost    = null;
+
+function attachModuleDrag(wrap, mod, arr){
+  const handle = wrap.querySelector('.module-drag-handle');
+  if(!handle) return;
+
+  // ── MOUSE ──
+  handle.addEventListener('mousedown', e=>{
+    if(e.button !== 0) return;
+    e.preventDefault();
+    startDrag(wrap, mod, arr);
+
+    function onMove(ev){
+      updateDragOver(ev.clientX, ev.clientY);
+    }
+    function onUp(){
+      endDrag();
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+
+  // ── TOUCH ──
+  handle.addEventListener('touchstart', e=>{
+    const t = e.touches[0];
+    touchStartY = t.clientY;
+    startDrag(wrap, mod, arr);
+    showGhost(mod.name, t.clientX, t.clientY);
+  }, {passive:true});
+
+  handle.addEventListener('touchmove', e=>{
+    const t = e.touches[0];
+    moveGhost(t.clientX, t.clientY);
+    updateDragOver(t.clientX, t.clientY);
+    // scroll automático da sidebar
+    const sidebar = document.getElementById('sidebar');
+    const r = sidebar.getBoundingClientRect();
+    if(t.clientY < r.top + 60)       sidebar.scrollBy(0,-8);
+    else if(t.clientY > r.bottom - 60) sidebar.scrollBy(0, 8);
+  }, {passive:true});
+
+  handle.addEventListener('touchend', ()=>{
+    hideGhost();
+    endDrag();
+  });
+}
+
+function startDrag(wrap, mod, arr){
+  moduleDragSrc = wrap;
+  moduleDragMod = mod;
+  moduleDragArr = arr;
+  wrap.classList.add('dragging');
+}
+
+function showGhost(name, x, y){
+  touchGhost = document.getElementById('drag-ghost');
+  touchGhost.textContent = name;
+  touchGhost.style.display = 'block';
+  moveGhost(x, y);
+}
+function moveGhost(x, y){
+  if(!touchGhost) return;
+  touchGhost.style.left = (x - 110)+'px';
+  touchGhost.style.top  = (y - 20)+'px';
+}
+function hideGhost(){
+  if(touchGhost){ touchGhost.style.display='none'; touchGhost=null; }
+}
+
+function getModuleWraps(){
+  return Array.from(playlistEl.querySelectorAll(':scope > .module-wrap'));
+}
+
+function updateDragOver(cx, cy){
+  getModuleWraps().forEach(w=>{
+    w.classList.remove('drag-over-top','drag-over-bottom');
+    if(w === moduleDragSrc) return;
+    const r = w.getBoundingClientRect();
+    if(cy >= r.top && cy <= r.bottom){
+      if(cy < r.top + r.height/2) w.classList.add('drag-over-top');
+      else                         w.classList.add('drag-over-bottom');
+    }
+  });
+}
+
+function endDrag(){
+  if(!moduleDragSrc) return;
+  moduleDragSrc.classList.remove('dragging');
+
+  // Encontra o alvo com indicador
+  let targetWrap = null, position = null;
+  getModuleWraps().forEach(w=>{
+    if(w.classList.contains('drag-over-top'))    { targetWrap=w; position='before'; }
+    if(w.classList.contains('drag-over-bottom')) { targetWrap=w; position='after'; }
+    w.classList.remove('drag-over-top','drag-over-bottom');
+  });
+
+  if(targetWrap && targetWrap !== moduleDragSrc){
+    const targetName = targetWrap.dataset.modName;
+    const srcIdx     = moduleDragArr.findIndex(m=>m.name===moduleDragMod.name);
+    const tgtIdx     = moduleDragArr.findIndex(m=>m.name===targetName);
+    if(srcIdx !== -1 && tgtIdx !== -1){
+      // Remove da posição original
+      const [moved] = moduleDragArr.splice(srcIdx, 1);
+      // Recalcula índice alvo após remoção
+      const newTgt = moduleDragArr.findIndex(m=>m.name===targetName);
+      const insertAt = position==='before' ? newTgt : newTgt+1;
+      moduleDragArr.splice(insertAt, 0, moved);
+
+      // Reconstrói índices de aulas e re-renderiza
+      rebuildLessonsFromModules();
+      buildSortedLessons();
+      renderModularPlaylist();
+      updatePlaylistActive();
+      saveModuleOrder();
+      saveToStorage();
+      toast('Módulos reordenados ✓');
+    }
+  }
+
+  moduleDragSrc = null;
+  moduleDragMod = null;
+  moduleDragArr = null;
+}
+
+// ── Persistência da ordem dos módulos ──
+function saveModuleOrder(){
+  try{
+    const order = flatModuleNames(modules);
+    localStorage.setItem(buildStorageKey()+'_modorder', JSON.stringify(order));
+  }catch(e){}
+}
+
+function loadModuleOrder(){
+  try{
+    const raw = localStorage.getItem(buildStorageKey()+'_modorder');
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
+}
+
+function flatModuleNames(mods){
+  const names = [];
+  mods.forEach(m=>{ names.push(m.name); (m.subModules||[]).forEach(s=>names.push('\t'+s.name)); });
+  return names;
+}
+
+function applyModuleOrder(savedNames){
+  if(!savedNames || !savedNames.length) return;
+  // Reordena apenas o nível raiz (sem tab)
+  const rootNames = savedNames.filter(n=>!n.startsWith('\t'));
+  const reordered = [];
+  rootNames.forEach(name=>{
+    const m = modules.find(m=>m.name===name);
+    if(m) reordered.push(m);
+  });
+  // Adiciona módulos novos (não salvos) ao final
+  modules.forEach(m=>{ if(!reordered.includes(m)) reordered.push(m); });
+  modules.length = 0;
+  reordered.forEach(m=>modules.push(m));
+}
+
+
+/* ═══════════════════════════════════════════
+   FRAME A FRAME
+═══════════════════════════════════════════ */
+function stepFrame(dir){
+  if(!video.src || !video.duration) return;
+  if(!video.paused) video.pause();
+  frameMode = true;
+  const frameDur = 1 / FRAME_RATE;
+  video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + dir * frameDur));
+  const badge = document.getElementById('frame-badge');
+  badge.style.display = 'flex';
+  const frameNum = Math.round(video.currentTime * FRAME_RATE);
+  document.getElementById('frame-badge-text').textContent = `fr ${frameNum}`;
+  document.getElementById('frame-prev-btn').classList.toggle('active-ctrl-green', true);
+  document.getElementById('frame-next-btn').classList.toggle('active-ctrl-green', true);
+}
+
+function exitFrameMode(){
+  if(!frameMode) return;
+  frameMode = false;
+  document.getElementById('frame-badge').style.display = 'none';
+  document.getElementById('frame-prev-btn').classList.remove('active-ctrl-green');
+  document.getElementById('frame-next-btn').classList.remove('active-ctrl-green');
+}
+
+video.addEventListener('play', ()=>{
+  exitFrameMode();
+  playIcon.innerHTML=`<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>`;
+});
+video.addEventListener('pause', ()=>{
+  playIcon.innerHTML=`<polygon points="5 3 19 12 5 21 5 3"/>`;
+});
+
+
+/* ═══════════════════════════════════════════
+   TRANSCRIÇÃO AUTOMÁTICA (Web Speech API)
+═══════════════════════════════════════════ */
+function initRecognition(){
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SpeechRecognition) return null;
+  const rec = new SpeechRecognition();
+  rec.continuous = true;
+  rec.interimResults = true;
+  rec.lang = document.getElementById('transcription-lang').value;
+
+  rec.onresult = (event) => {
+    let interim = '';
+    for(let i = event.resultIndex; i < event.results.length; i++){
+      const transcript = event.results[i][0].transcript;
+      if(event.results[i].isFinal){
+        transcriptionFinalText += transcript + ' ';
+      } else {
+        interim += transcript;
+      }
+    }
+    transcriptionInterimText = interim;
+    renderTranscriptionOutput();
+  };
+
+  rec.onerror = (event) => {
+    if(event.error === 'no-speech') return;
+    if(event.error === 'not-allowed'){
+      toast('Permissão de microfone negada');
+      stopTranscription(true);
+    } else if(event.error === 'network'){
+      toast('Erro de rede na transcrição');
+    }
+    updateTranscriptionStatus('error');
+  };
+
+  rec.onend = () => {
+    if(isTranscribing && !transcriptionPaused){
+      // Auto-restart para manter contínuo
+      try{ rec.start(); }catch(e){}
+    } else {
+      updateTranscriptionStatus('stopped');
+    }
+  };
+
+  rec.onspeechstart = () => updateTranscriptionStatus('listening');
+  rec.onspeechend   = () => updateTranscriptionStatus('processing');
+
+  return rec;
+}
+
+function openTranscriptionModal(){
+  if(!window.SpeechRecognition && !window.webkitSpeechRecognition){
+    toast('Seu navegador não suporta reconhecimento de voz. Use Chrome ou Edge.');
+    return;
+  }
+  document.getElementById('transcription-modal').classList.add('active');
+  updateTranscriptionStatus(isTranscribing && !transcriptionPaused ? 'listening' : transcriptionPaused ? 'paused' : 'stopped');
+  updateTranscriptionStartBtn();
+}
+
+function closeTranscriptionModal(){
+  document.getElementById('transcription-modal').classList.remove('active');
+}
+
+function onTranscriptionLangChange(){
+  // Se estiver transcrevendo, reinicia com novo idioma
+  if(isTranscribing){
+    stopTranscription(true);
+    setTimeout(()=>startTranscription(), 300);
+  }
+}
+
+function toggleTranscription(){
+  if(!isTranscribing){
+    startTranscription();
+  } else if(transcriptionPaused){
+    resumeTranscription();
+  } else {
+    pauseTranscription();
+  }
+}
+
+function startTranscription(){
+  recognition = initRecognition();
+  if(!recognition){ toast('Reconhecimento de voz não disponível'); return; }
+  isTranscribing = true;
+  transcriptionPaused = false;
+  try{
+    recognition.start();
+    updateTranscriptionStatus('listening');
+    updateTranscriptionStartBtn();
+    updateTranscriptionFabState();
+    document.getElementById('transcription-btn').classList.add('active-btn');
+  }catch(e){
+    isTranscribing = false;
+    toast('Erro ao iniciar microfone: '+e.message);
+  }
+}
+
+function resumeTranscription(){
+  if(!recognition) recognition = initRecognition();
+  transcriptionPaused = false;
+  try{
+    recognition.start();
+    updateTranscriptionStatus('listening');
+    updateTranscriptionStartBtn();
+    updateTranscriptionFabState();
+  }catch(e){}
+}
+
+function pauseTranscription(){
+  if(!isTranscribing) return;
+  transcriptionPaused = true;
+  try{ recognition && recognition.stop(); }catch(e){}
+  updateTranscriptionStatus('paused');
+  updateTranscriptionStartBtn();
+  updateTranscriptionFabState();
+}
+
+function stopTranscription(silent){
+  isTranscribing = false;
+  transcriptionPaused = false;
+  try{ recognition && recognition.stop(); }catch(e){}
+  recognition = null;
+  updateTranscriptionStatus('stopped');
+  updateTranscriptionStartBtn();
+  updateTranscriptionFabState();
+  document.getElementById('transcription-btn').classList.remove('active-btn');
+  if(!silent) toast('Transcrição parada');
+}
+
+function clearTranscription(){
+  transcriptionFinalText = '';
+  transcriptionInterimText = '';
+  renderTranscriptionOutput();
+  toast('Transcrição limpa');
+}
+
+function copyTranscription(){
+  const text = transcriptionFinalText.trim();
+  if(!text){ toast('Nada para copiar'); return; }
+  navigator.clipboard.writeText(text).then(()=>toast('Copiado! ✓')).catch(()=>{
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    toast('Copiado! ✓');
+  });
+}
+
+function exportTranscription(){
+  const text = transcriptionFinalText.trim();
+  if(!text){ toast('Nada para exportar'); return; }
+  const lessonName = currentIdx>=0&&lessons[currentIdx]?lessons[currentIdx].name:'transcricao';
+  const header = `# Transcrição — ${lessonName}\nGerado em: ${new Date().toLocaleString('pt-BR')}\n\n---\n\n`;
+  const blob = new Blob([header+text],{type:'text/markdown'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = 'transcricao_'+lessonName.replace(/[^a-z0-9]/gi,'_').slice(0,40)+'_'+new Date().toISOString().slice(0,10)+'.md';
+  a.click(); URL.revokeObjectURL(url);
+  toast('Transcrição exportada ✓');
+}
+
+function renderTranscriptionOutput(){
+  const el = document.getElementById('transcription-output');
+  if(!el) return;
+  if(!transcriptionFinalText && !transcriptionInterimText){
+    el.innerHTML = '<span style="color:var(--text3);font-style:italic;">A transcrição aparecerá aqui conforme você fala…</span>';
+  } else {
+    el.innerHTML = escH(transcriptionFinalText) +
+      (transcriptionInterimText ? `<span class="transcription-interim">${escH(transcriptionInterimText)}</span>` : '');
+    el.scrollTop = el.scrollHeight;
+  }
+  // Atualizar contagem de palavras
+  const wc = document.getElementById('transcription-word-count');
+  if(wc){
+    const words = transcriptionFinalText.trim().split(/\s+/).filter(w=>w.length>0).length;
+    wc.textContent = words + (words===1?' palavra':' palavras');
+  }
+}
+
+function updateTranscriptionStatus(state){
+  const dot  = document.getElementById('transcription-dot');
+  const text = document.getElementById('transcription-status-text');
+  if(!dot||!text) return;
+  dot.className = 'transcription-dot';
+  if(state==='listening'){
+    dot.classList.add('active');
+    text.textContent = '🎙 Ouvindo… fale agora';
+  } else if(state==='processing'){
+    dot.classList.add('paused');
+    text.textContent = '⏳ Processando fala…';
+  } else if(state==='paused'){
+    dot.classList.add('paused');
+    text.textContent = '⏸ Pausado — clique em Retomar';
+  } else if(state==='error'){
+    text.textContent = '⚠ Erro — verifique permissões do microfone';
+  } else {
+    text.textContent = '⏹ Parado — clique em Iniciar para começar';
+  }
+}
+
+function updateTranscriptionStartBtn(){
+  const btn = document.getElementById('transcription-start-btn');
+  if(!btn) return;
+  if(!isTranscribing){
+    btn.textContent = '▶ Iniciar';
+    btn.className = 'modal-btn primary';
+  } else if(transcriptionPaused){
+    btn.textContent = '▶ Retomar';
+    btn.className = 'modal-btn primary';
+  } else {
+    btn.textContent = '⏸ Pausar';
+    btn.className = 'modal-btn secondary';
+  }
+}
+
+function updateTranscriptionFabState(){
+  const fab = document.getElementById('transcription-fab');
+  if(!fab) return;
+  fab.classList.toggle('recording', isTranscribing && !transcriptionPaused);
+}
+
+// Tratar visibilidade para pausar/retomar reconhecimento
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState==='hidden' && isTranscribing && !transcriptionPaused){
+    try{ recognition && recognition.stop(); }catch(e){}
+  } else if(document.visibilityState==='visible' && isTranscribing && !transcriptionPaused){
+    try{ if(recognition) recognition.start(); }catch(e){}
+  }
+});
+
+document.getElementById('transcription-modal').addEventListener('click', e=>{
+  if(e.target===document.getElementById('transcription-modal')) closeTranscriptionModal();
+});
+
+/* ═══════════════════════════════════════════
+   MODO REVISÃO
+═══════════════════════════════════════════ */
+function buildReviewItems(){
+  reviewItems = [];
+  chapters.forEach(c=>{
+    reviewItems.push({
+      id: c.id, type:'chapter', label:c.label, lessonName:c.lessonName,
+      ts:c.ts, tsLabel:fmtTime(c.ts), createdAt:c.createdAt||0
+    });
+  });
+  notes.forEach(n=>{
+    reviewItems.push({
+      id: n.id, type:'note', label:n.text.slice(0,60)+(n.text.length>60?'…':''),
+      lessonName:n.lessonName, ts:n.ts, tsLabel:n.tsLabel, createdAt:n.createdAt||0
+    });
+  });
+  reviewItems.sort((a,b)=>{
+    const ai = lessons.findIndex(l=>l.name===a.lessonName);
+    const bi = lessons.findIndex(l=>l.name===b.lessonName);
+    if(ai!==bi) return ai-bi;
+    return a.ts-b.ts;
+  });
+}
+
+function getFilteredReviewItems(){
+  if(reviewFilter==='chapters') return reviewItems.filter(i=>i.type==='chapter');
+  if(reviewFilter==='notes')    return reviewItems.filter(i=>i.type==='note');
+  return reviewItems;
+}
+
+function openReviewMode(){
+  buildReviewItems();
+  renderReviewBody();
+  document.getElementById('review-overlay').classList.add('active');
+  document.getElementById('review-btn').classList.add('active-btn');
+}
+
+function closeReviewMode(){
+  document.getElementById('review-overlay').classList.remove('active');
+  document.getElementById('review-btn').classList.remove('active-btn');
+}
+
+function setReviewFilter(f, el){
+  reviewFilter = f;
+  document.querySelectorAll('.review-filter-btn').forEach(b=>b.classList.remove('active-filter'));
+  el.classList.add('active-filter');
+  renderReviewBody();
+}
+
+function renderReviewBody(){
+  const list = getFilteredReviewItems();
+  const body = document.getElementById('review-body');
+  const label = document.getElementById('review-subtitle-label');
+  label.textContent = `${list.length} ponto${list.length!==1?'s':''} de revisão`;
+
+  if(!list.length){
+    body.innerHTML=`<div class="review-empty">
+      <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
+      <p>Nenhum item de revisão encontrado.<br>Adicione capítulos (C) ou notas (A) enquanto assiste.</p>
+    </div>`;
+    document.getElementById('review-pos-label').textContent = '—';
+    return;
+  }
+
+  body.innerHTML = list.map((item,i)=>`
+    <div class="review-item ${i===reviewCurrentIdx?'active-rev':''}" id="rev-item-${i}" onclick="jumpToReviewItem(${i})">
+      <span class="review-item-num">${String(i+1).padStart(2,'0')}</span>
+      <span class="review-item-ts">${escH(item.tsLabel)}</span>
+      <div class="review-item-info">
+        <div class="review-item-label">${escH(item.label)}</div>
+        <div class="review-item-lesson">${escH(item.lessonName)}</div>
+      </div>
+      <span class="review-item-type ${item.type}">${item.type==='chapter'?'capítulo':'nota'}</span>
+    </div>
+  `).join('');
+
+  updateReviewPosLabel(list);
+}
+
+function updateReviewPosLabel(list){
+  list = list || getFilteredReviewItems();
+  const lbl = document.getElementById('review-pos-label');
+  if(reviewCurrentIdx>=0 && reviewCurrentIdx<list.length){
+    lbl.textContent = `${reviewCurrentIdx+1} / ${list.length}`;
+  } else {
+    lbl.textContent = `— / ${list.length}`;
+  }
+}
+
+function jumpToReviewItem(idx){
+  const list = getFilteredReviewItems();
+  if(idx<0||idx>=list.length) return;
+  reviewCurrentIdx = idx;
+  const item = list[idx];
+  const tIdx = lessons.findIndex(l=>l.name===item.lessonName);
+
+  const goToTime = () => {
+    video.currentTime = item.ts;
+    video.pause();
+  };
+
+  if(tIdx>=0 && tIdx!==currentIdx){
+    playLesson(tIdx);
+    video.addEventListener('loadedmetadata', function once(){
+      video.removeEventListener('loadedmetadata',once);
+      goToTime();
+    },{once:true});
+  } else {
+    goToTime();
+  }
+
+  document.querySelectorAll('.review-item').forEach((el,i)=>el.classList.toggle('active-rev', i===idx));
+  updateReviewPosLabel(list);
+  toast(`Revisão: ${item.label.slice(0,40)} — ${item.tsLabel}`);
+}
+
+function reviewNav(dir){
+  const list = getFilteredReviewItems();
+  if(!list.length) return;
+  const next = Math.max(0, Math.min(list.length-1, reviewCurrentIdx + dir));
+  jumpToReviewItem(next);
+  const el = document.getElementById('rev-item-'+next);
+  if(el) el.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+/* ═══════════════════════════════════════════
+   HISTÓRICO DE ESTUDO
+═══════════════════════════════════════════ */
+function startHistorySession(idx){
+  closeHistorySession();
+  historySessionLesson = idx;
+  historySessionStart  = Date.now();
+  historySessionSec    = 0;
+}
+
+function closeHistorySession(){
+  if(historySessionLesson < 0 || historySessionStart === null) return;
+  const watched = historySessionSec;
+  if(watched < 2) return;
+  const lesson = lessons[historySessionLesson];
+  if(!lesson) return;
+  const date = new Date(historySessionStart).toISOString().slice(0,10);
+  const time = new Date(historySessionStart).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  studyHistory.push({
+    id: uid(),
+    lessonName: lesson.name,
+    lessonIdx: historySessionLesson,
+    date, time,
+    startedAt: historySessionStart,
+    watchedSec: watched
+  });
+  if(studyHistory.length > 500) studyHistory = studyHistory.slice(-500);
+  historySessionLesson = -1;
+  historySessionStart  = null;
+  historySessionSec    = 0;
+}
+
+setInterval(()=>{
+  if(!video.paused && !video.ended && historySessionLesson >= 0){
+    historySessionSec++;
+  }
+}, 1000);
+
+function renderHistoryPane(){
+  if(!studyHistory.length){
+    return `<div style="padding:24px 8px;text-align:center;color:var(--text3);font-size:12px;">
+      Nenhum histórico ainda. Assista aulas para acumular histórico.
+    </div>`;
+  }
+  const byDate = {};
+  [...studyHistory].reverse().forEach(h=>{
+    if(!byDate[h.date]) byDate[h.date]=[];
+    byDate[h.date].push(h);
+  });
+
+  let html = '<div class="history-list">';
+  for(const [date, entries] of Object.entries(byDate)){
+    const totalSec = entries.reduce((s,e)=>s+e.watchedSec,0);
+    html += `<div class="history-day">
+      <div class="history-day-label">${formatDateLabel(date)} · ${fmtTime(totalSec)} assistidos</div>`;
+    entries.forEach(h=>{
+      html += `<div class="history-entry" onclick="jumpToHistoryEntry('${h.id}')">
+        <span class="history-entry-time">${h.time||'--:--'}</span>
+        <span class="history-entry-name">${escH(h.lessonName)}</span>
+        <span class="history-entry-dur">${fmtTime(h.watchedSec)}</span>
+        <button class="history-entry-play" title="Ir para esta aula">
+          <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg>
+        </button>
+      </div>`;
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function formatDateLabel(dateStr){
+  const today = new Date().toISOString().slice(0,10);
+  const yesterday = new Date(Date.now()-86400000).toISOString().slice(0,10);
+  if(dateStr===today) return 'Hoje';
+  if(dateStr===yesterday) return 'Ontem';
+  const d = new Date(dateStr+'T12:00:00');
+  return d.toLocaleDateString('pt-BR',{weekday:'long', day:'numeric', month:'short'});
+}
+
+function jumpToHistoryEntry(id){
+  const h = studyHistory.find(x=>x.id===id); if(!h) return;
+  const lIdx = lessons.findIndex(l=>l.name===h.lessonName);
+  if(lIdx>=0){ playLesson(lIdx); document.getElementById('stats-modal').classList.remove('active'); }
+}
+
+/* ═══════════════════════════════════════════
+   ESTATÍSTICAS
+═══════════════════════════════════════════ */
+function startStatsTimer(){
+  if(statsTimer) return;
+  statsTimer = setInterval(()=>{
+    if(!video.paused && !video.ended){
+      studyStats.totalWatchedSec = (studyStats.totalWatchedSec||0)+1;
+      const today = new Date().toISOString().slice(0,10);
+      studyStats.dailySec = studyStats.dailySec||{};
+      studyStats.dailySec[today] = (studyStats.dailySec[today]||0)+1;
+      studyStats.lastStudyDate = today;
+    }
+  },1000);
+}
+
+function openStats(){
+  saveToStorage();
+  renderStatsModal('stats');
+  document.getElementById('stats-modal').classList.add('active');
+}
+
+function renderStatsModal(activeTab){
+  const total    = studyStats.totalWatchedSec||0;
+  const today    = new Date().toISOString().slice(0,10);
+  const todaySec = (studyStats.dailySec||{})[today]||0;
+  const pct      = lessons.length ? Math.round(done.size/lessons.length*100) : 0;
+  let streak = 0;
+  const daily = studyStats.dailySec||{};
+  let d = new Date(); d.setHours(0,0,0,0);
+  while(true){ const k=d.toISOString().slice(0,10); if(daily[k]&&daily[k]>0){streak++;d.setDate(d.getDate()-1);}else break; if(streak>365)break; }
+  const days7=[]; const now=new Date(); now.setHours(0,0,0,0);
+  for(let i=6;i>=0;i--){ const dd=new Date(now); dd.setDate(dd.getDate()-i); const k=dd.toISOString().slice(0,10); days7.push({label:dd.toLocaleDateString('pt-BR',{weekday:'short'}),sec:daily[k]||0}); }
+  const maxSec = Math.max(...days7.map(d=>d.sec),1);
+
+  const statsHTML = `
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-label">Total assistido</div><div class="stat-value">${fmtTime(total)}</div><div class="stat-sub">horas de estudo</div></div>
+      <div class="stat-card"><div class="stat-label">Hoje</div><div class="stat-value">${fmtTime(todaySec)}</div><div class="stat-sub">${today}</div></div>
+      <div class="stat-card"><div class="stat-label">Progresso</div><div class="stat-value">${pct}%</div><div class="stat-sub">${done.size} de ${lessons.length} aulas</div><div class="stat-bar-wrap"><div class="stat-bar" style="width:${pct}%"></div></div></div>
+      <div class="stat-card"><div class="stat-label">Sequência atual</div><div class="stat-value">${streak}</div><div class="stat-sub">dia${streak!==1?'s':''} consecutivos</div></div>
+    </div>
+    <div class="stats-section-title" style="margin-top:14px;">Atividade — últimos 7 dias</div>
+    <div style="display:flex;align-items:flex-end;gap:6px;height:70px;padding:8px 0 4px;">
+      ${days7.map(d=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;"><div style="flex:1;width:100%;display:flex;align-items:flex-end;"><div style="width:100%;background:${d.sec>0?'var(--accent)':'var(--bg4)'};border-radius:3px 3px 0 0;height:${Math.max(4,Math.round(d.sec/maxSec*54))}px;transition:height .4s;"></div></div><div style="font-size:9px;color:var(--text3);font-family:'JetBrains Mono',monospace;">${d.label}</div></div>`).join('')}
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-top:6px;">Notas: <span style="color:var(--text2);font-weight:500;">${notes.length}</span> · Capítulos: <span style="color:var(--text2);font-weight:500;">${chapters.length}</span> · Sessões: <span style="color:var(--text2);font-weight:500;">${studyHistory.length}</span></div>
+  `;
+
+  document.getElementById('stats-content').innerHTML = `
+    <div class="stats-tab-row">
+      <div class="stats-tab ${activeTab==='stats'?'active-tab':''}" onclick="switchStatsTab('stats')">Estatísticas</div>
+      <div class="stats-tab ${activeTab==='history'?'active-tab':''}" onclick="switchStatsTab('history')">Histórico</div>
+    </div>
+    <div class="stats-pane ${activeTab==='stats'?'active-pane':''}" id="stats-pane-stats">${statsHTML}</div>
+    <div class="stats-pane ${activeTab==='history'?'active-pane':''}" id="stats-pane-history">${renderHistoryPane()}</div>
+  `;
+}
+
+function switchStatsTab(tab){
+  renderStatsModal(tab);
+}
+
+/* ═══════════════════════════════════════════
+   PiP + WAKELOCK
+═══════════════════════════════════════════ */
+function togglePiP(){
+  if(!document.pictureInPictureEnabled||!video.src) return;
+  if(document.pictureInPictureElement){ document.exitPictureInPicture().catch(()=>{}); }
+  else{ video.requestPictureInPicture().catch(e=>toast('PiP não disponível: '+e.message)); }
+}
+if(document.pictureInPictureEnabled){ document.getElementById('pip-btn').style.display='flex'; }
+video.addEventListener('enterpictureinpicture',()=>{
+  const b=document.getElementById('pip-btn');
+  b.style.background='rgba(108,99,255,.3)'; b.style.borderColor='rgba(108,99,255,.6)';
+  requestWakeLock();
+});
+video.addEventListener('leavepictureinpicture',()=>{
+  const b=document.getElementById('pip-btn'); b.style.background=''; b.style.borderColor='';
+  releaseWakeLock();
+});
+let wakeLock = null;
+async function requestWakeLock(){
+  try{ if('wakeLock' in navigator){ wakeLock=await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release',()=>{wakeLock=null;}); } }catch(e){}
+}
+function releaseWakeLock(){ try{ if(wakeLock){ wakeLock.release(); wakeLock=null; } }catch(e){} }
+document.addEventListener('visibilitychange', async()=>{
+  if(document.visibilityState==='visible' && document.pictureInPictureElement) await requestWakeLock();
+  if(document.visibilityState==='hidden'){
+    if(currentIdx>=0 && video.currentTime>2) lessonTimes[currentIdx]=video.currentTime;
+    closeHistorySession();
+    saveToStorage();
+  }
+});
+
+/* ═══════════════════════════════════════════
+   LOOP A-B
+═══════════════════════════════════════════ */
+function abCycle(){
+  if(abState===0)      setAbA();
+  else if(abState===1) setAbB();
+  else                 clearAB();
+}
+function setAbA(){
+  if(!video.src) return;
+  abA=video.currentTime; abState=1;
+  updateABUI(); toast(`A definido em ${fmtTime(abA)}`);
+}
+function setAbB(){
+  if(!video.src) return;
+  abB=video.currentTime;
+  if(abB<=abA){ toast('Ponto B deve ser depois do A'); return; }
+  abState=2; updateABUI();
+  toast(`Loop A-B: ${fmtTime(abA)} → ${fmtTime(abB)}`);
+}
+function clearAB(){
+  abState=0; abA=0; abB=0; updateABUI();
+  toast('Loop A-B cancelado');
+}
+function updateABUI(){
+  const btn    = document.getElementById('ab-btn');
+  const label  = document.getElementById('ab-label');
+  const region = document.getElementById('ab-region');
+  if(abState===0){
+    btn.classList.remove('active-ctrl');
+    label.style.display='none';
+    region.style.display='none';
+  } else if(abState===1){
+    btn.classList.add('active-ctrl');
+    label.style.display='flex';
+    document.getElementById('ab-label-text').textContent=`A=${fmtTime(abA)}`;
+    region.style.display='none';
+  } else {
+    btn.classList.add('active-ctrl');
+    label.style.display='flex';
+    document.getElementById('ab-label-text').textContent=`${fmtTime(abA)}↔${fmtTime(abB)}`;
+    updateABRegion();
+  }
+}
+function updateABRegion(){
+  if(!video.duration||abState!==2) return;
+  const region=document.getElementById('ab-region');
+  const pctA=abA/video.duration*100, pctB=abB/video.duration*100;
+  region.style.display='block';
+  region.style.left=pctA+'%';
+  region.style.width=(pctB-pctA)+'%';
+}
+function checkABLoop(){
+  if(abState!==2||!video.duration) return;
+  updateABRegion();
+  if(video.currentTime>=abB-0.1) video.currentTime=abA;
+}
+
+/* ═══════════════════════════════════════════
+   CAPÍTULOS
+═══════════════════════════════════════════ */
+function currentLessonName(){ return currentIdx>=0&&lessons[currentIdx]?lessons[currentIdx].name:''; }
+function addChapterAtCurrent(){
+  if(!video.src||!video.duration) return;
+  const ts   = video.currentTime;
+  const name = `Capítulo ${chapters.filter(c=>c.lessonName===currentLessonName()).length+1}`;
+  const label = window.prompt('Nome do capítulo:', name);
+  if(label===null) return;
+  chapters.push({id:uid(), lessonName:currentLessonName(), ts, label:label||name, createdAt:Date.now()});
+  chapters.sort((a,b)=>a.ts-b.ts);
+  renderChapterMarkers();
+  saveToStorage();
+  toast(`Capítulo "${label||name}" adicionado em ${fmtTime(ts)}`);
+}
+function deleteChapter(id){
+  chapters = chapters.filter(c=>c.id!==id);
+  renderChapterMarkers(); saveToStorage();
+}
+function renderChapterMarkers(){
+  const container = document.getElementById('chapter-markers');
+  container.innerHTML = '';
+  if(!video.duration) return;
+  const cur = currentLessonName();
+  chapters.filter(c=>c.lessonName===cur).forEach(c=>{
+    const pct = c.ts/video.duration*100;
+    const m   = document.createElement('div');
+    m.className = 'chapter-marker';
+    m.style.left = pct+'%';
+    m.title = c.label+' — '+fmtTime(c.ts);
+    m.onclick = (e)=>{ e.stopPropagation(); video.currentTime=c.ts; };
+    container.appendChild(m);
+  });
+}
+function seekbarHover(e){
+  if(!video.duration) return;
+  const rect = document.getElementById('seekbar').getBoundingClientRect();
+  const pct  = (e.clientX-rect.left)/rect.width;
+  const t    = Math.max(0,Math.min(1,pct))*video.duration;
+  const cur  = currentLessonName();
+  const nearby = chapters.filter(c=>c.lessonName===cur&&Math.abs(c.ts-t)<video.duration*0.03);
+  const tip  = document.getElementById('chapter-tooltip');
+  if(nearby.length){
+    tip.textContent = nearby[0].label+' · '+fmtTime(nearby[0].ts);
+    tip.style.left  = (pct*100)+'%';
+    tip.style.display = 'block';
+  } else {
+    tip.style.display = 'none';
+  }
+}
+function seekbarLeave(){ document.getElementById('chapter-tooltip').style.display='none'; }
+
+/* ═══════════════════════════════════════════
+   NOTAS
+═══════════════════════════════════════════ */
+function toggleNotesPanel(){
+  notesPanelVisible = !notesPanelVisible;
+  const panel = document.getElementById('notes-panel');
+  panel.classList.toggle('hidden', !notesPanelVisible);
+  const btn = document.getElementById('notes-toggle-btn');
+  btn.classList.toggle('active-btn', notesPanelVisible);
+}
+function openMobileNotes(){
+  renderNotesMobile();
+  document.getElementById('notes-mobile-modal').classList.add('active');
+}
+function snapNoteTimestamp(isMob){
+  const t = video.currentTime||0;
+  if(isMob){ noteMobileTimestamp=t; document.getElementById('note-ts-badge-mobile').textContent=fmtTime(t); }
+  else      { noteTimestamp=t;       document.getElementById('note-ts-badge').textContent=fmtTime(t); }
+}
+
+video.addEventListener('timeupdate',()=>{
+  if(notesPanelVisible){
+    if(Math.abs(noteTimestamp-(video.currentTime||0))<5||noteTimestamp===0){
+      noteTimestamp = video.currentTime||0;
+      document.getElementById('note-ts-badge').textContent = fmtTime(noteTimestamp);
+    }
+  }
+  if(document.getElementById('notes-mobile-modal').classList.contains('active')){
+    if(Math.abs(noteMobileTimestamp-(video.currentTime||0))<5||noteMobileTimestamp===0){
+      noteMobileTimestamp = video.currentTime||0;
+      document.getElementById('note-ts-badge-mobile').textContent = fmtTime(noteMobileTimestamp);
+    }
+  }
+  if(!video.duration) return;
+  seekFill.style.width = (video.currentTime/video.duration*100)+'%';
+  timeCur.textContent  = fmtTime(video.currentTime);
+  timeDur.textContent  = fmtTime(video.duration);
+  if(currentIdx>=0 && video.currentTime>2){
+    lessonTimes[currentIdx] = video.currentTime;
+    clearTimeout(saveTimer); saveTimer = setTimeout(saveToStorage, 5000);
+  }
+  checkABLoop();
+
+});
+
+function addNote(isMob){
+  const taId = isMob?'note-textarea-mobile':'note-textarea';
+  const ta   = document.getElementById(taId);
+  const text = ta.value.trim();
+  if(!text){ toast('Escreva algo antes de adicionar'); return; }
+  const ts         = isMob?noteMobileTimestamp:noteTimestamp;
+  const lessonName = currentIdx>=0&&lessons[currentIdx]?lessons[currentIdx].name:'—';
+  notes.push({id:uid(), lessonName, ts, tsLabel:fmtTime(ts), text, createdAt:Date.now()});
+  ta.value = '';
+  renderNotes(); if(isMob) renderNotesMobile();
+  saveToStorage(); toast('Nota adicionada ✓');
+}
+function deleteNote(id){
+  notes = notes.filter(n=>n.id!==id);
+  renderNotes(); renderNotesMobile(); saveToStorage();
+}
+function renderNoteHTML(n){
+  return `<div class="note-item" id="note-${n.id}">
+    <div class="note-ts">
+      <span style="cursor:pointer;" onclick="jumpToNote('${n.id}')">▶ ${escH(n.tsLabel)}</span>
+      <div style="display:flex;align-items:center;gap:4px;">
+        <span class="note-lesson-tag" title="${escH(n.lessonName)}">${escH(n.lessonName)}</span>
+        <button class="note-del" onclick="deleteNote('${n.id}')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+    </div>
+    <div class="note-text">${escH(n.text)}</div>
+  </div>`;
+}
+function renderNotes(){
+  const list = document.getElementById('notes-list');
+  if(!list) return;
+  if(!notes.length){ list.innerHTML=`<div class="notes-empty"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><p>Nenhuma nota ainda.</p></div>`; return; }
+  list.innerHTML = [...notes].sort((a,b)=>b.createdAt-a.createdAt).map(renderNoteHTML).join('');
+}
+function renderNotesMobile(){
+  const list = document.getElementById('notes-list-mobile');
+  if(!list) return;
+  if(!notes.length){ list.innerHTML=`<div class="notes-empty"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><p>Nenhuma nota ainda.</p></div>`; return; }
+  list.innerHTML = [...notes].sort((a,b)=>b.createdAt-a.createdAt).map(renderNoteHTML).join('');
+}
+function jumpToNote(id){
+  const n = notes.find(x=>x.id===id); if(!n) return;
+  const tIdx = lessons.findIndex(l=>l.name===n.lessonName);
+  if(tIdx>=0 && tIdx!==currentIdx){
+    playLesson(tIdx);
+    video.addEventListener('loadedmetadata', function once(){ video.removeEventListener('loadedmetadata',once); video.currentTime=n.ts; },{once:true});
+  } else { video.currentTime=n.ts; }
+}
+function exportNotes(){
+  if(!notes.length){ toast('Nenhuma nota para exportar'); return; }
+  const byLesson = {};
+  [...notes].sort((a,b)=>a.ts-b.ts).forEach(n=>{ if(!byLesson[n.lessonName]) byLesson[n.lessonName]=[]; byLesson[n.lessonName].push(n); });
+  let md = `# Notas de Estudo\nExportado em ${new Date().toLocaleString('pt-BR')}\n\n`;
+  Object.entries(byLesson).forEach(([lesson,ns])=>{ md+=`## ${lesson}\n\n`; ns.forEach(n=>{md+=`**[${n.tsLabel}]** ${n.text}\n\n`;}); });
+  const blob = new Blob([md],{type:'text/markdown'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a'); a.href=url; a.download='notas_videoaulas_'+new Date().toISOString().slice(0,10)+'.md'; a.click(); URL.revokeObjectURL(url);
+  toast('Notas exportadas ✓');
+}
+
+/* ═══════════════════════════════════════════
+   EXPORTAR / IMPORTAR PROGRESSO
+═══════════════════════════════════════════ */
+function openProgressModal() { document.getElementById('progress-modal').classList.add('active'); }
+function closeProgressModal(){ document.getElementById('progress-modal').classList.remove('active'); }
+function exportProgress(){
+  saveToStorage(); const data=loadFromStorage();
+  if(!data){ toast('Nenhum progresso para exportar'); return; }
+  data.lessonNames = lessons.map(l=>l.name); data.exportedAt = new Date().toISOString();
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url  = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url;
+  a.download = 'videoaulas_progresso_'+new Date().toISOString().slice(0,10)+'.json'; a.click(); URL.revokeObjectURL(url);
+  closeProgressModal(); toast('Progresso exportado ✓');
+}
+function triggerImport(){ closeProgressModal(); document.getElementById('import-input').click(); }
+function importProgress(event){
+  const file=event.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!data.done) throw new Error('inválido');
+      applyStoredProgress(data);
+      try{ localStorage.setItem(buildStorageKey(), JSON.stringify(data)); }catch(_){}
+      isModular ? renderModularPlaylist() : renderPlaylist(sortedLessons);
+      updatePlaylistActive();
+      toast(`Progresso restaurado: ${done.size} aula(s) ✓`);
+    }catch(e){ toast('Erro ao importar: arquivo inválido'); }
+  };
+  reader.readAsText(file); event.target.value='';
+}
+
+/* ═══════════════════════════════════════════
+   HELPER: normalizar entry
+═══════════════════════════════════════════ */
+function entryIsFile(entry){
+  if(entry.kind !== undefined) return entry.kind === 'file';
+  if(entry.isFile !== undefined) return entry.isFile === true;
+  return false;
+}
+function entryIsDir(entry){
+  if(entry.kind !== undefined) return entry.kind === 'directory';
+  if(entry.isDirectory !== undefined) return entry.isDirectory === true;
+  return false;
+}
+async function entryGetFile(entry){
+  if(typeof entry.getFile === 'function' && entry.kind !== undefined) return entry.getFile();
+  if(typeof entry.file === 'function') return new Promise((res,rej)=>entry.file(res,rej));
+  return null;
+}
+
+/* ═══════════════════════════════════════════
+   LEITURA ROBUSTA DE ENTRIES
+═══════════════════════════════════════════ */
+async function readAllEntries(dirHandle){
+  if(dirHandle.values){
+    const entries = [];
+    try{ for await(const en of dirHandle.values()) entries.push(en); }catch(e){}
+    return entries;
+  }
+  if(dirHandle.createReader){
+    return new Promise(res=>{
+      const r=dirHandle.createReader(); const all=[];
+      function read(){ r.readEntries(batch=>{ if(!batch.length){res(all);return;} all.push(...batch); read(); }, ()=>res(all)); }
+      read();
+    });
+  }
+  return [];
+}
+
+/* ═══════════════════════════════════════════
+   AGRUPAMENTO DE SUBPASTAS
+═══════════════════════════════════════════ */
+function countFilesInRawModule(mod){
+  let c = mod.lessons.length + (mod.extras||[]).length;
+  (mod.subModules||[]).forEach(s=>{ c+=countFilesInRawModule(s); });
+  return c;
+}
+
+function shouldFlattenSubmodules(mod){
+  if(!mod.subModules || mod.subModules.length===0) return false;
+  if(mod.lessons.length > 0 || (mod.extras&&mod.extras.length>0)) return false;
+  return mod.subModules.every(sub=>{
+    const totalFiles = sub.lessons.length + (sub.extras?sub.extras.length:0);
+    const hasDeepSubs = (sub.subModules||[]).length > 0;
+    return !hasDeepSubs && totalFiles === 1;
+  });
+}
+
+function normalizeModules(mods){
+  return mods.map(mod=>{
+    const normalized = {...mod, subModules: normalizeModules(mod.subModules||[])};
+    if(shouldFlattenSubmodules(normalized)){
+      const flatLessons = [];
+      const flatExtras  = [];
+      normalized.subModules.forEach(sub=>{
+        flatLessons.push(...sub.lessons);
+        flatExtras.push(...(sub.extras||[]));
+      });
+      return {...normalized, lessons:[...flatLessons], extras:[...normalized.extras||[],...flatExtras], subModules:[]};
+    }
+    return normalized;
+  });
+}
+
+/* ═══════════════════════════════════════════
+   LEITURA DE PASTA
+═══════════════════════════════════════════ */
+function showLoading(t,s){
+  document.getElementById('loading-text').textContent = t||'Lendo arquivos…';
+  document.getElementById('loading-sub').textContent  = s||'';
+  document.getElementById('loading-overlay').classList.add('active');
+}
+function hideLoading(){ document.getElementById('loading-overlay').classList.remove('active'); }
+function updateLoadingCount(n){ document.getElementById('loading-sub').textContent=`${n} arquivo(s) encontrado(s)…`; }
+
+async function openFolder(){
+  if(lessons.length>0){
+    showModal('Já existe um curso carregado','O que você deseja fazer?',[
+      {label:'Acrescentar módulos', cls:'primary',   action:addModules},
+      {label:'Substituir curso',    cls:'danger',    action:loadNewCourse},
+      {label:'Cancelar',           cls:'secondary', action:closeModal}
+    ]);
+    return;
+  }
+  loadNewCourse();
+}
+async function loadNewCourse(){ closeModal(); await pickAndLoadFolder(false); }
+async function addModules()   { closeModal(); await pickAndLoadFolder(true);  }
+
+async function pickAndLoadFolder(merge){
+  try{
+    if(!window.showDirectoryPicker){
+      const inp=document.createElement('input'); inp.type='file'; inp.multiple=true; inp.accept='video/*';
+      inp.onchange=e=>loadFiles(Array.from(e.target.files), merge);
+      inp.click(); return;
+    }
+    const dir=await window.showDirectoryPicker({mode:'read'});
+    currentDirHandle=dir;
+    showLoading('Lendo estrutura de pastas…');
+    await processDirectory(dir, merge);
+  }catch(e){
+    hideLoading();
+    if(e.name!=='AbortError') toast('Erro ao abrir pasta: '+e.message);
+  }
+}
+
+async function processDirectory(dir, merge){
+  const topEntries = await readAllEntries(dir);
+  const fileEntries = [];
+  const subdirEntries = [];
+  for(const entry of topEntries){
+    if(entryIsFile(entry))     fileEntries.push(entry);
+    else if(entryIsDir(entry)) subdirEntries.push(entry);
+  }
+  const topVideos = [], topExtras = [];
+  let rootCount = 0;
+  for(const entry of fileEntries){
+    try{
+      const f = await entryGetFile(entry);
+      if(!f) continue;
+      if(isVideo(f.name))        { topVideos.push(f); rootCount++; }
+      else if(isContent(f.name)) { topExtras.push({file:f, name:f.name}); rootCount++; }
+    }catch(e){}
+  }
+  updateLoadingCount(rootCount);
+
+  if(topVideos.length > 0){
+    const allFiles  = [...topVideos];
+    const allExtras = [...topExtras];
+    let count = rootCount;
+    await Promise.all(subdirEntries.map(sub =>
+      readDirFlat(sub, allFiles, allExtras, 0, ()=>{ count++; updateLoadingCount(count); })
+    ));
+    hideLoading();
+    loadFiles(allFiles, merge, allExtras);
+    return;
+  }
+
+  if(subdirEntries.length > 0){
+    const rawModules = [];
+    let count = rootCount;
+    for(const subdir of subdirEntries){
+      const mod = await readModuleDir(subdir, 0, ()=>{ count++; updateLoadingCount(count); });
+      if(mod) rawModules.push(mod);
+    }
+    const normalizedModules = normalizeModules(rawModules);
+    const totalModVids = normalizedModules.reduce((s,m)=>s+countLessonsDeep(m),0);
+    if(totalModVids > 0 || normalizedModules.some(m=>countFilesInRawModule(m)>0)){
+      if(merge){ modules=[...modules,...normalizedModules]; }
+      else      { modules=normalizedModules; lessons=[]; done=new Set(); }
+      isModular = true;
+      document.body.classList.add('is-modular');
+      // Primeiro rebuild para gerar chave de storage correta
+      rebuildLessonsFromModules();
+      // Aplica ordem customizada (se existir)
+      if(!merge) applyModuleOrder(loadModuleOrder());
+      // Rebuild final com ordem correta
+      rebuildLessonsFromModules();
+      const stored = loadFromStorage();
+      if(stored) applyStoredProgress(stored);
+      buildSortedLessons();
+      hideLoading();
+      renderModularPlaylist();
+      if(!merge) playLesson(getResumeIdx(stored));
+      const totalItems = normalizedModules.reduce((s,m)=>s+countFilesInRawModule(m),0);
+      toast(`${totalItems} item(s) em ${normalizedModules.length} módulo(s)`);
+      return;
+    }
+  }
+
+  hideLoading();
+  if(topExtras.length > 0){
+    loadFiles([], merge, topExtras);
+  } else {
+    toast('Nenhum vídeo encontrado na pasta selecionada');
+  }
+}
+
+function countLessonsDeep(mod){
+  return mod.lessons.length + (mod.subModules||[]).reduce((s,m)=>s+countLessonsDeep(m),0);
+}
+
+async function readModuleDir(dirHandle, depth, onFile){
+  const modLessons=[], modExtras=[], subModules=[];
+  let entries = [];
+  try{ entries = await readAllEntries(dirHandle); }catch(e){ return null; }
+  const fileEntries = [], dirEntries = [];
+  for(const entry of entries){
+    if(entryIsFile(entry))     fileEntries.push(entry);
+    else if(entryIsDir(entry)) dirEntries.push(entry);
+  }
+  fileEntries.sort((a,b)=>naturalSort(a.name,b.name));
+  dirEntries.sort((a,b)=>naturalSort(a.name,b.name));
+  for(const entry of fileEntries){
+    try{
+      const f = await entryGetFile(entry);
+      if(!f) continue;
+      if(isVideo(f.name))        { modLessons.push(f); onFile&&onFile(f); }
+      else if(isContent(f.name)) modExtras.push({file:f, name:f.name});
+    }catch(e){}
+  }
+  for(const entry of dirEntries){
+    if(depth < MAX_DEPTH-1){
+      try{
+        const sub = await readModuleDir(entry, depth+1, onFile);
+        if(sub) subModules.push(sub);
+      }catch(e){}
+    }
+  }
+  if(subModules.length>0 || modLessons.length>0 || modExtras.length>0){
+    const name = dirHandle.name || 'Módulo';
+    return {name, lessons:modLessons.sort((a,b)=>naturalSort(a.name,b.name)), extras:modExtras, subModules};
+  }
+  return null;
+}
+
+async function readDirFlat(dirHandle, outFiles, outExtras, depth, onFile){
+  if(depth>=MAX_DEPTH) return;
+  let entries = [];
+  try{ entries = await readAllEntries(dirHandle); }catch(e){ return; }
+  const subs = [];
+  for(const entry of entries){
+    try{
+      if(entryIsFile(entry)){
+        const f = await entryGetFile(entry);
+        if(!f) continue;
+        if(isVideo(f.name))        { outFiles.push(f); onFile&&onFile(f); }
+        else if(isContent(f.name)) outExtras.push({file:f, name:f.name});
+      } else if(entryIsDir(entry)){
+        subs.push(entry);
+      }
+    }catch(e){}
+  }
+  await Promise.all(subs.map(s=>readDirFlat(s, outFiles, outExtras, depth+1, onFile)));
+}
+
+function rebuildLessonsFromModules(){
+  lessons = []; let idx=0;
+  function add(mod){
+    for(const f of mod.lessons)
+      lessons.push({file:f, url:URL.createObjectURL(f), name:f.name.replace(/\.[^.]+$/,''), idx:idx++});
+    (mod.subModules||[]).forEach(add);
+  }
+  modules.forEach(add);
+}
+
+function getResumeIdx(stored){
+  if(!stored||!stored.currentName) return 0;
+  const i = lessons.findIndex(l=>l.name===stored.currentName);
+  return i>=0?i:0;
+}
+
+function loadFiles(files, merge, extras=[]){
+  const vids = files.filter(f=>isVideo(f.name));
+  if(!vids.length && !extras.length){ toast('Nenhum arquivo encontrado'); return; }
+  if(!vids.length && !merge){ 
+    extraFiles = extras.map(e=>({...e, type:fileType(e.name), url:URL.createObjectURL(e.file)}));
+    isModular=false; modules=[]; document.body.classList.remove('is-modular');
+    buildSortedLessons();
+    renderPlaylist(sortedLessons);
+    toast(`${extras.length} arquivo(s) carregado(s)`);
+    return;
+  }
+  vids.sort((a,b)=>naturalSort(a.name,b.name));
+  if(!merge){
+    done=new Set(); Object.keys(lessonTimes).forEach(k=>delete lessonTimes[k]);
+    lessons   = vids.map((f,i)=>({file:f, url:URL.createObjectURL(f), name:f.name.replace(/\.[^.]+$/,''), idx:i}));
+    extraFiles= extras.map(e=>({...e, type:fileType(e.name), url:URL.createObjectURL(e.file)}));
+    isModular=false; modules=[]; document.body.classList.remove('is-modular');
+    const stored=loadFromStorage(); if(stored) applyStoredProgress(stored);
+  } else {
+    const off = lessons.length;
+    lessons    = [...lessons,...vids.map((f,i)=>({file:f, url:URL.createObjectURL(f), name:f.name.replace(/\.[^.]+$/,''), idx:off+i}))];
+    extraFiles = [...extraFiles,...extras.map(e=>({...e, type:fileType(e.name), url:URL.createObjectURL(e.file)}))];
+  }
+  buildSortedLessons();
+  renderPlaylist(sortedLessons);
+  if(!merge||currentIdx<0){ const stored=loadFromStorage(); playLesson(getResumeIdx(stored)); }
+  toast(`${vids.length} vídeo(s) carregado(s)`);
+}
+
+/* ═══════════════════════════════════════════
+   RENDERIZAR PLAYLIST
+═══════════════════════════════════════════ */
+function renderPlaylist(list){
+  totalCount.textContent = lessons.length; updateDoneCount();
+  if(!list.length && !extraFiles.length){ playlistEl.innerHTML='<div style="padding:32px 16px;font-size:12px;color:var(--text3);text-align:center;">Nenhum vídeo encontrado</div>'; return; }
+  playlistEl.innerHTML = '';
+  if(!isModular && extraFiles.length){
+    renderExtraItems(playlistEl, extraFiles);
+    const sep=document.createElement('div'); sep.className='section-label'; sep.textContent=`${list.length} ${list.length===1?'aula':'aulas'}`; playlistEl.appendChild(sep);
+  } else if(list.length) {
+    const lbl=document.createElement('div'); lbl.className='section-label'; lbl.textContent=`${list.length} ${list.length===1?'aula':'aulas'}`; playlistEl.appendChild(lbl);
+  }
+  renderBatch(list, 0, playlistEl);
+}
+
+function renderBatch(list, start, container, indent=0){
+  const BATCH=50, end=Math.min(start+BATCH, list.length);
+  for(let i=start;i<end;i++) container.appendChild(buildLessonItem(list[i], indent));
+  if(end<list.length) requestAnimationFrame(()=>renderBatch(list, end, container, indent));
+}
+
+function renderModularPlaylist(){
+  totalCount.textContent = lessons.length; updateDoneCount();
+  playlistEl.innerHTML   = '';
+
+  function renderMod(mod, container, depth, parentModArray){
+    const key = mod.name;
+    if(!(key in collapsedModules)) collapsedModules[key]=false;
+    const idxs   = collectModuleLessonIdxs(mod);
+    const modDone= idxs.filter(i=>done.has(i)).length;
+    const totalItems = idxs.length + ((mod.extras||[]).length);
+
+    // Wrap div para drag (apenas módulos de nível 0)
+    const wrap = document.createElement('div');
+    wrap.className = 'module-wrap';
+    wrap.dataset.modName = mod.name;
+
+    const header = document.createElement('div');
+    header.className = 'module-header'+(collapsedModules[key]?' collapsed':'');
+    header.style.marginLeft = (depth*12)+'px';
+
+    // Handle de arrasto (apenas para nível 0)
+    if(depth === 0){
+      const handle = document.createElement('div');
+      handle.className = 'module-drag-handle';
+      handle.title = 'Arrastar para reordenar';
+      handle.innerHTML = `<svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="18" x2="16" y2="18"/></svg>`;
+      // impede que o handle expanda/recolha o módulo
+      handle.addEventListener('mousedown', e=>e.stopPropagation());
+      handle.addEventListener('touchstart', e=>e.stopPropagation(), {passive:true});
+      header.appendChild(handle);
+    }
+
+    const arrow = document.createElement('svg');
+    arrow.setAttribute('viewBox','0 0 24 24');
+    arrow.classList.add('module-arrow');
+    arrow.innerHTML = `<polyline points="6 9 12 15 18 9"/>`;
+    header.appendChild(arrow);
+
+    const title = document.createElement('span');
+    title.className = 'module-title';
+    title.textContent = mod.name;
+    header.appendChild(title);
+
+    const countBadge = document.createElement('span');
+    countBadge.className = 'module-count';
+    countBadge.textContent = `${totalItems} item${totalItems!==1?'s':''}`;
+    header.appendChild(countBadge);
+
+    if(modDone > 0){
+      const doneBadge = document.createElement('span');
+      doneBadge.className = 'module-done-badge';
+      doneBadge.textContent = `${modDone}✓`;
+      header.appendChild(doneBadge);
+    }
+
+    const body = document.createElement('div');
+    body.className = 'module-body'+(collapsedModules[key]?' collapsed':'');
+
+    header.addEventListener('click', e=>{
+      if(e.target.closest('.module-drag-handle')) return;
+      toggleModule(key, header, body);
+    });
+
+    wrap.appendChild(header);
+
+    if(mod.extras && mod.extras.length){
+      const eu = mod.extras.map(e=>({...e, type:fileType(e.name), url:URL.createObjectURL(e.file)}));
+      renderExtraItems(body, eu, (depth+1)*12);
+    }
+
+    const byFile = new Map(lessons.map(l=>[l.file.name, l]));
+    for(const f of mod.lessons){
+      const l=byFile.get(f.name); if(l) body.appendChild(buildLessonItem(l, (depth+1)*12));
+    }
+
+    (mod.subModules||[]).forEach(sub=>renderMod(sub, body, depth+1, mod.subModules));
+    wrap.appendChild(body);
+    container.appendChild(wrap);
+
+    // Drag-and-drop apenas para nível 0
+    if(depth === 0) attachModuleDrag(wrap, mod, parentModArray);
+  }
+
+  modules.forEach(mod=>renderMod(mod, playlistEl, 0, modules));
+  updateCollapseAllBtn();
+}
+
+function collectModuleLessonIdxs(mod){
+  const byFile = new Map(lessons.map(l=>[l.file.name, l]));
+  const idxs   = mod.lessons.map(f=>byFile.get(f.name)).filter(Boolean).map(l=>l.idx);
+  (mod.subModules||[]).forEach(sub=>idxs.push(...collectModuleLessonIdxs(sub)));
+  return idxs;
+}
+
+function toggleModule(key, header, body){
+  collapsedModules[key] = !collapsedModules[key];
+  header.classList.toggle('collapsed', collapsedModules[key]);
+  body.classList.toggle('collapsed', collapsedModules[key]);
+  updateCollapseAllBtn();
+}
+
+function toggleCollapseAll(){
+  const allKeys = Object.keys(collapsedModules);
+  const anyExpanded = allKeys.some(k => !collapsedModules[k]);
+  if(anyExpanded) collapseAllModules();
+  else            expandAllModules();
+}
+
+function collapseAllModules(){
+  Object.keys(collapsedModules).forEach(k => collapsedModules[k] = true);
+  document.querySelectorAll('.module-header').forEach(h => h.classList.add('collapsed'));
+  document.querySelectorAll('.module-body').forEach(b => b.classList.add('collapsed'));
+  updateCollapseAllBtn();
+}
+
+function expandAllModules(){
+  Object.keys(collapsedModules).forEach(k => collapsedModules[k] = false);
+  document.querySelectorAll('.module-header').forEach(h => h.classList.remove('collapsed'));
+  document.querySelectorAll('.module-body').forEach(b => b.classList.remove('collapsed'));
+  updateCollapseAllBtn();
+}
+
+function updateCollapseAllBtn(){
+  const btn   = document.getElementById('btn-collapse-all');
+  const label = document.getElementById('collapse-all-label');
+  if(!btn) return;
+  const allKeys    = Object.keys(collapsedModules);
+  const anyExpanded = allKeys.some(k => !collapsedModules[k]);
+  btn.classList.toggle('expanded', anyExpanded);
+  label.textContent = anyExpanded ? 'Recolher' : 'Expandir';
+}
+
+function buildLessonItem(l, indent=0){
+  const item = document.createElement('div');
+  item.className = 'lesson-item'+(l.idx===currentIdx?' active':'');
+  item.id        = 'lesson-'+l.idx;
+  item.style.marginLeft = indent+'px';
+  item.onclick   = ()=>{ playLesson(l.idx); if(isMobile()) closeMobileSidebar(); };
+
+  const num = document.createElement('div');
+  num.className = 'lesson-num';
+  num.textContent = String(l.idx+1).padStart(2,'0');
+
+  const thumb = document.createElement('div');
+  thumb.className = 'lesson-thumb'+(done.has(l.idx)?' done':'');
+  const tvid = document.createElement('video');
+  tvid.src     = l.url;
+  tvid.preload = 'metadata';
+  tvid.muted   = true;
+  tvid.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+  thumb.appendChild(tvid);
+
+  const info   = document.createElement('div'); info.className='lesson-info';
+  const nm     = document.createElement('div'); nm.className='lesson-name'; nm.textContent=l.name;
+  const meta   = document.createElement('div'); meta.className='lesson-meta'; meta.textContent='…';
+  tvid.addEventListener('loadedmetadata',()=>{ meta.textContent=fmtTime(tvid.duration); },{once:true});
+
+  const resumeEl = document.createElement('div'); resumeEl.className='lesson-resume'; resumeEl.id='resume-'+l.idx;
+  const savedT   = lessonTimes[l.idx];
+  if(savedT&&savedT>2) resumeEl.textContent='↩ '+fmtTime(savedT);
+  info.appendChild(nm); info.appendChild(meta); info.appendChild(resumeEl);
+
+  const status = document.createElement('div');
+  status.className = 'lesson-status'+(done.has(l.idx)?' done':(l.idx===currentIdx?' playing':''));
+  status.id = 'status-'+l.idx;
+  if(done.has(l.idx))      status.innerHTML=`<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>`;
+  else if(l.idx===currentIdx) status.innerHTML=`<span></span>`;
+
+  item.appendChild(num); item.appendChild(thumb); item.appendChild(info); item.appendChild(status);
+  return item;
+}
+
+function getExtraIconSVG(type){
+  if(type==='pdf')   return `<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>`;
+  if(type==='xlsx')  return `<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>`;
+  if(type==='docx')  return `<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>`;
+  if(type==='web')   return `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`;
+  return `<svg viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>`;
+}
+
+function renderExtraItems(container, extras, indent=0){
+  extras.forEach(ex=>{
+    const item = document.createElement('div');
+    item.className = 'extra-item';
+    item.style.marginLeft = indent+'px';
+    item.onclick = ()=>openExtraFile(ex);
+
+    const icon = document.createElement('div');
+    icon.className = 'extra-icon '+(ex.type||'other');
+    icon.innerHTML = getExtraIconSVG(ex.type);
+
+    const name = document.createElement('div');
+    name.className   = 'extra-name';
+    name.textContent = ex.name.replace(/\.[^.]+$/,'');
+
+    item.appendChild(icon); item.appendChild(name);
+    container.appendChild(item);
+  });
+}
+
+function openExtraFile(ex){
+  if(ex.type==='xlsx') { openXlsx(ex); return; }
+  if(ex.type==='pdf'||ex.type==='web'){ window.open(ex.url,'_blank'); return; }
+  if(ex.type==='docx'){ window.open(ex.url,'_blank'); return; }
+  const a=document.createElement('a'); a.href=ex.url; a.download=ex.name; a.click();
+}
+
+/* ═══════════════════════════════════════════
+   XLSX VIEWER
+═══════════════════════════════════════════ */
+function openXlsx(ex){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      xlsxSheets={};
+      wb.SheetNames.forEach(n=>{ xlsxSheets[n]=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:''}); });
+      document.getElementById('xlsx-modal-title').textContent=ex.name.replace(/\.[^.]+$/,'');
+      renderXlsxTabs(wb.SheetNames, wb.SheetNames[0]);
+      document.getElementById('xlsx-modal').classList.add('active');
+    }catch(e){ toast('Erro ao ler planilha: '+e.message); }
+  };
+  reader.readAsArrayBuffer(ex.file);
+}
+function renderXlsxTabs(names, active){
+  const t=document.getElementById('xlsx-tabs'); t.innerHTML='';
+  names.forEach(n=>{
+    const tab=document.createElement('div'); tab.className='xlsx-tab'+(n===active?' active':'');
+    tab.textContent=n; tab.onclick=()=>{ renderXlsxTabs(names,n); renderXlsxTable(n); }; t.appendChild(tab);
+  });
+  renderXlsxTable(active);
+}
+function renderXlsxTable(sheet){
+  const rows=xlsxSheets[sheet]||[]; const c=document.getElementById('xlsx-content');
+  if(!rows.length){ c.innerHTML='<div style="padding:20px;font-size:13px;color:var(--text3);">Planilha vazia</div>'; return; }
+  const maxC=Math.max(...rows.map(r=>r.length)); const first=rows[0];
+  const hasHeader=first.some(x=>typeof x==='string'&&x.trim()!=='');
+  let html='<table class="xlsx-table"><thead><tr>';
+  if(hasHeader){
+    for(let i=0;i<maxC;i++) html+=`<th>${escH(String(first[i]||''))}</th>`;
+    html+='</tr></thead><tbody>';
+    for(let r=1;r<rows.length;r++){ html+='<tr>'; for(let i=0;i<maxC;i++) html+=`<td title="${escH(String(rows[r][i]||''))}">${escH(String(rows[r][i]||''))}</td>`; html+='</tr>'; }
+  } else {
+    for(let i=0;i<maxC;i++) html+=`<th>${String.fromCharCode(65+i)}</th>`;
+    html+='</tr></thead><tbody>';
+    rows.forEach(row=>{ html+='<tr>'; for(let i=0;i<maxC;i++) html+=`<td>${escH(String(row[i]||''))}</td>`; html+='</tr>'; });
+  }
+  html+='</tbody></table>'; c.innerHTML=html;
+}
+function closeXlsx(){ document.getElementById('xlsx-modal').classList.remove('active'); }
+
+/* ═══════════════════════════════════════════
+   PLAYER
+═══════════════════════════════════════════ */
+function playLesson(idx){
+  if(idx<0||idx>=lessons.length) return;
+  if(currentIdx>=0 && video.currentTime>2){ lessonTimes[currentIdx]=video.currentTime; updateResumeIndicator(currentIdx); }
+  closeHistorySession();
+  if(abState>0) clearAB();
+  exitFrameMode();
+  currentIdx=idx; const l=lessons[idx];
+  video.src=l.url; video.style.display='block'; emptyState.style.display='none';
+  nowTitle.textContent=l.name; video.playbackRate=speeds[speedIdx];
+
+  seekFill.style.width='0%';
+  timeCur.textContent='0:00'; timeDur.textContent='0:00';
+
+
+  const savedTime=lessonTimes[idx];
+  if(savedTime&&savedTime>2){
+    video.addEventListener('loadedmetadata', function onMeta(){
+      video.removeEventListener('loadedmetadata',onMeta);
+      if(savedTime<video.duration-5){ video.currentTime=savedTime; toast(`↩ Retomando de ${fmtTime(savedTime)}`); }
+      video.play().catch(()=>{});
+      renderChapterMarkers();
+    });
+  } else {
+    video.addEventListener('loadedmetadata', function onMeta2(){ video.removeEventListener('loadedmetadata',onMeta2); renderChapterMarkers(); },{once:true});
+    video.play().catch(()=>{});
+  }
+
+  const ml=document.getElementById('mark-btn').querySelector('.mark-label');
+  if(ml) ml.textContent=done.has(idx)?'✓ Concluída':'Marcar concluída';
+  updatePlaylistActive(); scrollToActive();
+  startStatsTimer();
+  startHistorySession(idx);
+  const today=new Date().toISOString().slice(0,10);
+  if(studyStats.lastStudyDate!==today) studyStats.sessionsCount=(studyStats.sessionsCount||0)+1;
+}
+
+function updateResumeIndicator(idx){
+  const el=document.getElementById('resume-'+idx); if(!el) return;
+  const t=lessonTimes[idx]; el.textContent=(t&&t>2)?'↩ '+fmtTime(t):'';
+}
+
+function updatePlaylistActive(){
+  document.querySelectorAll('.lesson-item').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.lesson-status').forEach(el=>{
+    const i=parseInt(el.id.replace('status-',''));
+    el.className='lesson-status'+(done.has(i)?' done':(i===currentIdx?' playing':''));
+    if(done.has(i))         el.innerHTML=`<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>`;
+    else if(i===currentIdx) el.innerHTML=`<span></span>`;
+    else                    el.innerHTML='';
+  });
+  const active=document.getElementById('lesson-'+currentIdx);
+  if(active) active.classList.add('active');
+  if(isModular) refreshModuleCounters();
+  lessons.forEach(l=>updateResumeIndicator(l.idx));
+}
+
+function refreshModuleCounters(){
+  document.querySelectorAll('.module-header').forEach(header=>{
+    const t=header.querySelector('.module-title'); if(!t) return;
+    const mod=findModuleByName(modules, t.textContent); if(!mod) return;
+    const idxs=collectModuleLessonIdxs(mod); const md=idxs.filter(i=>done.has(i)).length;
+    let badge=header.querySelector('.module-done-badge');
+    if(md>0){ if(!badge){ badge=document.createElement('span'); badge.className='module-done-badge'; header.appendChild(badge); } badge.textContent=md+'✓'; }
+    else if(badge) badge.remove();
+  });
+}
+
+function findModuleByName(mods, name){
+  for(const m of mods){ if(m.name===name) return m; const f=findModuleByName(m.subModules||[],name); if(f) return f; }
+  return null;
+}
+
+function scrollToActive(){
+  const el=document.getElementById('lesson-'+currentIdx);
+  if(el) el.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+function togglePlay(){
+  if(!video.src) return;
+  video.paused ? video.play() : video.pause();
+}
+
+video.addEventListener('ended', ()=>{
+  if(currentIdx>=0) lessonTimes[currentIdx]=0;
+  closeHistorySession();
+  markDone();
+  setTimeout(()=>nextLesson(), 800);
+});
+
+video.addEventListener('error', ()=>{
+  if(video.src && video.src !== window.location.href){
+    toast('Erro ao carregar vídeo. Tente reabrir a pasta.');
+  }
+});
+
+function seekClick(e){
+  if(!video.duration) return;
+  const r=document.getElementById('seekbar').getBoundingClientRect();
+  video.currentTime=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*video.duration;
+}
+
+document.getElementById('seekbar').addEventListener('touchstart', handleSeekTouch, {passive:true});
+document.getElementById('seekbar').addEventListener('touchmove',  handleSeekTouch, {passive:true});
+function handleSeekTouch(e){
+  if(!video.duration) return;
+  const r=document.getElementById('seekbar').getBoundingClientRect();
+  const t=e.touches[0]; video.currentTime=Math.max(0,Math.min(1,(t.clientX-r.left)/r.width))*video.duration;
+}
+
+function skipTime(s){ video.currentTime=Math.max(0,video.currentTime+s); }
+function prevLesson(){ if(currentIdx>0) playLesson(currentIdx-1); }
+function nextLesson(){ if(currentIdx<lessons.length-1) playLesson(currentIdx+1); }
+
+function cycleSpeed(){
+  speedIdx=(speedIdx+1)%speeds.length; video.playbackRate=speeds[speedIdx];
+  const s=speeds[speedIdx];
+  document.getElementById('speed-btn').textContent=(s%1===0?s.toFixed(0):s.toFixed(2).replace(/0+$/,''))+'×';
+  saveToStorage();
+}
+
+function setVol(v){ video.volume=parseFloat(v); }
+
+function markDone(){
+  if(currentIdx<0) return;
+  done.has(currentIdx) ? done.delete(currentIdx) : done.add(currentIdx);
+  if(done.has(currentIdx)) toast('Aula concluída! ✓'); else toast('Marcação removida');
+  updateDoneCount(); updatePlaylistActive();
+  const thumb=document.querySelector('#lesson-'+currentIdx+' .lesson-thumb');
+  if(thumb) thumb.className='lesson-thumb'+(done.has(currentIdx)?' done':'');
+  const ml=document.getElementById('mark-btn').querySelector('.mark-label');
+  if(ml) ml.textContent=done.has(currentIdx)?'✓ Concluída':'Marcar concluída';
+  saveToStorage();
+}
+
+function updateDoneCount(){ doneCount.textContent=done.size; }
+
+/* ═══════════════════════════════════════════
+   BUSCA E SIDEBAR
+═══════════════════════════════════════════ */
+function filterLessons(){
+  const q=document.getElementById('search-input').value.toLowerCase();
+  if(!lessons.length) return;
+  if(isModular){
+    if(!q){ renderModularPlaylist(); return; }
+    renderPlaylist(lessons.filter(l=>l.name.toLowerCase().includes(q)));
+  } else {
+    renderPlaylist(q ? sortedLessons.filter(l=>l.name.toLowerCase().includes(q)) : sortedLessons);
+  }
+}
+
+function toggleSidebar(){
+  if(isMobile()){
+    document.getElementById('sidebar').classList.contains('mobile-open') ? closeMobileSidebar() : openMobileSidebar();
+  } else {
+    sidebarVisible=!sidebarVisible;
+    document.getElementById('sidebar').style.display=sidebarVisible?'flex':'none';
+  }
+}
+
+function openMobileSidebar(){
+  document.getElementById('sidebar').classList.add('mobile-open');
+  document.getElementById('sidebar-backdrop').classList.add('active');
+}
+function closeMobileSidebar(){
+  document.getElementById('sidebar').classList.remove('mobile-open');
+  document.getElementById('sidebar-backdrop').classList.remove('active');
+}
+
+document.getElementById('video-wrapper').addEventListener('click', function(e){
+  if(!isMobile()) return;
+  if(e.target===video) return;
+  if(document.getElementById('sidebar').classList.contains('mobile-open')) closeMobileSidebar();
+});
+
+window.addEventListener('resize', ()=>{
+  if(!isMobile()){
+    document.getElementById('sidebar').classList.remove('mobile-open');
+    document.getElementById('sidebar-backdrop').classList.remove('active');
+  }
+});
+
+/* ═══════════════════════════════════════════
+   MODAIS
+═══════════════════════════════════════════ */
+function showModal(title, desc, actions){
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-desc').textContent  = desc;
+  const acts=document.getElementById('modal-actions'); acts.innerHTML='';
+  actions.forEach(a=>{
+    const btn=document.createElement('button'); btn.className='modal-btn '+(a.cls||'secondary');
+    btn.textContent=a.label; btn.onclick=a.action; acts.appendChild(btn);
+  });
+  document.getElementById('modal-overlay').classList.add('active');
+}
+function closeModal(){ document.getElementById('modal-overlay').classList.remove('active'); }
+
+['modal-overlay','progress-modal','stats-modal','shortcuts-modal','theme-modal','xlsx-modal'].forEach(id=>{
+  const el=document.getElementById(id); if(!el) return;
+  el.addEventListener('click', e=>{
+    if(e.target===el){
+      if(id==='modal-overlay')       closeModal();
+      else if(id==='progress-modal') closeProgressModal();
+      else el.classList.remove('active');
+    }
+  });
+});
+
+document.getElementById('notes-mobile-modal').addEventListener('click', e=>{
+  if(e.target===document.getElementById('notes-mobile-modal'))
+    document.getElementById('notes-mobile-modal').classList.remove('active');
+});
+
+/* ═══════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════ */
+let toastTimer = null;
+function toast(msg){
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  if(toastTimer) clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'), 2500);
+}
+
+/* ═══════════════════════════════════════════
+   DRAG & DROP
+═══════════════════════════════════════════ */
+const dropOverlay=document.getElementById('drop-overlay'); let dragCount=0;
+document.addEventListener('dragenter', e=>{ e.preventDefault(); dragCount++; dropOverlay.classList.add('active'); });
+document.addEventListener('dragleave', ()=>{ dragCount--; if(dragCount<=0){ dragCount=0; dropOverlay.classList.remove('active'); } });
+document.addEventListener('dragover',  e=>e.preventDefault());
+document.addEventListener('drop', async e=>{
+  e.preventDefault(); dragCount=0; dropOverlay.classList.remove('active');
+  const items=Array.from(e.dataTransfer.items||[]);
+  const files=[], extras=[]; showLoading('Lendo arquivos arrastados…'); let count=0;
+  for(const item of items){
+    if(item.kind==='file'){
+      const entry=item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+      if(entry && entry.isDirectory){
+        await readDirDrop(entry, files, extras, 0, ()=>{ count++; updateLoadingCount(count); });
+      } else {
+        const f=item.getAsFile();
+        if(f){
+          if(isVideo(f.name))       files.push(f);
+          else if(isContent(f.name)) extras.push({file:f, name:f.name});
+          count++;
+        }
+      }
+    }
+  }
+  hideLoading();
+  if(files.length||extras.length){
+    if(lessons.length>0){
+      showModal('Já existe um curso carregado','O que você deseja fazer?',[
+        {label:'Acrescentar', cls:'primary',   action:()=>{ closeModal(); loadFiles(files,true,extras); }},
+        {label:'Substituir',  cls:'danger',    action:()=>{ closeModal(); loadFiles(files,false,extras); }},
+        {label:'Cancelar',   cls:'secondary', action:closeModal}
+      ]);
+    } else {
+      loadFiles(files, false, extras);
+    }
+  }
+});
+
+async function readDirDrop(entry, out, extras, depth, onFile){
+  if(depth>=MAX_DEPTH) return;
+  const entries=await readAllEntries(entry); const subs=[];
+  for(const e of entries){
+    try{
+      if(entryIsFile(e)){
+        const f=await entryGetFile(e);
+        if(!f) continue;
+        if(isVideo(f.name))        { out.push(f); onFile&&onFile(f); }
+        else if(isContent(f.name)) extras.push({file:f, name:f.name});
+      } else if(entryIsDir(e)) subs.push(e);
+    }catch(_){}
+  }
+  await Promise.all(subs.map(s=>readDirDrop(s, out, extras, depth+1, onFile)));
+}
+
+/* ═══════════════════════════════════════════
+   ATALHOS DE TECLADO
+═══════════════════════════════════════════ */
+document.addEventListener('keydown', e=>{
+  if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
+  if(e.code==='Space')      { e.preventDefault(); togglePlay(); }
+  if(e.code==='ArrowRight') { e.preventDefault(); skipTime(10); }
+  if(e.code==='ArrowLeft')  { e.preventDefault(); skipTime(-10); }
+  if(e.code==='ArrowUp')    { e.preventDefault(); video.volume=Math.min(1,video.volume+0.1); document.getElementById('vol-slider').value=video.volume; }
+  if(e.code==='ArrowDown')  { e.preventDefault(); video.volume=Math.max(0,video.volume-0.1); document.getElementById('vol-slider').value=video.volume; }
+  if(e.key===','||e.key==='<') stepFrame(-1);
+  if(e.key==='.'||e.key==='>') stepFrame(1);
+  if(e.code==='KeyN')  nextLesson();
+  if(e.code==='KeyP')  prevLesson();
+  if(e.code==='KeyM')  markDone();
+  if(e.code==='KeyI')  togglePiP();
+  if(e.code==='KeyS')  toggleNotesPanel();
+  if(e.code==='KeyT')  {
+    // Atalho T: iniciar/pausar transcrição
+    if(!window.SpeechRecognition && !window.webkitSpeechRecognition) return;
+    toggleTranscription();
+    toast(isTranscribing && !transcriptionPaused ? '🎙 Transcrição iniciada' : '⏸ Transcrição pausada');
+  }
+  if(e.code==='KeyR')  {
+    if(document.getElementById('review-overlay').classList.contains('active')) closeReviewMode();
+    else openReviewMode();
+  }
+  if(e.code==='KeyA')  { if(!notesPanelVisible) toggleNotesPanel(); snapNoteTimestamp(false); document.getElementById('note-textarea').focus(); }
+  if(e.code==='KeyC')  addChapterAtCurrent();
+  if(e.key==='[')      { if(abState===0||abState===1) setAbA(); }
+  if(e.key===']')      { if(abState===1) setAbB(); }
+  if(e.code==='Escape'){
+    if(document.getElementById('review-overlay').classList.contains('active')){ closeReviewMode(); return; }
+    if(document.getElementById('transcription-modal').classList.contains('active')){ closeTranscriptionModal(); return; }
+    if(abState>0) clearAB();
+  }
+  if(e.key==='?')      document.getElementById('shortcuts-modal').classList.add('active');
+});
+
+/* ═══════════════════════════════════════════
+   GOOGLE DRIVE SYNC
+   Usa Google Identity Services (GIS) + Drive REST API v3
+   Salva/carrega um único arquivo: videoaulas-progress.json
+═══════════════════════════════════════════ */
+const DRIVE_CLIENT_ID  = '820436973942-5tnu4kg6tsgemgg0mjmlh2ql7bs4g1p7.apps.googleusercontent.com'; // ← Cole aqui seu Client ID do Google Cloud Console
+const DRIVE_SCOPE      = 'https://www.googleapis.com/auth/drive.appdata';
+const DRIVE_FILE_NAME  = 'videoaulas-progress.json';
+const DRIVE_AUTO_INTERVAL = 60000; // auto-sync a cada 60s
+
+let driveToken         = null;   // access token atual
+let driveFileId        = null;   // id do arquivo no Drive
+let driveUserEmail     = null;
+let driveLastSync      = null;
+let driveSyncTimer     = null;
+let driveTokenClient   = null;
+let driveGapiLoaded    = false;
+let driveGisLoaded     = false;
+let drivePendingSync   = false;  // sync enfileirado enquanto token não está pronto
+
+/* ── Estado UI ── */
+function driveSetStatus(state){
+  // state: 'disconnected' | 'connected' | 'syncing' | 'error'
+  const headerBtn  = document.getElementById('drive-header-btn');
+  const headerDot  = document.getElementById('drive-header-dot');
+  const headerLbl  = document.getElementById('drive-header-label');
+  const modalDot   = document.getElementById('drive-modal-dot');
+  const modalTxt   = document.getElementById('drive-modal-status-text');
+
+  headerBtn.className = 'drive-btn ' + (state==='disconnected'?'disconnected':state==='syncing'?'syncing':'connected');
+
+  const dotClass = state==='connected'?'ok':state==='syncing'?'syncing':state==='error'?'error':'';
+  [headerDot, modalDot].forEach(d=>{ d.className='drive-sync-dot'; if(dotClass) d.classList.add(dotClass); });
+
+  const labels = {disconnected:'Drive', connected:'Drive ✓', syncing:'Sync…', error:'Drive !'};
+  headerLbl.textContent = labels[state]||'Drive';
+
+  const statusTexts = {
+    disconnected:'Desconectado — clique para conectar',
+    connected: driveUserEmail ? `Conectado como ${driveUserEmail}` : 'Conectado',
+    syncing:'Sincronizando…',
+    error:'Erro na sincronização'
+  };
+  modalTxt.textContent = statusTexts[state]||state;
+}
+
+function driveUpdateModalInfo(){
+  const info = document.getElementById('drive-modal-info');
+  const actions = document.getElementById('drive-modal-actions');
+  if(driveToken){
+    info.style.display='flex';
+    document.getElementById('drive-info-email').textContent = driveUserEmail||'—';
+    document.getElementById('drive-info-lastsync').textContent = driveLastSync
+      ? new Date(driveLastSync).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})
+      : 'Nunca';
+    actions.innerHTML = `
+      <button class="modal-btn primary" onclick="driveSyncNow()">☁ Sincronizar agora</button>
+      <button class="modal-btn secondary" onclick="driveLoadFromDrive()">⬇ Carregar do Drive</button>
+      <button class="modal-btn danger" style="margin-left:auto;" onclick="driveDisconnect()">Desconectar</button>
+      <button class="modal-btn secondary" onclick="closeDriveModal()">Fechar</button>
+    `;
+  } else {
+    info.style.display='none';
+    actions.innerHTML = `
+      <button class="modal-btn primary" id="drive-connect-btn" onclick="driveConnect()">Conectar com Google</button>
+      <button class="modal-btn secondary" onclick="closeDriveModal()">Fechar</button>
+    `;
+  }
+}
+
+function openDriveModal(){
+  driveUpdateModalInfo();
+  driveSetStatus(driveToken?'connected':'disconnected');
+  document.getElementById('drive-modal').classList.add('active');
+}
+function closeDriveModal(){ document.getElementById('drive-modal').classList.remove('active'); }
+document.getElementById('drive-modal').addEventListener('click', e=>{
+  if(e.target===document.getElementById('drive-modal')) closeDriveModal();
+});
+
+/* ── Carregar GAPI + GIS ── */
+function driveLoadScripts(){
+  if(document.getElementById('gapi-script')) return;
+  const gapiScript = document.createElement('script');
+  gapiScript.id  = 'gapi-script';
+  gapiScript.src = 'https://apis.google.com/js/api.js';
+  gapiScript.onload = ()=>{
+    gapi.load('client', async()=>{
+      await gapi.client.init({});
+      driveGapiLoaded = true;
+      driveCheckReady();
+    });
+  };
+  document.head.appendChild(gapiScript);
+
+  const gisScript = document.createElement('script');
+  gisScript.id  = 'gis-script';
+  gisScript.src = 'https://accounts.google.com/gsi/client';
+  gisScript.onload = ()=>{
+    if(!DRIVE_CLIENT_ID){
+      toast('⚠ Configure o Client ID do Google no código');
+      return;
+    }
+    driveTokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: DRIVE_CLIENT_ID,
+      scope: DRIVE_SCOPE,
+      callback: driveHandleToken,
+    });
+    driveGisLoaded = true;
+    driveCheckReady();
+  };
+  document.head.appendChild(gisScript);
+}
+
+function driveCheckReady(){
+  if(driveGapiLoaded && driveGisLoaded && drivePendingSync){
+    drivePendingSync = false;
+    driveRequestToken();
+  }
+}
+
+/* ── Connect / Disconnect ── */
+function driveConnect(){
+  if(!DRIVE_CLIENT_ID){
+    toast('⚠ Configure o Client ID do Google no arquivo HTML');
+    return;
+  }
+  driveLoadScripts();
+  if(driveGapiLoaded && driveGisLoaded){
+    driveRequestToken();
+  } else {
+    drivePendingSync = true;
+    toast('Carregando bibliotecas Google…');
+  }
+}
+
+function driveRequestToken(){
+  if(!driveTokenClient){ toast('Google não carregado, tente novamente'); return; }
+  driveTokenClient.requestAccessToken({prompt:''});
+}
+
+async function driveHandleToken(resp){
+  if(resp.error){ driveSetStatus('error'); toast('Erro ao conectar: '+resp.error); return; }
+  driveToken = resp.access_token;
+  gapi.client.setToken({access_token: driveToken});
+
+  // Pegar email do usuário
+  try{
+    const info = await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{
+      headers:{Authorization:'Bearer '+driveToken}
+    });
+    const json = await info.json();
+    driveUserEmail = json.email;
+  }catch(e){}
+
+  driveSetStatus('connected');
+  driveUpdateModalInfo();
+  toast('☁ Drive conectado! Verificando progresso salvo…');
+
+  // Tentar carregar dados do Drive ao conectar
+  await driveLoadFromDrive(true);
+
+  // Inicia auto-sync
+  if(driveSyncTimer) clearInterval(driveSyncTimer);
+  driveSyncTimer = setInterval(driveSyncNow, DRIVE_AUTO_INTERVAL);
+
+  // Persistir token no localStorage (apenas o email para UX)
+  try{ localStorage.setItem('videoaulas_drive_email', driveUserEmail||''); }catch(e){}
+}
+
+function driveDisconnect(){
+  if(driveToken) google.accounts.oauth2.revoke(driveToken, ()=>{});
+  driveToken = null; driveFileId = null; driveUserEmail = null; driveLastSync = null;
+  if(driveSyncTimer){ clearInterval(driveSyncTimer); driveSyncTimer=null; }
+  try{ localStorage.removeItem('videoaulas_drive_email'); }catch(e){}
+  driveSetStatus('disconnected');
+  driveUpdateModalInfo();
+  toast('Drive desconectado');
+}
+
+/* ── Construir payload ── */
+function driveBuildPayload(){
+  saveToStorage();
+  const positions = {};
+  lessons.forEach(l=>{ const t=lessonTimes[l.idx]; if(t&&t>2) positions[l.name]=t; });
+  return {
+    version: 2,
+    savedAt: new Date().toISOString(),
+    lessonNames: lessons.map(l=>l.name),
+    done: [...done].map(i=>lessons[i]?lessons[i].name:null).filter(Boolean),
+    positions,
+    speedIdx,
+    currentName: currentIdx>=0&&lessons[currentIdx] ? lessons[currentIdx].name : null,
+    studyStats,
+    notes,
+    chapters,
+    studyHistory
+  };
+}
+
+/* ── Buscar fileId no Drive (pasta appDataFolder) ── */
+async function driveFindFile(){
+  const resp = await gapi.client.request({
+    path: 'https://www.googleapis.com/drive/v3/files',
+    params:{
+      spaces:'appDataFolder',
+      fields:'files(id,name,modifiedTime)',
+      q:`name='${DRIVE_FILE_NAME}'`
+    }
+  });
+  const files = resp.result.files||[];
+  return files.length ? files[0].id : null;
+}
+
+/* ── Salvar no Drive ── */
+async function driveSyncNow(){
+  if(!driveToken){ toast('Drive não conectado'); return; }
+  driveSetStatus('syncing');
+  try{
+    const payload = JSON.stringify(driveBuildPayload(), null, 2);
+    const blob    = new Blob([payload],{type:'application/json'});
+
+    if(!driveFileId) driveFileId = await driveFindFile();
+
+    if(driveFileId){
+      // Atualizar arquivo existente
+      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`,{
+        method:'PATCH',
+        headers:{'Authorization':'Bearer '+driveToken,'Content-Type':'application/json'},
+        body: blob
+      });
+    } else {
+      // Criar novo arquivo na pasta appDataFolder
+      const meta = {name:DRIVE_FILE_NAME, parents:['appDataFolder']};
+      const form = new FormData();
+      form.append('metadata', new Blob([JSON.stringify(meta)],{type:'application/json'}));
+      form.append('file', blob);
+      const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',{
+        method:'POST',
+        headers:{'Authorization':'Bearer '+driveToken},
+        body: form
+      });
+      const json = await r.json();
+      driveFileId = json.id;
+    }
+
+    driveLastSync = Date.now();
+    driveSetStatus('connected');
+    driveUpdateModalInfo();
+    toast('☁ Progresso salvo no Drive ✓');
+  }catch(e){
+    driveSetStatus('error');
+    toast('Erro ao salvar no Drive: '+e.message);
+  }
+}
+
+/* ── Carregar do Drive ── */
+async function driveLoadFromDrive(silent=false){
+  if(!driveToken){ if(!silent) toast('Drive não conectado'); return; }
+  if(!silent) driveSetStatus('syncing');
+  try{
+    if(!driveFileId) driveFileId = await driveFindFile();
+    if(!driveFileId){
+      if(!silent) toast('Nenhum progresso encontrado no Drive');
+      driveSetStatus('connected');
+      return;
+    }
+    const resp = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`,{
+      headers:{'Authorization':'Bearer '+driveToken}
+    });
+    const data = await resp.json();
+    if(!data || (!data.done && !data.notes)) throw new Error('Arquivo inválido');
+
+    applyStoredProgress(data);
+    // Persistir localmente também
+    try{ localStorage.setItem(buildStorageKey(), JSON.stringify(data)); }catch(e){}
+    isModular ? renderModularPlaylist() : renderPlaylist(sortedLessons);
+    updatePlaylistActive();
+
+    driveLastSync = Date.now();
+    driveSetStatus('connected');
+    driveUpdateModalInfo();
+    if(!silent) toast(`☁ Progresso restaurado do Drive ✓ (${(data.done||[]).length} aulas concluídas)`);
+    else if((data.done||[]).length>0) toast(`☁ Progresso sincronizado do Drive: ${(data.done||[]).length} aula(s) concluída(s)`);
+  }catch(e){
+    driveSetStatus('error');
+    if(!silent) toast('Erro ao carregar do Drive: '+e.message);
+  }
+}
+
+/* ── Injetar sync no saveToStorage ── */
+const _origSave = saveToStorage;
+saveToStorage = function(){
+  _origSave();
+  if(driveToken){
+    // debounce: salva no Drive 5s após última mudança
+    clearTimeout(window._driveSaveTimer);
+    window._driveSaveTimer = setTimeout(driveSyncNow, 5000);
+  }
+};
+
+/* ── Reconectar automaticamente se havia sessão ── */
+(function(){
+  try{
+    const email = localStorage.getItem('videoaulas_drive_email');
+    if(email){
+      driveUserEmail = email;
+      // Mostra estado "conectado anteriormente" até reconectar
+      document.getElementById('drive-header-label').textContent = 'Drive ↻';
+    }
+  }catch(e){}
+})();
+
+
+window.addEventListener('beforeunload', ()=>{
+  if(currentIdx>=0 && video.currentTime>2) lessonTimes[currentIdx]=video.currentTime;
+  closeHistorySession();
+  if(isTranscribing) stopTranscription(true);
+  saveToStorage();
+  // Sync síncrono no Drive ao fechar (best-effort via sendBeacon)
+  if(driveToken && lessons.length){
+    try{
+      const payload = JSON.stringify(driveBuildPayload());
+      if(driveFileId){
+        navigator.sendBeacon(
+          `https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`,
+          new Blob([payload],{type:'application/json'})
+        );
+      }
+    }catch(e){}
+  }
+});
+</script>
+</body></html>

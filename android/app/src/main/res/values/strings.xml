@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">StudyPlay</string>
+    <string name="media_channel_name">StudyPlay — Reprodução</string>
+    <string name="media_channel_desc">Controles de reprodução de vídeoaulas</string>
+    <string name="title_activity_main">StudyPlay</string>
+    <string name="package_name">com.jcorelabs.studyplay</string>
+    <string name="custom_url_scheme">com.jcorelabs.studyplay</string>
+</resources>

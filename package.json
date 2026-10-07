@@ -1,0 +1,22 @@
+{
+  "name": "studyplayapk",
+  "version": "1.0.0",
+  "description": "StudyPlay — Plataforma de videoaulas local (Android APK)",
+  "main": "index.js",
+  "scripts": {
+    "build:apk": "npx cap sync android && cd android && gradlew.bat assembleDebug"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@capacitor/android": "^8.3.3",
+    "@capacitor/app": "^8.1.0",
+    "@capacitor/cli": "^8.3.3",
+    "@capacitor/core": "^8.3.3"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5"
+  }
+}

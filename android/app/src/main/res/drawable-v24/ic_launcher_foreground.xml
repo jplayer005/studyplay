@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Foreground icon: white filled play triangle, ~30% smaller than previous version.
+  Previous: 34dp wide × 43dp tall → new: 24dp wide × 30dp tall, centered at (54,54).
+  Safe zone (⌀66, r=33 from center): all points within ~19dp of center — well inside.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- White filled play triangle — 24dp wide × 30dp tall, centered at (54,54) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M42,39 L66,54 L42,69 Z" />
+
+</vector>

@@ -1,0 +1,13 @@
+{
+  "appId": "com.jcorelabs.studyplay",
+  "appName": "StudyPlay",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": false
+    }
+  }
+}
