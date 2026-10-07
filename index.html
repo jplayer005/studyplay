@@ -4,7 +4,14 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>VideoAulas — Plataforma Local</title>
+<meta http-equiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src *;">
+<title>StudyPlay — VideoAulas</title>
+<script>
+/* Stub seguro: garante que Capacitor não quebre no browser */
+if (typeof window.Capacitor === 'undefined') {
+  window.Capacitor = { isNativePlatform: function(){ return false; }, getPlatform: function(){ return 'web'; }, Plugins: {} };
+}
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 /* ── TEMAS ── */
@@ -17,6 +24,7 @@
   --chapter-line:rgba(108,99,255,.5);
   --sidebar:340px; --header-h:54px;
   --safe-b:env(safe-area-inset-bottom,0px); --safe-t:env(safe-area-inset-top,0px);
+  --safe-l:env(safe-area-inset-left,0px); --safe-r:env(safe-area-inset-right,0px);
 }
 [data-theme="light"] {
   --bg:#f0f2f8; --bg2:#ffffff; --bg3:#f4f6fb; --bg4:#e8ecf4;
@@ -27,13 +35,13 @@
   --chapter-line:rgba(108,99,255,.6);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-html{height:100%;}
-body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);height:100dvh;display:flex;flex-direction:column;overflow:hidden;-webkit-tap-highlight-color:transparent;transition:background .25s,color .25s;}
+html{height:100%;overflow:hidden;overscroll-behavior:none;}
+body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);height:100dvh;display:flex;flex-direction:column;overflow:hidden;overscroll-behavior:none;-webkit-tap-highlight-color:transparent;transition:background .25s,color .25s;}
 
 /* ── TOPBAR ── */
 header{display:flex;align-items:center;gap:8px;padding:0 14px;padding-top:var(--safe-t);height:calc(var(--header-h) + var(--safe-t));background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;z-index:20;}
 .logo{display:flex;align-items:center;gap:9px;font-weight:600;font-size:15px;letter-spacing:-.3px;}
-.logo-icon{width:30px;height:30px;background:linear-gradient(135deg,var(--accent),var(--accent3));border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.logo-icon{width:30px;height:30px;background:linear-gradient(135deg,#38bdf8,#0284c7);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(56,189,248,.35);}
 .logo-icon svg{width:16px;height:16px;fill:white;}
 .header-spacer{flex:1;}
 .btn-load{display:flex;align-items:center;gap:8px;background:var(--accent);color:white;border:none;border-radius:8px;padding:0 13px;height:34px;font-family:'Sora',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:opacity .2s;white-space:nowrap;}
@@ -83,6 +91,12 @@ body.is-modular .btn-collapse-all{display:flex;}
 .module-drag-handle:hover{opacity:.8;}
 .module-drag-handle:active{cursor:grabbing;}
 .module-drag-handle svg{width:12px;height:12px;stroke:var(--text2);fill:none;stroke-width:2;stroke-linecap:round;}
+/* módulo Favoritos */
+.module-header.fav-module{border-color:rgba(251,191,36,.3);background:rgba(251,191,36,.07);}
+.module-header.fav-module:hover{background:rgba(251,191,36,.13);}
+.module-header.fav-module .module-title{color:var(--amber);}
+.module-header.fav-module .module-arrow{stroke:var(--amber);}
+.module-header.fav-module .module-count{color:var(--amber);background:rgba(251,191,36,.12);}
 /* drag wrapper */
 .module-wrap{position:relative;transition:margin .1s;}
 .module-wrap.drag-over-top::before,.module-wrap.drag-over-bottom::after{content:'';display:block;height:3px;background:var(--accent);border-radius:2px;margin:1px 0;}
@@ -133,6 +147,41 @@ body.is-modular .btn-collapse-all{display:flex;}
 .player-area{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
 .video-wrapper{flex:1;display:flex;align-items:center;justify-content:center;background:#000;position:relative;min-height:0;}
 video#main-video{max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain;}
+
+/* ── MODO NATIVO (ExoPlayer PlayerView acima do WebView) ── */
+/* Oculta o <video> HTML — PlayerView renderiza em cima */
+body.native-vp #main-video{visibility:hidden!important;}
+/* Fundo transparente na área de vídeo → window background preto aparece como letterbox */
+body.native-vp .video-wrapper{background:transparent!important;}
+
+/* ── FULLSCREEN NATIVO ── */
+/* Quando plugin.enterFullscreen() é ativado, o PlayerView ocupa toda a tela Android.
+   Aqui apenas escondemos a UI do WebView para não aparecer atrás do player.
+   pointer-events:none garante que a camada transparente do WebView não bloqueie
+   os toques que devem ir ao PlayerView nativo. */
+body.native-fullscreen{background:#000!important;}
+body.native-fullscreen .sidebar,
+body.native-fullscreen header{display:none!important;}
+body.native-fullscreen .player-area{
+  position:fixed;inset:0;z-index:200;background:transparent;
+  pointer-events:none;/* toques passam para o PlayerView nativo (clickable=true em FS) */
+}
+body.native-fullscreen .video-wrapper{background:transparent!important;}
+body.native-fullscreen .controls-bar{display:none!important;}
+
+/* ── PIP ATIVO — sem moldura ── */
+/* O PlayerView já ocupa tela cheia via onPiPModeChanged(Java).
+   Aqui garantimos que o fundo do WebView não apareça no PiP window.
+   pointer-events:none é CRÍTICO: evita que a div transparente (position:fixed;inset:0)
+   bloqueie todos os toques ao sair do PiP se pip-active não for removido a tempo. */
+body.pip-active .sidebar,
+body.pip-active header,
+body.pip-active .controls-bar{display:none!important;}
+body.pip-active .player-area{
+  position:fixed;inset:0;z-index:200;background:transparent;
+  pointer-events:none;
+}
+body.pip-active .video-wrapper{background:transparent!important;}
 .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:var(--text3);text-align:center;padding:40px;}
 .empty-icon{width:72px;height:72px;background:var(--bg3);border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);}
 .empty-icon svg{width:32px;height:32px;stroke:var(--text3);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;}
@@ -189,20 +238,6 @@ video#main-video{max-width:100%;max-height:100%;width:100%;height:100%;object-fi
 .history-entry-play svg{width:10px;height:10px;fill:var(--accent2);stroke:none;}
 
 
-/* ── TRANSCRIÇÃO ── */
-.transcription-modal-box{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;width:100%;max-width:520px;padding:22px;display:flex;flex-direction:column;gap:14px;max-height:90vh;overflow-y:auto;}
-.transcription-status{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:'JetBrains Mono',monospace;}
-.transcription-dot{width:8px;height:8px;border-radius:50%;background:var(--text3);flex-shrink:0;}
-.transcription-dot.active{background:var(--red);animation:pulse 1s infinite;}
-.transcription-dot.paused{background:var(--amber);}
-.transcription-text-area{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;min-height:180px;max-height:300px;overflow-y:auto;font-size:13px;color:var(--text);line-height:1.7;white-space:pre-wrap;word-break:break-word;}
-.transcription-text-area::-webkit-scrollbar{width:4px;}
-.transcription-text-area::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px;}
-.transcription-interim{color:var(--text3);font-style:italic;}
-.transcription-controls{display:flex;gap:8px;flex-wrap:wrap;}
-.transcription-lang-select{flex:1;min-width:120px;height:34px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'Sora',sans-serif;font-size:12px;padding:0 8px;outline:none;cursor:pointer;}
-.transcription-lang-select:focus{border-color:rgba(108,99,255,.4);}
-
 /* ── LOADING ── */
 #loading-overlay{display:none;position:fixed;inset:0;background:rgba(13,15,20,.88);z-index:400;align-items:center;justify-content:center;flex-direction:column;gap:16px;}
 #loading-overlay.active{display:flex;}
@@ -212,10 +247,30 @@ video#main-video{max-width:100%;max-height:100%;width:100%;height:100%;object-fi
 .loading-sub{font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;}
 
 /* ── CONTROLS ── */
-.controls-bar{background:var(--bg2);border-top:1px solid var(--border);padding:9px 14px 11px;flex-shrink:0;}
+.controls-bar{background:var(--bg2);border-top:1px solid var(--border);padding:9px 14px 11px;flex-shrink:0;position:relative;}
+/* ── UNIFIED MORE MENU ── */
+#unified-more-menu{display:none;position:absolute;bottom:100%;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border2);padding:12px 14px;z-index:35;flex-direction:column;gap:10px;box-shadow:0 -6px 24px rgba(0,0,0,.3);max-height:72vh;overflow-y:auto;}
+#unified-more-menu.open{display:flex;}
+.unified-menu-section{display:flex;flex-direction:column;gap:7px;}
+.unified-menu-section-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);padding-bottom:2px;}
+.unified-menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px;}
+.unified-menu-btn{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:9px;cursor:pointer;font-size:12px;font-family:'Sora',sans-serif;color:var(--text2);transition:background .15s;width:100%;text-align:left;white-space:nowrap;}
+.unified-menu-btn:hover{background:var(--bg4);}
+.unified-menu-btn svg{width:15px;height:15px;stroke:var(--text2);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
+.unified-menu-btn.active-ctrl-green{background:rgba(52,211,153,.12);border-color:rgba(52,211,153,.3);}
+.unified-menu-btn.active-ctrl-green svg{stroke:var(--green);}
+.unified-menu-btn.active-ctrl{background:rgba(251,191,36,.15);border-color:rgba(251,191,36,.4);}
+.unified-menu-btn.active-ctrl svg{stroke:var(--amber);}
+.unified-menu-btn.active-btn{background:rgba(108,99,255,.15);border-color:rgba(108,99,255,.3);}
+.unified-menu-btn.active-btn svg{stroke:var(--accent2);}
+.unified-menu-divider{height:1px;background:var(--border);margin:2px 0;}
+@media(max-width:559px){.unified-menu-grid{grid-template-columns:repeat(2,1fr);}}
 .now-playing{display:flex;align-items:center;gap:9px;margin-bottom:7px;}
 .now-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--accent);flex-shrink:0;}
-.now-title{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.now-title{flex:1;font-size:13px;font-weight:500;color:var(--text);overflow:hidden;}
+#now-title{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+@keyframes now-title-scroll{0%,20%{transform:translateX(0);}80%,100%{transform:translateX(-100%);}}
+@media(max-width:559px) and (orientation:portrait){#now-title.marquee{display:inline-block;text-overflow:clip;animation:now-title-scroll 12s linear infinite;}}
 
 /* ── SEEKBAR COM CAPÍTULOS ── */
 .progress-row{display:flex;align-items:center;gap:9px;margin-bottom:7px;}
@@ -253,6 +308,16 @@ video#main-video{max-width:100%;max-height:100%;width:100%;height:100%;object-fi
 .mark-done-btn{display:flex;align-items:center;gap:6px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.25);color:var(--green);border-radius:8px;padding:0 11px;height:34px;font-family:'Sora',sans-serif;font-size:11px;font-weight:500;cursor:pointer;transition:background .15s;flex-shrink:0;}
 .mark-done-btn:hover{background:rgba(52,211,153,.18);}
 .mark-done-btn svg{width:12px;height:12px;stroke:var(--green);fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;}
+.fav-ctrl-btn{display:flex;align-items:center;gap:5px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:0 10px;height:34px;cursor:pointer;flex-shrink:0;transition:border-color .15s,background .15s;}
+.fav-ctrl-btn:hover{background:var(--bg4);}
+.fav-ctrl-btn svg{width:13px;height:13px;stroke:var(--amber);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.fav-ctrl-btn.is-fav{background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.3);}
+.fav-ctrl-btn.is-fav svg{fill:var(--amber);}
+.lesson-fav-btn{display:flex;align-items:center;justify-content:center;width:22px;height:22px;background:none;border:none;cursor:pointer;flex-shrink:0;opacity:.3;padding:0;transition:opacity .15s;}
+.lesson-fav-btn:hover{opacity:1;}
+.lesson-fav-btn svg{width:14px;height:14px;stroke:var(--amber);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.lesson-fav-btn.is-fav{opacity:1;}
+.lesson-fav-btn.is-fav svg{fill:var(--amber);}
 
 /* ── FRAME A FRAME badge ── */
 #frame-badge{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent3);background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.25);border-radius:5px;padding:2px 8px;height:34px;display:none;align-items:center;gap:5px;white-space:nowrap;}
@@ -296,6 +361,10 @@ video#main-video{max-width:100%;max-height:100%;width:100%;height:100%;object-fi
 .notes-mobile-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:350;align-items:flex-end;justify-content:center;}
 .notes-mobile-modal.active{display:flex;}
 .notes-mobile-box{background:var(--bg2);border-top:1px solid var(--border2);border-radius:16px 16px 0 0;width:100%;max-height:85dvh;display:flex;flex-direction:column;padding-bottom:var(--safe-b);}
+/* Modo teclado p/ notas mobile: mini player no topo, caixa de notas na base */
+body.keyboard-notes-open .notes-mobile-modal{top:auto !important;background:transparent;pointer-events:none;}
+body.keyboard-notes-open .notes-mobile-box{pointer-events:all;max-height:calc(100dvh - 220px);box-shadow:0 -6px 24px rgba(0,0,0,.5);}
+body.keyboard-notes-open .notes-mobile-box .notes-list{display:none;}
 
 /* ── XLSX VIEWER ── */
 .xlsx-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:300;align-items:center;justify-content:center;padding:20px;}
@@ -427,17 +496,38 @@ video#main-video{max-width:100%;max-height:100%;width:100%;height:100%;object-fi
 #toast{position:fixed;bottom:24px;right:24px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:11px 15px;font-size:13px;color:var(--text2);transform:translateY(60px);opacity:0;transition:all .3s;z-index:500;pointer-events:none;max-width:calc(100vw - 48px);}
 #toast.show{transform:translateY(0);opacity:1;}
 
+/* ── BARRA DE PROGRESSO DA AULA (2px na base do item) ── */
+.lesson-item{position:relative;}
+.lesson-prog-bar{position:absolute;bottom:0;left:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent3));border-radius:0 2px 0 0;pointer-events:none;transition:width .4s;}
+
+/* ── BARRA DE PROGRESSO DO MÓDULO ── */
+.module-prog-wrap{height:3px;background:var(--bg4);border-radius:0 0 6px 6px;overflow:hidden;margin:0 6px 3px;}
+.module-prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent3));border-radius:4px;transition:width .5s;}
+
+/* ── SWIPE HINT ── */
+.swipe-hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(1);background:rgba(0,0,0,.72);color:#fff;border-radius:10px;padding:10px 20px;font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;pointer-events:none;transition:opacity .35s,transform .35s;opacity:0;z-index:10;white-space:nowrap;}
+
+/* ── CONFIGURAÇÕES ── */
+.settings-section{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);padding:10px 2px 5px;border-bottom:1px solid var(--border);margin-bottom:6px;}
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:8px 2px;border-bottom:1px solid var(--border);}
+.settings-row:last-child{border-bottom:none;}
+.settings-label{font-size:13px;color:var(--text);}
+.settings-value{font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--text3);}
+.settings-link{font-size:12px;color:var(--accent2);text-decoration:none;cursor:pointer;}
+.settings-link:hover{text-decoration:underline;}
+.settings-row-clickable{cursor:pointer;transition:background .15s;border-radius:6px;padding:8px 4px;}
+.settings-row-clickable:hover{background:var(--bg3);}
+
 /* ── FAB mobile ── */
-#mobile-sidebar-toggle{display:none;position:fixed;bottom:80px;left:12px;width:40px;height:40px;background:var(--accent);border-radius:50%;border:none;z-index:30;cursor:pointer;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(108,99,255,.4);}
-#mobile-sidebar-toggle svg{width:18px;height:18px;stroke:white;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+/* #mobile-sidebar-toggle substituído por #ctrl-sidebar-btn (dentro da controls-bar,
+   abaixo do PlayerView — nunca coberto pelo player nativo) */
+#mobile-sidebar-toggle{display:none;}
+#ctrl-sidebar-btn{display:none;}/* mostrado via media query abaixo */
 #mobile-notes-fab{display:none;position:fixed;bottom:80px;right:12px;width:40px;height:40px;background:var(--bg2);border:1px solid var(--border2);border-radius:50%;z-index:30;cursor:pointer;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,.3);}
 #mobile-notes-fab svg{width:18px;height:18px;stroke:var(--accent2);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
-/* FAB Transcrição mobile */
-#transcription-fab{display:none;position:fixed;width:40px;height:40px;background:var(--bg2);border:1px solid var(--border2);border-radius:50%;z-index:30;cursor:pointer;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,.3);}
-#transcription-fab svg{width:18px;height:18px;stroke:var(--accent2);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
-#transcription-fab.recording{background:rgba(248,113,113,.15);border-color:rgba(248,113,113,.4);}
-#transcription-fab.recording svg{stroke:var(--red);}
 #sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:25;}
+#landscape-title-bar{display:none;padding:4px calc(12px + var(--safe-l)) 4px calc(12px + var(--safe-r));background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;overflow:hidden;}
+#landscape-now-title{display:block;font-size:11px;font-weight:500;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
 /* ── RESPONSIVE ── */
 @media(min-width:560px) and (max-width:899px){:root{--sidebar:260px;}}
@@ -445,19 +535,7 @@ video#main-video{max-width:100%;max-height:100%;width:100%;height:100%;object-fi
 
 @media(max-width:559px){
   :root{--sidebar:82vw;--header-h:50px;}
-  /* ── HEADER SCROLL HORIZONTAL MOBILE ── */
-  header{
-    gap:6px;
-    padding:0 10px;
-    padding-top:var(--safe-t);
-    height:calc(var(--header-h) + var(--safe-t));
-    overflow-x:auto;
-    overflow-y:hidden;
-    scrollbar-width:none;
-    flex-wrap:nowrap;
-    -webkit-overflow-scrolling:touch;
-  }
-  header::-webkit-scrollbar{display:none;}
+  header{gap:6px;padding:0 10px;padding-top:var(--safe-t);height:calc(var(--header-h) + var(--safe-t));}
   .header-spacer{display:none;}
   .logo{gap:5px;font-size:13px;flex-shrink:0;}
   .logo-icon{width:26px;height:26px;border-radius:6px;}
@@ -466,30 +544,27 @@ video#main-video{max-width:100%;max-height:100%;width:100%;height:100%;object-fi
   .progress-badge{font-size:9px;padding:3px 6px;flex-shrink:0;}
   .btn-icon{width:28px;height:28px;min-width:28px;border-radius:7px;flex-shrink:0;}
   .btn-icon svg{width:13px;height:13px;}
-  /* Todos os botões visíveis com scroll — nenhum oculto */
-  #shortcuts-btn{flex-shrink:0;}
   #notes-toggle-btn{display:flex;flex-shrink:0;}
-  #transcription-btn{display:flex;flex-shrink:0;}
-  /* FABs mobile ficam disponíveis como alternativa, mas agora header scrollável resolve */
   #mobile-notes-fab{display:none;}
-  #transcription-fab{display:flex;bottom:calc(18px + var(--safe-b) + 58px + 52px);right:12px;}
   .btn-load{height:28px;padding:0 8px;font-size:11px;border-radius:7px;gap:4px;flex-shrink:0;}
   .sidebar{position:fixed !important;top:0;left:0;z-index:40;width:min(82vw,300px) !important;height:100dvh !important;transform:translateX(-100%);transition:transform .26s cubic-bezier(.4,0,.2,1) !important;border-right:1px solid var(--border2) !important;}
   .sidebar.mobile-open{transform:translateX(0) !important;}
+  /* Garante que o botão "Recolher" não fique atrás da status bar */
+  .sidebar .sidebar-header{padding-top:calc(14px + var(--safe-t));}
   #sidebar-backdrop.active{display:block;}
-  #mobile-sidebar-toggle{display:flex;}
+  /* Sidebar toggle dentro da controls-bar (abaixo do PlayerView, sempre acessível) */
+  #ctrl-sidebar-btn{display:flex;}
   .notes-panel{display:none !important;}
   .lesson-thumb{display:none;}
   .lesson-name{font-size:11px;}
   .lesson-meta,.lesson-resume{font-size:9px;}
   .lesson-status{width:15px;height:15px;}
   .controls-bar{padding:8px 11px;padding-bottom:calc(8px + var(--safe-b));}
-  .ctrl-row{gap:4px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;}
-  .ctrl-row::-webkit-scrollbar{display:none;}
+  .ctrl-row{gap:4px;flex-wrap:nowrap;}
   .ctrl-btn{width:30px;height:30px;border-radius:7px;}
   .ctrl-btn svg{width:13px;height:13px;}
-  .speed-btn{font-size:10px;padding:0 7px;height:30px;}
   .mark-done-btn{padding:0 7px;height:30px;font-size:11px;}
+  .fav-ctrl-btn{padding:0 7px;height:30px;}
   .mark-done-btn .mark-label{display:none;}
   .vol-row{display:none;}
   .ab-label{display:none;}
@@ -498,15 +573,56 @@ video#main-video{max-width:100%;max-height:100%;width:100%;height:100%;object-fi
   #toast{bottom:calc(20px + var(--safe-b));right:14px;font-size:12px;}
   .stats-grid{grid-template-columns:1fr;}
   .theme-btn span{display:none;}
-  .transcription-modal-box{max-height:80vh;}
-  .transcription-controls{gap:6px;}
+  #header-sidebar-toggle{display:none;}
 }
 @media(max-width:559px) and (orientation:landscape){
+  :root{--header-h:36px;}
+  header{padding-left:calc(10px + var(--safe-l));padding-right:calc(10px + var(--safe-r));}
   #mobile-sidebar-toggle{display:none;}
   #mobile-notes-fab{display:none;}
-  #transcription-fab{display:none;}
   #sidebar-backdrop{display:none !important;}
-  .controls-bar{padding:5px 11px;padding-bottom:calc(5px + var(--safe-b));}
+  .controls-bar{padding:4px 11px;padding-bottom:calc(4px + var(--safe-b));}
+  .now-playing{display:none;}
+  #landscape-title-bar{display:block;}
+}
+
+/* ── PAISAGEM EM PHONE/TABLET MÉDIO (560-1024px) ──
+   Header flutua fixo apenas sobre a área do player;
+   sidebar fica em altura total; title-bar aparece abaixo do header. */
+@media(min-width:560px) and (max-width:1024px) and (orientation:landscape){
+  :root{--header-h:42px;}
+  header{
+    position:fixed;top:0;right:0;left:var(--sidebar);
+    height:calc(var(--header-h) + var(--safe-t));
+    z-index:30;
+  }
+  .logo-text{display:none;}
+  .progress-badge{display:none;}
+  /* sidebar cresce para 100dvh (header saiu do fluxo normal) */
+  .main{height:100dvh;}
+  /* sidebar-header respeitando safe-area do topo */
+  .sidebar .sidebar-header{padding-top:calc(14px + var(--safe-t));}
+  /* player-area recua o conteúdo para baixo do header fixo */
+  .player-area{padding-top:calc(var(--header-h) + var(--safe-t));}
+  .now-playing{display:none;}
+  #landscape-title-bar{display:block;}
+  .controls-bar{padding:5px 14px;padding-bottom:calc(5px + var(--safe-b));}
+  /* sidebar oculta → header expande para cobrir a largura toda */
+  body.sidebar-hidden header{left:0;}
+  /* tudo na mesma linha — sem quebra de linha */
+  .ctrl-row{flex-wrap:nowrap;gap:4px;}
+  .ctrl-btn{width:28px;height:28px;border-radius:7px;}
+  .ctrl-btn svg{width:13px;height:13px;}
+  .mark-done-btn{padding:0 7px;height:28px;font-size:10px;}
+  .mark-done-btn .mark-label{display:none;}
+  .fav-ctrl-btn{padding:0 6px;height:28px;}
+  .vol-row{display:none;}
+}
+
+/* On mobile (≤799px): hide overflow-item header buttons (accessible via unified ⋮) */
+@media(max-width:799px){
+  .btn-icon.overflow-item{display:none !important;}
+  .drive-btn.overflow-item{display:none !important;}
 }
 </style>
 </head>
@@ -584,6 +700,7 @@ video#main-video{max-width:100%;max-height:100%;width:100%;height:100%;object-fi
       <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">Esc</span></div><span class="shortcut-desc">Cancelar loop A-B / fechar revisão</span></div>
       <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">A</span></div><span class="shortcut-desc">Adicionar nota no timestamp atual</span></div>
       <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">S</span></div><span class="shortcut-desc">Abrir / fechar painel de notas</span></div>
+      <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">L</span></div><span class="shortcut-desc">Ciclar loop da aula (1× / infinito / desativado)</span></div>
       <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">I</span></div><span class="shortcut-desc">Picture-in-Picture</span></div>
       <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">R</span></div><span class="shortcut-desc">Abrir / fechar modo revisão</span></div>
       <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">T</span></div><span class="shortcut-desc">Iniciar / pausar transcrição</span></div>
@@ -616,59 +733,34 @@ video#main-video{max-width:100%;max-height:100%;width:100%;height:100%;object-fi
 </div>
 
 
-<!-- Modal Transcrição Automática -->
-<div class="modal-overlay" id="transcription-modal">
-  <div class="transcription-modal-box">
-    <div class="modal-title">🎙 Transcrição Automática</div>
-    <div class="transcription-status">
-      <div class="transcription-dot" id="transcription-dot"></div>
-      <span id="transcription-status-text">Parado — clique em Iniciar para começar</span>
+<!-- Modal Configurações -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal-box" style="max-width:380px;">
+    <div class="modal-title">⚙ Configurações</div>
+    <div class="settings-section">Reprodução</div>
+    <div class="settings-row">
+      <span class="settings-label">Auto-completar aula a 90%</span>
+      <span class="settings-value" style="color:var(--green);">Ativado</span>
     </div>
-    <div style="display:flex;flex-direction:column;gap:6px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
-        <span style="font-size:11px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.8px;">Transcrição</span>
-        <span id="transcription-word-count" style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--text3);">0 palavras</span>
-      </div>
-      <div class="transcription-text-area" id="transcription-output">
-        <span style="color:var(--text3);font-style:italic;">A transcrição aparecerá aqui conforme você fala…</span>
-      </div>
+    <div class="settings-row settings-row-clickable" onclick="clearCrashLog()">
+      <span class="settings-label">Log de erros</span>
+      <span class="settings-value" id="crash-log-count">0 erros</span>
     </div>
-    <div style="display:flex;flex-direction:column;gap:8px;">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <label style="font-size:11px;color:var(--text3);white-space:nowrap;">Idioma:</label>
-        <select class="transcription-lang-select" id="transcription-lang" onchange="onTranscriptionLangChange()">
-          <option value="pt-BR">🇧🇷 Português (Brasil)</option>
-          <option value="pt-PT">🇵🇹 Português (Portugal)</option>
-          <option value="en-US">🇺🇸 English (US)</option>
-          <option value="en-GB">🇬🇧 English (UK)</option>
-          <option value="es-ES">🇪🇸 Español</option>
-          <option value="fr-FR">🇫🇷 Français</option>
-          <option value="de-DE">🇩🇪 Deutsch</option>
-          <option value="it-IT">🇮🇹 Italiano</option>
-          <option value="ja-JP">🇯🇵 日本語</option>
-          <option value="zh-CN">🇨🇳 中文 (简体)</option>
-        </select>
-      </div>
-      <div class="transcription-controls">
-        <button class="modal-btn primary" id="transcription-start-btn" onclick="toggleTranscription()" style="flex:0;min-width:110px;">
-          ▶ Iniciar
-        </button>
-        <button class="modal-btn secondary" onclick="copyTranscription()" style="flex:0;min-width:80px;">
-          ⎘ Copiar
-        </button>
-        <button class="modal-btn secondary" onclick="exportTranscription()" style="flex:0;min-width:90px;">
-          ↓ Exportar
-        </button>
-        <button class="modal-btn danger" onclick="clearTranscription()" style="flex:0;min-width:80px;">
-          ✕ Limpar
-        </button>
-      </div>
+    <div class="settings-section" style="margin-top:8px;">Sobre o app</div>
+    <div class="settings-row">
+      <span class="settings-label">Versão</span>
+      <span class="settings-value">2.0.0</span>
     </div>
-    <div style="font-size:11px;color:var(--text3);line-height:1.6;background:var(--bg3);border-radius:7px;padding:10px 12px;border:1px solid var(--border);">
-      💡 <strong style="color:var(--text2);">Como usar:</strong> Clique em Iniciar e fale próximo ao microfone. A transcrição é feita localmente pelo navegador usando reconhecimento de voz. Funciona melhor no Chrome e Edge. Use o atalho <span style="font-family:'JetBrains Mono',monospace;background:var(--bg4);padding:1px 5px;border-radius:3px;">T</span> para iniciar/pausar rapidamente.
+    <div class="settings-row">
+      <span class="settings-label">Política de Privacidade</span>
+      <a class="settings-link" href="https://jcorelabs.com/studyplay/privacy" target="_blank" onclick="openExternalLink(event,this.href)">ver →</a>
     </div>
-    <div class="modal-actions">
-      <button class="modal-btn secondary" onclick="closeTranscriptionModal()">Fechar</button>
+    <div class="settings-row">
+      <span class="settings-label">Avaliar o app</span>
+      <a class="settings-link" href="#" onclick="rateApp(event)">⭐ Avaliar →</a>
+    </div>
+    <div class="modal-actions" style="margin-top:12px;">
+      <button class="modal-btn secondary" onclick="document.getElementById('settings-modal').classList.remove('active')">Fechar</button>
     </div>
   </div>
 </div>
@@ -694,7 +786,7 @@ video#main-video{max-width:100%;max-height:100%;width:100%;height:100%;object-fi
         <svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Exportar
       </button>
-      <button class="notes-snap-btn" style="margin-left:4px;" onclick="document.getElementById('notes-mobile-modal').classList.remove('active')">✕</button>
+      <button class="notes-snap-btn" style="margin-left:4px;" onclick="document.getElementById('notes-mobile-modal').classList.remove('active');window._nativeShowPlayer?.();">✕</button>
     </div>
     <div class="notes-list" id="notes-list-mobile"></div>
     <div class="notes-input-area">
@@ -769,47 +861,43 @@ video#main-video{max-width:100%;max-height:100%;width:100%;height:100%;object-fi
 <header>
   <div class="logo">
     <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg></div>
-    <span class="logo-text">VideoAulas</span>
+    <span class="logo-text">StudyPlay</span>
   </div>
   <div class="header-spacer"></div>
   <div class="progress-badge">Concluídas: <span id="done-count">0</span> / <span id="total-count">0</span></div>
 
-  <button class="btn-icon" onclick="openStats()" title="Estatísticas e histórico de estudo">
-    <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-  </button>
-
-  <!-- Modo Revisão -->
-  <button class="btn-icon" id="review-btn" onclick="openReviewMode()" title="Modo revisão (R)">
+  <!-- Botões secundários: visíveis no desktop, acessíveis via ⋮ no mobile -->
+  <button class="btn-icon overflow-item" id="review-btn" onclick="openReviewMode()" title="Modo revisão (R)">
     <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/><polyline points="12 7 12 12 15 15"/></svg>
   </button>
 
-
-  <!-- Transcrição automática -->
-  <button class="btn-icon" id="transcription-btn" onclick="openTranscriptionModal()" title="Transcrição automática (T)">
-    <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-  </button>
-
-  <button class="btn-icon" id="theme-btn-header" onclick="document.getElementById('theme-modal').classList.add('active')" title="Tema claro/escuro">
+  <button class="btn-icon overflow-item" id="theme-btn-header" onclick="window._nativeHidePlayer?.();document.getElementById('theme-modal').classList.add('active')" title="Tema claro/escuro">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
   </button>
 
-  <button class="btn-icon" id="shortcuts-btn" onclick="document.getElementById('shortcuts-modal').classList.add('active')" title="Atalhos de teclado (?)">
-    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-  </button>
-
-  <button class="btn-icon" id="notes-toggle-btn" onclick="toggleNotesPanel()" title="Painel de notas (S)">
+  <button class="btn-icon" id="notes-toggle-btn" onclick="toggleNotesPanel()" title="Painel de notas (S)" aria-label="Notas">
     <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
   </button>
 
-  <button class="btn-icon" onclick="openProgressModal()" title="Exportar / Importar progresso">
+  <button class="btn-icon overflow-item" onclick="openProgressModal()" title="Exportar / Importar progresso" aria-label="Progresso">
     <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
   </button>
 
+  <!-- Configurações -->
+  <button class="btn-icon" id="settings-btn" onclick="openSettings()" title="Configurações e sobre" aria-label="Configurações">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  </button>
+
   <!-- Google Drive Sync Button -->
-  <button class="drive-btn disconnected" id="drive-header-btn" onclick="openDriveModal()" title="Sincronizar com Google Drive">
+  <button class="drive-btn disconnected overflow-item" id="drive-header-btn" onclick="openDriveModal()" title="Sincronizar com Google Drive">
     <div class="drive-sync-dot" id="drive-header-dot"></div>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12A10 10 0 1 1 12 2"/><path d="M22 2L12 12"/><path d="M16 2h6v6"/></svg>
     <span id="drive-header-label">Drive</span>
+  </button>
+
+  <!-- Estatísticas — sempre visível no header -->
+  <button class="btn-icon" onclick="openStats()" title="Estatísticas e histórico de estudo">
+    <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
   </button>
 
   <button class="btn-load" onclick="openFolder()">
@@ -817,7 +905,7 @@ video#main-video{max-width:100%;max-height:100%;width:100%;height:100%;object-fi
     Abrir Pasta
   </button>
 
-  <button class="btn-icon" onclick="toggleSidebar()" title="Ocultar/mostrar playlist">
+  <button id="header-sidebar-toggle" class="btn-icon" onclick="toggleSidebar()" title="Ocultar/mostrar playlist">
     <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
   </button>
 </header>
@@ -851,6 +939,7 @@ video#main-video{max-width:100%;max-height:100%;width:100%;height:100%;object-fi
 
   <!-- PLAYER -->
   <div class="player-area">
+    <div id="landscape-title-bar"><span id="landscape-now-title">—</span></div>
     <div class="video-wrapper" id="video-wrapper">
       <div class="empty-state" id="empty-state">
         <div class="empty-icon"><svg viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div>
@@ -865,7 +954,7 @@ video#main-video{max-width:100%;max-height:100%;width:100%;height:100%;object-fi
     <div class="controls-bar">
       <div class="now-playing">
         <span class="now-label">▶ Agora</span>
-        <span class="now-title" id="now-title">—</span>
+        <span class="now-title"><span id="now-title">—</span></span>
       </div>
       <div class="progress-row">
         <span class="time-label" id="time-cur">0:00</span>
@@ -878,12 +967,12 @@ video#main-video{max-width:100%;max-height:100%;width:100%;height:100%;object-fi
         <span class="time-label right" id="time-dur">0:00</span>
       </div>
       <div class="ctrl-row">
+        <!-- Sidebar toggle — mobile only, dentro da controls-bar (abaixo do PlayerView) -->
+        <button id="ctrl-sidebar-btn" class="ctrl-btn" onclick="openMobileSidebar()" title="Playlist">
+          <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        </button>
         <button class="ctrl-btn" onclick="prevLesson()" title="Anterior (P)">
           <svg viewBox="0 0 24 24"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
-        </button>
-        <!-- Frame anterior -->
-        <button class="ctrl-btn" id="frame-prev-btn" onclick="stepFrame(-1)" title="Frame anterior (&lt;)">
-          <svg viewBox="0 0 24 24"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
         </button>
         <button class="ctrl-btn" onclick="skipTime(-10)" title="-10s (←)">
           <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
@@ -894,22 +983,29 @@ video#main-video{max-width:100%;max-height:100%;width:100%;height:100%;object-fi
         <button class="ctrl-btn" onclick="skipTime(10)" title="+10s (→)">
           <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-4.5"/></svg>
         </button>
-        <!-- Próximo frame -->
-        <button class="ctrl-btn" id="frame-next-btn" onclick="stepFrame(1)" title="Próximo frame (&gt;)">
-          <svg viewBox="0 0 24 24"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
-        </button>
         <button class="ctrl-btn" onclick="nextLesson()" title="Próxima (N)">
           <svg viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
         </button>
-        <button class="speed-btn" id="speed-btn" onclick="cycleSpeed()" title="Velocidade">1×</button>
-        <button class="ctrl-btn" id="ab-btn" onclick="abCycle()" title="Loop A-B ([  ])">
-          <svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        <!-- Loop aula (antes do modo áudio) -->
+        <button class="ctrl-btn" id="loop-btn" onclick="toggleLoop()" title="Repetir esta aula em loop" style="position:relative;">
+          <svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="10" y1="8" x2="12" y2="8"/></svg>
+          <span class="loop-count-badge" style="display:none;position:absolute;bottom:2px;right:2px;font-size:8px;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--amber);line-height:1;pointer-events:none;">1×</span>
         </button>
-        <button class="ctrl-btn" id="chapter-btn" onclick="addChapterAtCurrent()" title="Adicionar capítulo aqui (C)">
-          <svg viewBox="0 0 24 24"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        <!-- Botão Áudio (apenas áudio, tela pode ser desligada) -->
+        <button class="ctrl-btn" id="audio-only-btn" onclick="toggleAudioOnly()" title="Apenas áudio — desliga a tela" style="display:none;">
+          <svg viewBox="0 0 24 24"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
         </button>
+        <!-- PiP (mostrado/oculto por JS) -->
         <button class="ctrl-btn" id="pip-btn" onclick="togglePiP()" title="Picture-in-Picture (I)" style="display:none;">
           <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="10" y="10" width="11" height="7" rx="1" fill="none" stroke-width="1.8"/></svg>
+        </button>
+        <!-- Tela cheia (logo após PiP) -->
+        <button class="ctrl-btn" id="fs-btn" onclick="toggleNativeFullscreen()" title="Tela cheia (F)">
+          <svg id="fs-icon" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+        </button>
+        <!-- Botão ⋮ Unificado — abre menu com todos os controles extras -->
+        <button class="ctrl-btn" id="unified-more-btn" onclick="toggleMoreMenu()" title="Mais opções">
+          <svg viewBox="0 0 24 24" fill="var(--text2)" stroke="none"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
         </button>
 
         <div class="ab-label" id="ab-label" style="display:none;">
@@ -920,6 +1016,9 @@ video#main-video{max-width:100%;max-height:100%;width:100%;height:100%;object-fi
           <svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
           <span id="frame-badge-text">fr</span>
         </div>
+        <button class="fav-ctrl-btn" id="fav-btn" onclick="toggleFavorite(currentIdx)" title="Favoritar aula">
+          <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </button>
         <button class="mark-done-btn" onclick="markDone()" id="mark-btn">
           <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
           <span class="mark-label">Marcar concluída</span>
@@ -928,6 +1027,77 @@ video#main-video{max-width:100%;max-height:100%;width:100%;height:100%;object-fi
           <svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
           <input type="range" class="vol-slider" id="vol-slider" min="0" max="1" step="0.02" value="1" oninput="setVol(this.value)">
         </div>
+      </div>
+
+      <!-- ══ MENU UNIFICADO ⋮ ══ -->
+      <div id="unified-more-menu">
+
+        <!-- ── Playback ── -->
+        <div class="unified-menu-section">
+          <span class="unified-menu-section-title">Playback</span>
+          <div class="unified-menu-grid">
+            <!-- Velocidade -->
+            <button class="unified-menu-btn" id="speed-btn" onclick="cycleSpeed()" title="Ciclar velocidade">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Vel: <strong id="speed-value">1×</strong>
+            </button>
+            <!-- Timer sono -->
+            <button class="unified-menu-btn" id="sleep-btn" onclick="openSleepTimer()" title="Timer de sono">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 6 12 12 15.5 14"/></svg>
+              Timer de sono
+            </button>
+            <!-- Adicionar capítulo -->
+            <button class="unified-menu-btn" id="chapter-btn" onclick="addChapterAtCurrent();closeMoreMenu()" title="Adicionar capítulo aqui (C)">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              + Capítulo
+            </button>
+            <!-- Loop A-B — ícone: setas bidirecionais em linha -->
+            <button class="unified-menu-btn" id="ab-btn" onclick="abCycle()" title="Loop A-B (definir pontos [ e ])">
+              <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><polyline points="8 7 3 12 8 17"/><polyline points="16 7 21 12 16 17"/></svg>
+              Loop A·B
+            </button>
+            <!-- Frame anterior -->
+            <button class="unified-menu-btn" id="frame-prev-btn" onclick="stepFrame(-1)" title="Frame anterior (&lt;)">
+              <svg viewBox="0 0 24 24"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+              Frame ◀
+            </button>
+            <!-- Próximo frame -->
+            <button class="unified-menu-btn" id="frame-next-btn" onclick="stepFrame(1)" title="Próximo frame (&gt;)">
+              <svg viewBox="0 0 24 24"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+              Frame ▶
+            </button>
+          </div>
+        </div>
+
+        <div class="unified-menu-divider"></div>
+
+        <!-- ── App ── -->
+        <div class="unified-menu-section">
+          <span class="unified-menu-section-title">App</span>
+          <div class="unified-menu-grid">
+            <!-- Modo Revisão -->
+            <button class="unified-menu-btn" onclick="openReviewMode();closeMoreMenu()">
+              <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/><polyline points="12 7 12 12 15 15"/></svg>
+              Modo Revisão
+            </button>
+            <!-- Tema -->
+            <button class="unified-menu-btn" onclick="window._nativeHidePlayer?.();document.getElementById('theme-modal').classList.add('active');closeMoreMenu()">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg>
+              Tema
+            </button>
+            <!-- Exportar Progresso -->
+            <button class="unified-menu-btn" onclick="openProgressModal();closeMoreMenu()">
+              <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+              Progresso
+            </button>
+            <!-- Google Drive -->
+            <button class="unified-menu-btn" onclick="openDriveModal();closeMoreMenu()">
+              <svg viewBox="0 0 24 24"><path d="M22 12A10 10 0 1 1 12 2"/><path d="M22 2L12 12"/><path d="M16 2h6v6"/></svg>
+              Google Drive
+            </button>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -954,9 +1124,6 @@ video#main-video{max-width:100%;max-height:100%;width:100%;height:100%;object-fi
 </div>
 
 <!-- FABs mobile -->
-<button id="transcription-fab" onclick="openTranscriptionModal()" title="Transcrição automática">
-  <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-</button>
 <button id="mobile-sidebar-toggle" onclick="openMobileSidebar()">
   <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
 </button>
@@ -969,6 +1136,19 @@ video#main-video{max-width:100%;max-height:100%;width:100%;height:100%;object-fi
 /* ═══════════════════════════════════════════
    CONSTANTES E ESTADO GLOBAL
 ═══════════════════════════════════════════ */
+/* ── CRASH LOG (window.onerror) ── */
+const _crashLog = [];
+window.onerror = (msg, src, line, col, err)=>{
+  _crashLog.push({msg:String(msg).slice(0,200), src:String(src||'').slice(0,80), line, at:Date.now()});
+  if(_crashLog.length > 30) _crashLog.shift();
+  try{ localStorage.setItem('splay_crash_log', JSON.stringify(_crashLog.slice(-20))); }catch(e){}
+  return false;
+};
+window.onunhandledrejection = (ev)=>{
+  _crashLog.push({msg:String(ev.reason||'unhandled rejection').slice(0,200), at:Date.now()});
+  if(_crashLog.length > 30) _crashLog.shift();
+};
+
 const VIDEO_EXTS = ['mp4','webm','mkv','avi','mov','m4v','ogv','flv'];
 const PDF_EXTS   = ['pdf'];
 const WEB_EXTS   = ['html','htm','url'];
@@ -977,7 +1157,7 @@ const DOCX_EXTS  = ['docx','doc','pptx','ppt'];
 const OTHER_EXTS = ['txt','zip','mp3','ogg','wav','m4a'];
 const ALL_CONTENT_EXTS = [...PDF_EXTS,...WEB_EXTS,...XLSX_EXTS,...DOCX_EXTS,...OTHER_EXTS];
 const LS_KEY   = 'videoaulas_v3';
-const MAX_DEPTH = 6;
+const MAX_DEPTH = 20; // profundidade máxima de subpastas (praticamente ilimitado)
 
 let lessons     = [];
 let modules     = [];
@@ -986,6 +1166,7 @@ let sortedLessons = [];
 let currentIdx  = -1;
 let speeds      = [0.5,0.75,1.0,1.25,1.5,1.75,2.0], speedIdx = 2;
 let done        = new Set();
+let favorites   = new Set();
 let sidebarVisible = true, notesPanelVisible = false;
 let isModular   = false;
 let collapsedModules = {};
@@ -993,6 +1174,7 @@ let currentDirHandle = null;
 let xlsxSheets  = {};
 let saveTimer   = null;
 const lessonTimes = {};
+const lessonDurations = {}; // idx → duration em segundos (carregado via thumbnail)
 
 // Estatísticas
 let studyStats = {totalWatchedSec:0,sessionsCount:0,lastStudyDate:null,dailySec:{}};
@@ -1028,23 +1210,85 @@ let historySessionStart = null;
 let historySessionLesson = -1;
 let historySessionSec = 0;
 
-// ── TRANSCRIÇÃO ──
-let recognition = null;
-let isTranscribing = false;
-let transcriptionPaused = false;
-let transcriptionFinalText = '';
-let transcriptionInterimText = '';
-
-const video      = document.getElementById('main-video');
-const emptyState = document.getElementById('empty-state');
-const playlistEl = document.getElementById('playlist');
-const nowTitle   = document.getElementById('now-title');
-const seekFill   = document.getElementById('seekbar-fill');
+const video           = document.getElementById('main-video');
+const emptyState      = document.getElementById('empty-state');
+const playlistEl      = document.getElementById('playlist');
+const nowTitle        = document.getElementById('now-title');
+const landscapeNowTitle = document.getElementById('landscape-now-title');
+const seekFill        = document.getElementById('seekbar-fill');
+function updateNowTitle(name){
+  nowTitle.textContent = name;
+  if(landscapeNowTitle) landscapeNowTitle.textContent = name;
+  nowTitle.classList.remove('marquee');
+  requestAnimationFrame(()=>{ if(nowTitle.scrollWidth > nowTitle.offsetWidth) nowTitle.classList.add('marquee'); });
+}
 const timeCur    = document.getElementById('time-cur');
 const timeDur    = document.getElementById('time-dur');
 const playIcon   = document.getElementById('play-icon');
 const doneCount  = document.getElementById('done-count');
 const totalCount = document.getElementById('total-count');
+
+/* ═══════════════════════════════════════════
+   PLATFORM DETECTION (CAPACITOR / WEB)
+═══════════════════════════════════════════ */
+const Platform = (function(){
+  try{ return { isCapacitor: !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) }; }
+  catch(e){ return { isCapacitor: false }; }
+})();
+
+/* ═══════════════════════════════════════════
+   IDB — PERSISTÊNCIA DE VÍDEOS (ANDROID APK)
+   Blobs salvos em IndexedDB para restauração automática
+═══════════════════════════════════════════ */
+const _IDB_DB    = 'studyplay_v1_videos';
+const _IDB_STORE = 'vids';
+const _IDB_SESS  = 'splay_apk_session';
+let   _idbConn   = null;
+
+function _idbOpen(){
+  if(_idbConn) return Promise.resolve(_idbConn);
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open(_IDB_DB,1);
+    r.onupgradeneeded=e=>{ if(!e.target.result.objectStoreNames.contains(_IDB_STORE)) e.target.result.createObjectStore(_IDB_STORE,{keyPath:'name'}); };
+    r.onsuccess=e=>{ _idbConn=e.target.result; res(_idbConn); };
+    r.onerror=()=>rej(r.error);
+  });
+}
+async function _idbSave(file){
+  try{
+    const db=await _idbOpen();
+    await new Promise((res,rej)=>{ const tx=db.transaction(_IDB_STORE,'readwrite'); tx.objectStore(_IDB_STORE).put({name:file.name,blob:file,sz:file.size,mt:file.type||'video/mp4'}); tx.oncomplete=res; tx.onerror=()=>rej(tx.error); });
+  }catch(e){}
+}
+async function _idbGet(name){
+  try{
+    const db=await _idbOpen();
+    return new Promise((res,rej)=>{ const req=db.transaction(_IDB_STORE,'readonly').objectStore(_IDB_STORE).get(name); req.onsuccess=()=>{ const r=req.result; res(r?new File([r.blob],r.name,{type:r.mt}):null); }; req.onerror=()=>rej(req.error); });
+  }catch(e){ return null; }
+}
+async function _idbKeys(){
+  try{
+    const db=await _idbOpen();
+    return new Promise((res,rej)=>{ const req=db.transaction(_IDB_STORE,'readonly').objectStore(_IDB_STORE).getAllKeys(); req.onsuccess=()=>res(req.result||[]); req.onerror=()=>rej(req.error); });
+  }catch(e){ return []; }
+}
+async function _idbClear(){
+  try{ const db=await _idbOpen(); await new Promise((res,rej)=>{ const tx=db.transaction(_IDB_STORE,'readwrite'); tx.objectStore(_IDB_STORE).clear(); tx.oncomplete=res; tx.onerror=()=>rej(tx.error); }); }catch(e){}
+}
+// Salva lista de nomes de arquivos no localStorage (metadados da sessão)
+function _idbSaveSession(names){ try{ localStorage.setItem(_IDB_SESS,JSON.stringify({names,savedAt:Date.now()})); }catch(e){} }
+function _idbGetSession(){ try{ const r=localStorage.getItem(_IDB_SESS); return r?JSON.parse(r):null; }catch(e){return null;} }
+// Salva blobs em background, sem bloquear a UI
+function _idbBgSave(files){
+  if(!Platform.isCapacitor||!files.length) return;
+  const q=[...files]; let n=0;
+  async function next(){
+    if(!q.length){ if(n>0) toast(`📦 ${n} vídeo(s) salvos para acesso offline`); return; }
+    await _idbSave(q.shift()); n++;
+    setTimeout(next,20);
+  }
+  setTimeout(next,1200);
+}
 
 
 /* ═══════════════════════════════════════════
@@ -1118,6 +1362,7 @@ function saveToStorage(){
     lessons.forEach(l=>{ const t=lessonTimes[l.idx]; if(t&&t>2) positions[l.name]=t; });
     const data = {
       done:[...done].map(i=>lessons[i]?lessons[i].name:null).filter(Boolean),
+      favorites:[...favorites].map(i=>lessons[i]?.name).filter(Boolean),
       positions, speedIdx,
       currentName: currentIdx>=0&&lessons[currentIdx] ? lessons[currentIdx].name : null,
       savedAt: Date.now(), studyStats, notes, chapters,
@@ -1135,10 +1380,12 @@ function applyStoredProgress(data){
   const nameToIdx = new Map(lessons.map(l=>[l.name, l.idx]));
   done = new Set();
   (data.done||[]).forEach(name=>{ const i=nameToIdx.get(name); if(i!==undefined) done.add(i); });
+  favorites = new Set();
+  (data.favorites||[]).forEach(name=>{ const i=nameToIdx.get(name); if(i!==undefined) favorites.add(i); });
   if(data.speedIdx!==undefined){
     speedIdx = data.speedIdx; video.playbackRate = speeds[speedIdx];
     const s = speeds[speedIdx];
-    document.getElementById('speed-btn').textContent = (s%1===0?s.toFixed(0):s.toFixed(2).replace(/0+$/,''))+'×';
+    const sv2=document.getElementById('speed-value'); if(sv2) sv2.textContent=(s%1===0?s.toFixed(0):s.toFixed(2).replace(/0+$/,''))+'×';
   }
   (data.positions?Object.entries(data.positions):[]).forEach(([name,t])=>{
     const i = nameToIdx.get(name); if(i!==undefined) lessonTimes[i]=t;
@@ -1354,248 +1601,17 @@ function exitFrameMode(){
 video.addEventListener('play', ()=>{
   exitFrameMode();
   playIcon.innerHTML=`<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>`;
+  if(_audioOnly){
+    /* Re-oculta o PlayerView se modo áudio estiver ativo (ExoPlayer pode reexibir ao trocar faixa) */
+    const _p=window.Capacitor?.Plugins?.VideoPlayer;
+    if(_p) _p.hide().catch(()=>{});
+  } else { requestWakeLock(); }
 });
 video.addEventListener('pause', ()=>{
   playIcon.innerHTML=`<polygon points="5 3 19 12 5 21 5 3"/>`;
+  releaseWakeLock();
 });
 
-
-/* ═══════════════════════════════════════════
-   TRANSCRIÇÃO AUTOMÁTICA (Web Speech API)
-═══════════════════════════════════════════ */
-function initRecognition(){
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!SpeechRecognition) return null;
-  const rec = new SpeechRecognition();
-  rec.continuous = true;
-  rec.interimResults = true;
-  rec.lang = document.getElementById('transcription-lang').value;
-
-  rec.onresult = (event) => {
-    let interim = '';
-    for(let i = event.resultIndex; i < event.results.length; i++){
-      const transcript = event.results[i][0].transcript;
-      if(event.results[i].isFinal){
-        transcriptionFinalText += transcript + ' ';
-      } else {
-        interim += transcript;
-      }
-    }
-    transcriptionInterimText = interim;
-    renderTranscriptionOutput();
-  };
-
-  rec.onerror = (event) => {
-    if(event.error === 'no-speech') return;
-    if(event.error === 'not-allowed'){
-      toast('Permissão de microfone negada');
-      stopTranscription(true);
-    } else if(event.error === 'network'){
-      toast('Erro de rede na transcrição');
-    }
-    updateTranscriptionStatus('error');
-  };
-
-  rec.onend = () => {
-    if(isTranscribing && !transcriptionPaused){
-      // Auto-restart para manter contínuo
-      try{ rec.start(); }catch(e){}
-    } else {
-      updateTranscriptionStatus('stopped');
-    }
-  };
-
-  rec.onspeechstart = () => updateTranscriptionStatus('listening');
-  rec.onspeechend   = () => updateTranscriptionStatus('processing');
-
-  return rec;
-}
-
-function openTranscriptionModal(){
-  if(!window.SpeechRecognition && !window.webkitSpeechRecognition){
-    toast('Seu navegador não suporta reconhecimento de voz. Use Chrome ou Edge.');
-    return;
-  }
-  document.getElementById('transcription-modal').classList.add('active');
-  updateTranscriptionStatus(isTranscribing && !transcriptionPaused ? 'listening' : transcriptionPaused ? 'paused' : 'stopped');
-  updateTranscriptionStartBtn();
-}
-
-function closeTranscriptionModal(){
-  document.getElementById('transcription-modal').classList.remove('active');
-}
-
-function onTranscriptionLangChange(){
-  // Se estiver transcrevendo, reinicia com novo idioma
-  if(isTranscribing){
-    stopTranscription(true);
-    setTimeout(()=>startTranscription(), 300);
-  }
-}
-
-function toggleTranscription(){
-  if(!isTranscribing){
-    startTranscription();
-  } else if(transcriptionPaused){
-    resumeTranscription();
-  } else {
-    pauseTranscription();
-  }
-}
-
-function startTranscription(){
-  recognition = initRecognition();
-  if(!recognition){ toast('Reconhecimento de voz não disponível'); return; }
-  isTranscribing = true;
-  transcriptionPaused = false;
-  try{
-    recognition.start();
-    updateTranscriptionStatus('listening');
-    updateTranscriptionStartBtn();
-    updateTranscriptionFabState();
-    document.getElementById('transcription-btn').classList.add('active-btn');
-  }catch(e){
-    isTranscribing = false;
-    toast('Erro ao iniciar microfone: '+e.message);
-  }
-}
-
-function resumeTranscription(){
-  if(!recognition) recognition = initRecognition();
-  transcriptionPaused = false;
-  try{
-    recognition.start();
-    updateTranscriptionStatus('listening');
-    updateTranscriptionStartBtn();
-    updateTranscriptionFabState();
-  }catch(e){}
-}
-
-function pauseTranscription(){
-  if(!isTranscribing) return;
-  transcriptionPaused = true;
-  try{ recognition && recognition.stop(); }catch(e){}
-  updateTranscriptionStatus('paused');
-  updateTranscriptionStartBtn();
-  updateTranscriptionFabState();
-}
-
-function stopTranscription(silent){
-  isTranscribing = false;
-  transcriptionPaused = false;
-  try{ recognition && recognition.stop(); }catch(e){}
-  recognition = null;
-  updateTranscriptionStatus('stopped');
-  updateTranscriptionStartBtn();
-  updateTranscriptionFabState();
-  document.getElementById('transcription-btn').classList.remove('active-btn');
-  if(!silent) toast('Transcrição parada');
-}
-
-function clearTranscription(){
-  transcriptionFinalText = '';
-  transcriptionInterimText = '';
-  renderTranscriptionOutput();
-  toast('Transcrição limpa');
-}
-
-function copyTranscription(){
-  const text = transcriptionFinalText.trim();
-  if(!text){ toast('Nada para copiar'); return; }
-  navigator.clipboard.writeText(text).then(()=>toast('Copiado! ✓')).catch(()=>{
-    const ta = document.createElement('textarea');
-    ta.value = text; document.body.appendChild(ta); ta.select();
-    document.execCommand('copy'); document.body.removeChild(ta);
-    toast('Copiado! ✓');
-  });
-}
-
-function exportTranscription(){
-  const text = transcriptionFinalText.trim();
-  if(!text){ toast('Nada para exportar'); return; }
-  const lessonName = currentIdx>=0&&lessons[currentIdx]?lessons[currentIdx].name:'transcricao';
-  const header = `# Transcrição — ${lessonName}\nGerado em: ${new Date().toLocaleString('pt-BR')}\n\n---\n\n`;
-  const blob = new Blob([header+text],{type:'text/markdown'});
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url;
-  a.download = 'transcricao_'+lessonName.replace(/[^a-z0-9]/gi,'_').slice(0,40)+'_'+new Date().toISOString().slice(0,10)+'.md';
-  a.click(); URL.revokeObjectURL(url);
-  toast('Transcrição exportada ✓');
-}
-
-function renderTranscriptionOutput(){
-  const el = document.getElementById('transcription-output');
-  if(!el) return;
-  if(!transcriptionFinalText && !transcriptionInterimText){
-    el.innerHTML = '<span style="color:var(--text3);font-style:italic;">A transcrição aparecerá aqui conforme você fala…</span>';
-  } else {
-    el.innerHTML = escH(transcriptionFinalText) +
-      (transcriptionInterimText ? `<span class="transcription-interim">${escH(transcriptionInterimText)}</span>` : '');
-    el.scrollTop = el.scrollHeight;
-  }
-  // Atualizar contagem de palavras
-  const wc = document.getElementById('transcription-word-count');
-  if(wc){
-    const words = transcriptionFinalText.trim().split(/\s+/).filter(w=>w.length>0).length;
-    wc.textContent = words + (words===1?' palavra':' palavras');
-  }
-}
-
-function updateTranscriptionStatus(state){
-  const dot  = document.getElementById('transcription-dot');
-  const text = document.getElementById('transcription-status-text');
-  if(!dot||!text) return;
-  dot.className = 'transcription-dot';
-  if(state==='listening'){
-    dot.classList.add('active');
-    text.textContent = '🎙 Ouvindo… fale agora';
-  } else if(state==='processing'){
-    dot.classList.add('paused');
-    text.textContent = '⏳ Processando fala…';
-  } else if(state==='paused'){
-    dot.classList.add('paused');
-    text.textContent = '⏸ Pausado — clique em Retomar';
-  } else if(state==='error'){
-    text.textContent = '⚠ Erro — verifique permissões do microfone';
-  } else {
-    text.textContent = '⏹ Parado — clique em Iniciar para começar';
-  }
-}
-
-function updateTranscriptionStartBtn(){
-  const btn = document.getElementById('transcription-start-btn');
-  if(!btn) return;
-  if(!isTranscribing){
-    btn.textContent = '▶ Iniciar';
-    btn.className = 'modal-btn primary';
-  } else if(transcriptionPaused){
-    btn.textContent = '▶ Retomar';
-    btn.className = 'modal-btn primary';
-  } else {
-    btn.textContent = '⏸ Pausar';
-    btn.className = 'modal-btn secondary';
-  }
-}
-
-function updateTranscriptionFabState(){
-  const fab = document.getElementById('transcription-fab');
-  if(!fab) return;
-  fab.classList.toggle('recording', isTranscribing && !transcriptionPaused);
-}
-
-// Tratar visibilidade para pausar/retomar reconhecimento
-document.addEventListener('visibilitychange', ()=>{
-  if(document.visibilityState==='hidden' && isTranscribing && !transcriptionPaused){
-    try{ recognition && recognition.stop(); }catch(e){}
-  } else if(document.visibilityState==='visible' && isTranscribing && !transcriptionPaused){
-    try{ if(recognition) recognition.start(); }catch(e){}
-  }
-});
-
-document.getElementById('transcription-modal').addEventListener('click', e=>{
-  if(e.target===document.getElementById('transcription-modal')) closeTranscriptionModal();
-});
 
 /* ═══════════════════════════════════════════
    MODO REVISÃO
@@ -1629,6 +1645,7 @@ function getFilteredReviewItems(){
 }
 
 function openReviewMode(){
+  window._nativeHidePlayer?.();
   buildReviewItems();
   renderReviewBody();
   document.getElementById('review-overlay').classList.add('active');
@@ -1826,6 +1843,7 @@ function startStatsTimer(){
 }
 
 function openStats(){
+  window._nativeHidePlayer?.();
   saveToStorage();
   renderStatsModal('stats');
   document.getElementById('stats-modal').classList.add('active');
@@ -1873,12 +1891,106 @@ function switchStatsTab(tab){
 }
 
 /* ═══════════════════════════════════════════
-   PiP + WAKELOCK
+   FULLSCREEN NATIVO + PiP + WAKELOCK
 ═══════════════════════════════════════════ */
+
+/* Tela cheia — nativo via plugin, web via Fullscreen API */
+function toggleNativeFullscreen(){
+  if(Platform.isCapacitor){
+    const plug=window.Capacitor?.Plugins?.VideoPlayer;
+    if(!plug||!video.src) return;
+    document.body.classList.contains('native-fullscreen')
+      ? plug.exitFullscreen().catch(()=>{})
+      : plug.enterFullscreen().catch(()=>{});
+    return;
+  }
+  /* Web fallback */
+  if(!document.fullscreenElement){
+    document.querySelector('.player-area')?.requestFullscreen?.().catch(()=>{});
+  } else {
+    document.exitFullscreen?.().catch(()=>{});
+  }
+}
+
+/* Tecla F no teclado */
+function handleFsKey(){ toggleNativeFullscreen(); }
+
+/* Áudio-only: oculta o PlayerView (vídeo some, áudio continua) */
+let _audioOnly=false;
+
+/* Playlist nativa (ExoPlayer gerencia a fila sem precisar do WebView):
+   _nativePlaylistMode    = true quando setPlaylist foi usado para carregar aulas
+   _nativePlaylistStartIdx= índice em lessons[] correspondente ao item 0 da fila do ExoPlayer */
+let _nativePlaylistMode    = false;
+let _nativePlaylistStartIdx = 0;
+/**
+ * Retorna true se o player nativo pode usar setPlaylist para todas as aulas
+ * a partir de idx. Requer:
+ *  - Estar no APK (Capacitor)
+ *  - Plugin VideoPlayer com suporte a setPlaylist
+ *  - Todas as aulas a partir de idx terem URI nativa (não blob do IDB)
+ */
+function canNativePlaylist(idx){
+  if(!Platform.isCapacitor) return false;
+  const plug=window.Capacitor?.Plugins?.VideoPlayer;
+  if(!plug || typeof plug.setPlaylist!=='function') return false;
+  if(idx<0 || idx>=lessons.length) return false;
+  return lessons.slice(idx).every(l=>l.file && l.file._uri);
+}
+
+function toggleAudioOnly(){
+  if(!Platform.isCapacitor) return;
+  const plug=window.Capacitor?.Plugins?.VideoPlayer;
+  if(!plug) return;
+  _audioOnly=!_audioOnly;
+  if(_audioOnly){
+    plug.hide().catch(()=>{});
+    releaseWakeLock();
+    toast('🎧 Modo áudio — vídeo oculto, tela pode ser desligada');
+  } else {
+    plug.show().catch(()=>{});
+    if(!video.paused) requestWakeLock();
+    requestAnimationFrame(()=>{ if(typeof window._nativeDoSyncRect==='function') window._nativeDoSyncRect(); });
+    toast('▶ Vídeo retomado');
+  }
+  document.getElementById('audio-only-btn')?.classList.toggle('active-ctrl',_audioOnly);
+}
+function syncRectNative(plug){
+  /* Usa o doSyncRect interno se disponível (mais preciso, respeita fullscreen) */
+  if(typeof window._nativeDoSyncRect === 'function'){ window._nativeDoSyncRect(); return; }
+  const r=document.getElementById('main-video').getBoundingClientRect();
+  if(r.width>0&&r.height>0) plug.updateRect({x:r.left,y:r.top,w:r.width,h:r.height}).catch(()=>{});
+}
+
 function togglePiP(){
-  if(!document.pictureInPictureEnabled||!video.src) return;
-  if(document.pictureInPictureElement){ document.exitPictureInPicture().catch(()=>{}); }
-  else{ video.requestPictureInPicture().catch(e=>toast('PiP não disponível: '+e.message)); }
+  if(!video.src) return;
+
+  if(Platform.isCapacitor){
+    const plug = window.Capacitor?.Plugins?.VideoPlayer;
+    if(!plug) return;
+    // Já está em PiP (classe pip-active) → a saída é feita pelo sistema
+    // (botão Voltar Android ou expandir a janela PiP), não precisa de ação aqui
+    if(document.body.classList.contains('pip-active')) return;
+
+    // Oculta a moldura HTML IMEDIATAMENTE — antes que o Java inicie a animação.
+    // Assim o primeiro frame da janela PiP já mostra apenas o vídeo, sem sidebar/topbar.
+    document.body.classList.add('pip-active');
+
+    plug.enterPiP().catch((e)=>{
+      // Se falhar, desfaz a ocultação
+      document.body.classList.remove('pip-active');
+      toast('PiP não disponível: ' + (e.message || String(e)));
+    });
+    return;
+  }
+
+  // Modo web: usa a Fullscreen/PiP API nativa do browser
+  if(!document.pictureInPictureEnabled) return;
+  if(document.pictureInPictureElement){
+    document.exitPictureInPicture().catch(()=>{});
+  } else {
+    video.requestPictureInPicture().catch(e=>toast('PiP não disponível: '+e.message));
+  }
 }
 if(document.pictureInPictureEnabled){ document.getElementById('pip-btn').style.display='flex'; }
 video.addEventListener('enterpictureinpicture',()=>{
@@ -1896,7 +2008,7 @@ async function requestWakeLock(){
 }
 function releaseWakeLock(){ try{ if(wakeLock){ wakeLock.release(); wakeLock=null; } }catch(e){} }
 document.addEventListener('visibilitychange', async()=>{
-  if(document.visibilityState==='visible' && document.pictureInPictureElement) await requestWakeLock();
+  if(document.visibilityState==='visible' && !video.paused && !_audioOnly) await requestWakeLock();
   if(document.visibilityState==='hidden'){
     if(currentIdx>=0 && video.currentTime>2) lessonTimes[currentIdx]=video.currentTime;
     closeHistorySession();
@@ -2019,6 +2131,8 @@ function seekbarLeave(){ document.getElementById('chapter-tooltip').style.displa
    NOTAS
 ═══════════════════════════════════════════ */
 function toggleNotesPanel(){
+  /* Em mobile (painel de notas oculto via CSS), abre o modal de notas em vez disso */
+  if(window.innerWidth <= 559){ openMobileNotes(); return; }
   notesPanelVisible = !notesPanelVisible;
   const panel = document.getElementById('notes-panel');
   panel.classList.toggle('hidden', !notesPanelVisible);
@@ -2026,9 +2140,26 @@ function toggleNotesPanel(){
   btn.classList.toggle('active-btn', notesPanelVisible);
 }
 function openMobileNotes(){
+  window._nativeHidePlayer?.();
   renderNotesMobile();
   document.getElementById('notes-mobile-modal').classList.add('active');
 }
+/* Modo teclado: ao focar textarea de nota, mostra player no topo e notas na base */
+(function setupNotesKeyboard(){
+  const ta = document.getElementById('note-textarea-mobile');
+  if(!ta) return;
+  ta.addEventListener('focus', ()=>{
+    if(!Platform.isCapacitor) return;
+    document.body.classList.add('keyboard-notes-open');
+    window._nativeShowPlayer?.(); // updatePlayerOverlay → doSyncRect com mini rect
+    setTimeout(()=>{ if(typeof window._nativeDoSyncRect==='function') window._nativeDoSyncRect(); }, 400);
+  });
+  ta.addEventListener('blur', ()=>{
+    if(!Platform.isCapacitor) return;
+    document.body.classList.remove('keyboard-notes-open');
+    if(document.getElementById('notes-mobile-modal').classList.contains('active')) window._nativeHidePlayer?.();
+  });
+})();
 function snapNoteTimestamp(isMob){
   const t = video.currentTime||0;
   if(isMob){ noteMobileTimestamp=t; document.getElementById('note-ts-badge-mobile').textContent=fmtTime(t); }
@@ -2057,6 +2188,19 @@ video.addEventListener('timeupdate',()=>{
     clearTimeout(saveTimer); saveTimer = setTimeout(saveToStorage, 5000);
   }
   checkABLoop();
+
+  /* Auto-completar: marca aula como concluída ao atingir 90% */
+  if(currentIdx>=0 && !done.has(currentIdx) && video.duration>10 && !isNaN(video.duration)){
+    if(video.currentTime/video.duration>=0.9){
+      done.add(currentIdx);
+      updateDoneCount(); updatePlaylistActive();
+      const tEl=document.querySelector('#lesson-'+currentIdx+' .lesson-thumb');
+      if(tEl) tEl.className='lesson-thumb done';
+      const ml=document.getElementById('mark-btn')?.querySelector('.mark-label');
+      if(ml) ml.textContent='✓ Concluída';
+      clearTimeout(saveTimer); saveTimer=setTimeout(saveToStorage,3000);
+    }
+  }
 
 });
 
@@ -2123,7 +2267,7 @@ function exportNotes(){
 /* ═══════════════════════════════════════════
    EXPORTAR / IMPORTAR PROGRESSO
 ═══════════════════════════════════════════ */
-function openProgressModal() { document.getElementById('progress-modal').classList.add('active'); }
+function openProgressModal() { window._nativeHidePlayer?.(); document.getElementById('progress-modal').classList.add('active'); }
 function closeProgressModal(){ document.getElementById('progress-modal').classList.remove('active'); }
 function exportProgress(){
   saveToStorage(); const data=loadFromStorage();
@@ -2199,14 +2343,71 @@ function countFilesInRawModule(mod){
   return c;
 }
 
+/* ── Coleta todos os vídeos de um módulo recursivamente (ordem natural) ── */
+function collectAllVideosFromMod(mod){
+  const vids=[...mod.lessons];
+  (mod.subModules||[]).forEach(s=>vids.push(...collectAllVideosFromMod(s)));
+  return vids.sort((a,b)=>naturalSort(a.name,b.name));
+}
+
+/* ── Coleta todos os extras de um módulo recursivamente ── */
+function collectAllExtrasFromMod(mod){
+  const exts=[...(mod.extras||[])];
+  (mod.subModules||[]).forEach(s=>exts.push(...collectAllExtrasFromMod(s)));
+  return exts;
+}
+
+/*
+ * shouldFlattenSubmodules — decide se os subMódulos de um módulo devem ser
+ * achatados em lições diretas (em vez de serem exibidos como sub-seções).
+ *
+ * Caso de uso principal: estrutura tipo plataforma de curso
+ *   Curso/
+ *     Módulo 1/
+ *       Conteúdo 1/   ← subMódulo (deve virar lição com nome da pasta)
+ *         video.mp4
+ *       Conteúdo 2/
+ *         video.mp4
+ *
+ * Regra: achata quando os subMódulos são "contêineres de conteúdo":
+ *   - O módulo pai não tem vídeos diretos
+ *   - Cada subMódulo pode ter vídeos diretamente OU apenas sub-subMódulos folha
+ *     (sem aninhamento extra além de dois níveis abaixo do módulo)
+ */
 function shouldFlattenSubmodules(mod){
   if(!mod.subModules || mod.subModules.length===0) return false;
   if(mod.lessons.length > 0 || (mod.extras&&mod.extras.length>0)) return false;
+  // Achata se cada subMódulo é um "contêiner de conteúdo" (folha ou 1 nível de profundidade)
   return mod.subModules.every(sub=>{
-    const totalFiles = sub.lessons.length + (sub.extras?sub.extras.length:0);
-    const hasDeepSubs = (sub.subModules||[]).length > 0;
-    return !hasDeepSubs && totalFiles === 1;
+    // O subMódulo pode ter sub-subMódulos, mas esses devem ser todos folhas
+    return (sub.subModules||[]).every(ss => (ss.subModules||[]).length === 0);
   });
+}
+
+/*
+ * normalizeModules — aplica shouldFlattenSubmodules recursivamente e, ao achatar,
+ * atribui _displayName = nome da pasta "Conteúdo" aos arquivos de vídeo.
+ * Isso garante que a interface exiba o nome do conteúdo (pasta), não o nome técnico
+ * do arquivo de vídeo, replicando o comportamento de plataformas de curso online.
+ */
+/* _wrapFile — anexa _displayName a um arquivo sem perder a identidade do objeto.
+   Objetos nativos (têm _uri) são plain objects → spread seguro.
+   File objects da web têm name/size/type no protótipo → spread produz {} vazio,
+   causando "createObjectURL: Overload resolution failed". Guardamos o File
+   original em _webFile e _fileUrl() usa essa referência. Android: intocado. */
+function _wrapFile(f, displayName){
+  if(f._uri !== undefined){
+    // Objeto nativo (plain obj com _uri) — spread é seguro
+    return {...f, _displayName: displayName};
+  }
+  /* normalizeModules é recursiva: em pastas com múltiplos níveis de subpastas,
+     shouldFlattenSubmodules pode ser verdadeiro em mais de um nível, fazendo
+     _wrapFile ser chamado sobre um objeto já empacotado. Sem o desempacotamento
+     abaixo, _webFile apontaria para outro wrapper (não para um File real), e
+     URL.createObjectURL falharia com "Overload resolution failed" de novo.
+     Solução: sempre subir até o File original antes de guardar em _webFile. */
+  const realFile = f._webFile || f;
+  return {_webFile: realFile, name: realFile.name || '', size: realFile.size || 0, type: realFile.type || '', _displayName: displayName};
 }
 
 function normalizeModules(mods){
@@ -2216,10 +2417,25 @@ function normalizeModules(mods){
       const flatLessons = [];
       const flatExtras  = [];
       normalized.subModules.forEach(sub=>{
-        flatLessons.push(...sub.lessons);
-        flatExtras.push(...(sub.extras||[]));
+        // Coleta TODOS os vídeos deste contêiner de conteúdo (inclusive em sub-subpastas)
+        const allVids = collectAllVideosFromMod(sub);
+        const allExts = collectAllExtrasFromMod(sub);
+        if(allVids.length === 0){
+          flatExtras.push(...allExts);
+        } else if(allVids.length === 1){
+          // Um único vídeo: usa o nome da pasta como nome da lição
+          flatLessons.push(_wrapFile(allVids[0], sub.name));
+          flatExtras.push(...allExts);
+        } else {
+          // Múltiplos vídeos: usa nome da pasta + numeração
+          allVids.forEach((f,i)=>{
+            const suffix = allVids.length > 1 ? ' ('+(i+1)+'/'+allVids.length+')' : '';
+            flatLessons.push(_wrapFile(f, sub.name + suffix));
+          });
+          flatExtras.push(...allExts);
+        }
       });
-      return {...normalized, lessons:[...flatLessons], extras:[...normalized.extras||[],...flatExtras], subModules:[]};
+      return {...normalized, lessons:[...flatLessons], extras:[...(normalized.extras||[]),...flatExtras], subModules:[]};
     }
     return normalized;
   });
@@ -2229,6 +2445,7 @@ function normalizeModules(mods){
    LEITURA DE PASTA
 ═══════════════════════════════════════════ */
 function showLoading(t,s){
+  window._nativeHidePlayer?.();
   document.getElementById('loading-text').textContent = t||'Lendo arquivos…';
   document.getElementById('loading-sub').textContent  = s||'';
   document.getElementById('loading-overlay').classList.add('active');
@@ -2247,11 +2464,28 @@ async function openFolder(){
   }
   loadNewCourse();
 }
-async function loadNewCourse(){ closeModal(); await pickAndLoadFolder(false); }
-async function addModules()   { closeModal(); await pickAndLoadFolder(true);  }
+async function loadNewCourse(){ closeModal(); _nativePlaylistMode=false; await pickAndLoadFolder(false); }
+async function addModules()   { closeModal(); _nativePlaylistMode=false; await pickAndLoadFolder(true);  }
 
 async function pickAndLoadFolder(merge){
   try{
+    if(Platform.isCapacitor){
+      /* ── Android APK: plugin nativo VideoFolder via ACTION_OPEN_DOCUMENT_TREE ── */
+      const VideoFolder = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.VideoFolder;
+      if(!VideoFolder){ toast('Plugin VideoFolder não disponível'); return; }
+      /* Mostra loading ANTES de chamar o plugin: após o usuário confirmar a pasta,
+         o plugin varre os arquivos em background — o loading é visível nesse período */
+      showLoading('Lendo pasta…');
+      const result = await VideoFolder.pickFolder();
+      if(!result || !result.files){ hideLoading(); return; }
+      showLoading(`Processando ${result.files.length} arquivo(s)…`);
+      await processNativeFiles(result.files, result.rootName, merge);
+      // Salva URI + cache para restauração instantânea na próxima sessão
+      if(!merge) saveNativeSessionCache(result.treeUri, result.rootName);
+      hideLoading();
+      return;
+    }
+    /* ── Web: usa showDirectoryPicker normalmente ── */
     if(!window.showDirectoryPicker){
       const inp=document.createElement('input'); inp.type='file'; inp.multiple=true; inp.accept='video/*';
       inp.onchange=e=>loadFiles(Array.from(e.target.files), merge);
@@ -2267,6 +2501,229 @@ async function pickAndLoadFolder(merge){
   }
 }
 
+/* ─────────────────────────────────────────────────────────────
+   saveNativeSessionCache — salva treeUri + estrutura processada
+   para restauração instantânea sem re-escanear a pasta.
+   Chamada após processNativeFiles() em carga nova (merge=false).
+───────────────────────────────────────────────────────────── */
+function saveNativeSessionCache(treeUri, rootName){
+  try{
+    const entry={treeUri, rootName, savedAt:Date.now(), isModular};
+    if(isModular){
+      function serMod(m){
+        return {
+          name:m.name,
+          lessons:(m.lessons||[]).map(f=>({
+            _uri:f._uri||'',_native:true,
+            name:f.name||'',size:f.size||0,
+            _displayName:f._displayName||null
+          })),
+          subModules:(m.subModules||[]).map(serMod)
+        };
+      }
+      entry.modulesCache=modules.map(serMod);
+    } else {
+      entry.lessonsCache=lessons.map(l=>({
+        name:l.name,
+        _uri:l.file._uri||'',
+        fname:l.file.name||'',
+        size:l.file.size||0
+      }));
+    }
+    localStorage.setItem('splay_native_session', JSON.stringify(entry));
+  }catch(e){
+    /* quota exceeded — salva ao menos treeUri para o fallback lento */
+    try{ localStorage.setItem('splay_native_session', JSON.stringify({treeUri,rootName,savedAt:Date.now()})); }catch(e2){}
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   quickRestore — reconstrói estado completo a partir do cache
+   salvo em splay_native_session.  Retorna true em caso de
+   sucesso, false se o cache está ausente/inválido (fallback
+   para o caminho lento via listPersistedFolder).
+───────────────────────────────────────────────────────────── */
+function quickRestore(sess){
+  const hasFlat   =!sess.isModular&&sess.lessonsCache&&sess.lessonsCache.length>0;
+  const hasMod    = sess.isModular&&sess.modulesCache&&sess.modulesCache.length>0;
+  if(!hasFlat&&!hasMod) return false;
+
+  lessons=[]; modules=[]; done=new Set();
+  isModular=!!sess.isModular;
+  document.body.classList.toggle('is-modular', isModular);
+
+  if(isModular){
+    function deserMod(raw){
+      return {
+        name:raw.name,
+        lessons:(raw.lessons||[]).map(f=>({
+          _uri:f._uri,_native:true,
+          name:f.name,size:f.size||0,
+          _displayName:f._displayName||null
+        })),
+        extras:[],
+        subModules:(raw.subModules||[]).map(deserMod)
+      };
+    }
+    modules=sess.modulesCache.map(deserMod);
+    rebuildLessonsFromModules();
+    applyModuleOrder(loadModuleOrder());
+    rebuildLessonsFromModules();
+  } else {
+    lessons=sess.lessonsCache.map((l,i)=>({
+      file:{_uri:l._uri,_native:true,name:l.fname||'',size:l.size||0},
+      url:l._uri,
+      name:l.name,
+      idx:i
+    }));
+  }
+
+  buildSortedLessons();
+  const stored=loadFromStorage();
+  if(stored) applyStoredProgress(stored);
+  if(isModular) renderModularPlaylist(); else renderPlaylist(sortedLessons);
+  playLesson(getResumeIdx(stored));
+  return true;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   processNativeFiles — processa a lista retornada pelo plugin
+   VideoFolder (ACTION_OPEN_DOCUMENT_TREE). Cada entry tem:
+     { name, relativePath, uri, mimeType, size }
+
+   Reconstrói a árvore de módulos usando relativePath e organiza
+   automaticamente como uma plataforma de curso:
+     • Sem subpastas / vídeos na raiz → lista plana
+     • 1 nível de subpastas → cada subpasta = módulo
+     • 2+ níveis → módulo > conteúdo (pasta) > vídeo(s)
+
+   merge=false: carregamento completo do curso
+   merge=true : pasta selecionada = UM NOVO MÓDULO adicionado
+═══════════════════════════════════════════════════════════════ */
+async function processNativeFiles(nativeFiles, rootName, merge){
+  /* ── 1. Constrói árvore em lotes assíncronos ──────────────────
+     Processar arquivos em lotes de 500 e ceder ao event-loop
+     entre cada lote mantém a UI responsiva mesmo com 5000+ arquivos. */
+  const root={name:rootName||'', videos:[], extras:[], children:{}};
+  let count=0;
+  const BATCH=500;
+  for(let i=0;i<nativeFiles.length;i+=BATCH){
+    const end=Math.min(i+BATCH, nativeFiles.length);
+    for(let j=i;j<end;j++){
+      const f=nativeFiles[j];
+      const parts=f.relativePath.split('/');
+      let node=root;
+      for(let k=0;k<parts.length-1;k++){
+        const d=parts[k];
+        if(!node.children[d]) node.children[d]={name:d,videos:[],extras:[],children:{}};
+        node=node.children[d];
+      }
+      const fname=parts[parts.length-1];
+      const nobj={name:fname, _uri:f.uri, _native:true, size:f.size||0};
+      const isVid=isVideo(fname)||(f.mimeType&&f.mimeType.startsWith('video/'));
+      const isCnt=!isVid&&(isContent(fname)||f.mimeType==='application/pdf'||f.mimeType==='text/html');
+      if(isVid)      { node.videos.push(nobj); count++; }
+      else if(isCnt) { node.extras.push({file:nobj, name:fname}); }
+    }
+    updateLoadingCount(count);
+    if(end<nativeFiles.length) await new Promise(r=>setTimeout(r,0));
+  }
+
+  /* ── 2. Converte nó da árvore em objeto de módulo ── */
+  function nodeToMod(node){
+    const subs=Object.values(node.children)
+      .sort((a,b)=>naturalSort(a.name,b.name))
+      .map(nodeToMod).filter(Boolean);
+    const vids=node.videos.slice().sort((a,b)=>naturalSort(a.name,b.name));
+    if(!vids.length&&!subs.length&&!(node.extras&&node.extras.length)) return null;
+    return {name:node.name, lessons:vids, extras:node.extras||[], subModules:subs};
+  }
+
+  const hasRootVideos=root.videos.length>0;
+  const subdirNames=Object.keys(root.children);
+
+  if(!hasRootVideos&&!subdirNames.length&&!root.extras.length){
+    toast('Nenhum vídeo encontrado na pasta selecionada'); return;
+  }
+
+  /* ── 3a. MERGE — pasta selecionada = UM NOVO MÓDULO ──────────
+     Quando o usuário clica em "Acrescentar módulos", a pasta que
+     ele escolhe deve entrar como UMA seção do curso (não explodir
+     seus filhos como módulos separados). */
+  if(merge){
+    const newMod=nodeToMod({
+      name:    rootName||'Módulo',
+      videos:  root.videos,
+      extras:  root.extras,
+      children:root.children
+    });
+    if(!newMod){ toast('Nenhum vídeo encontrado na pasta selecionada'); return; }
+
+    const normalized=normalizeModules([newMod]);
+
+    if(!isModular){
+      // Converte aulas flat existentes em "Módulo 1" e adiciona o novo
+      if(lessons.length>0){
+        const existLessons=lessons.map(l=>l.file);
+        const existExtras=extraFiles.map(e=>({file:e.file, name:e.name}));
+        const existMod={name:'Módulo 1', lessons:existLessons, extras:existExtras, subModules:[]};
+        modules=[existMod,...normalized];
+      } else {
+        modules=normalized;
+      }
+      isModular=true;
+      document.body.classList.add('is-modular');
+    } else {
+      modules=[...modules,...normalized];
+    }
+
+    rebuildLessonsFromModules();
+    buildSortedLessons();
+    const stored=loadFromStorage(); if(stored) applyStoredProgress(stored);
+    renderModularPlaylist();
+    if(currentIdx<0){
+      playLesson(getResumeIdx(stored));
+    } else if(Platform.isCapacitor){
+      /* APK: recria playlist nativa incluindo os novos módulos a partir da aula atual */
+      lessonTimes[currentIdx] = video.currentTime||lessonTimes[currentIdx]||0;
+      _nativePlaylistMode = false;
+      playLesson(currentIdx);
+    }
+    const newItems=normalized.reduce((s,m)=>s+countFilesInRawModule(m),0);
+    toast(`"${newMod.name}" adicionado — ${newItems} item(s)`);
+    return;
+  }
+
+  /* ── 3b. FLAT: vídeos na raiz ou sem subpastas ── */
+  if(hasRootVideos||!subdirNames.length){
+    const allVids=[...root.videos], allExtras=[...root.extras];
+    function flatCollect(n){ allVids.push(...n.videos); allExtras.push(...n.extras); Object.values(n.children).forEach(flatCollect); }
+    subdirNames.forEach(k=>flatCollect(root.children[k]));
+    loadFiles(allVids, false, allExtras);
+    return;
+  }
+
+  /* ── 3c. MODULAR: subpastas = módulos do curso ── */
+  const rawModules=subdirNames
+    .sort((a,b)=>naturalSort(a,b))
+    .map(k=>nodeToMod(root.children[k]))
+    .filter(Boolean);
+  if(!rawModules.length){ toast('Nenhum vídeo encontrado na pasta selecionada'); return; }
+
+  const normalizedModules=normalizeModules(rawModules);
+  modules=normalizedModules; lessons=[]; done=new Set();
+  isModular=true; document.body.classList.add('is-modular');
+  rebuildLessonsFromModules();
+  applyModuleOrder(loadModuleOrder());
+  rebuildLessonsFromModules();
+  buildSortedLessons();
+  const stored=loadFromStorage(); if(stored) applyStoredProgress(stored);
+  renderModularPlaylist();
+  playLesson(getResumeIdx(stored));
+  const totalItems=normalizedModules.reduce((s,m)=>s+countFilesInRawModule(m),0);
+  toast(`${totalItems} item(s) em ${normalizedModules.length} módulo(s)`);
+}
+
 async function processDirectory(dir, merge){
   const topEntries = await readAllEntries(dir);
   const fileEntries = [];
@@ -2275,6 +2732,12 @@ async function processDirectory(dir, merge){
     if(entryIsFile(entry))     fileEntries.push(entry);
     else if(entryIsDir(entry)) subdirEntries.push(entry);
   }
+  /* Ordena pelo mesmo critério do Android (naturalSort) para que
+     Módulo 1, Módulo 2… apareçam na ordem correta independente do
+     filesystem/browser. dirHandle.values() não garante ordem. */
+  fileEntries.sort((a,b)  => naturalSort(a.name, b.name));
+  subdirEntries.sort((a,b) => naturalSort(a.name, b.name));
+
   const topVideos = [], topExtras = [];
   let rootCount = 0;
   for(const entry of fileEntries){
@@ -2287,7 +2750,8 @@ async function processDirectory(dir, merge){
   }
   updateLoadingCount(rootCount);
 
-  if(topVideos.length > 0){
+  if(topVideos.length > 0 && !merge){
+    // Carregamento fresh com vídeos na raiz → lista plana
     const allFiles  = [...topVideos];
     const allExtras = [...topExtras];
     let count = rootCount;
@@ -2295,36 +2759,78 @@ async function processDirectory(dir, merge){
       readDirFlat(sub, allFiles, allExtras, 0, ()=>{ count++; updateLoadingCount(count); })
     ));
     hideLoading();
-    loadFiles(allFiles, merge, allExtras);
+    loadFiles(allFiles, false, allExtras);
     return;
   }
 
-  if(subdirEntries.length > 0){
-    const rawModules = [];
+  if(subdirEntries.length > 0 || topVideos.length > 0){
+    let rawModules = [];
     let count = rootCount;
+
+    if(merge){
+      // ── MERGE: pasta selecionada = UM NOVO MÓDULO ──────────────
+      // Lê toda a estrutura da pasta selecionada como um único módulo
+      const modLessons = [...topVideos];
+      const modExtras  = [...topExtras];
+      const subMods    = [];
+      for(const subdir of subdirEntries){
+        const sub = await readModuleDir(subdir, 0, ()=>{ count++; updateLoadingCount(count); });
+        if(sub) subMods.push(sub);
+      }
+      const newMod = {
+        name:       dir.name || 'Módulo',
+        lessons:    modLessons.sort((a,b)=>naturalSort(a.name,b.name)),
+        extras:     modExtras,
+        subModules: subMods
+      };
+      const normalized = normalizeModules([newMod]);
+      if(!isModular){
+        if(lessons.length>0){
+          const existMod={name:'Módulo 1', lessons:lessons.map(l=>l.file), extras:extraFiles.map(e=>({file:e.file,name:e.name})), subModules:[]};
+          modules=[existMod,...normalized];
+        } else {
+          modules=normalized;
+        }
+        isModular=true; document.body.classList.add('is-modular');
+      } else {
+        modules=[...modules,...normalized];
+      }
+      rebuildLessonsFromModules();
+      buildSortedLessons();
+      const stored=loadFromStorage(); if(stored) applyStoredProgress(stored);
+      hideLoading();
+      renderModularPlaylist();
+      if(currentIdx<0) playLesson(getResumeIdx(stored));
+      const newItems=normalized.reduce((s,m)=>s+countFilesInRawModule(m),0);
+      toast(`"${newMod.name}" adicionado — ${newItems} item(s)`);
+      return;
+    }
+
+    // ── Carregamento normal: subpastas = módulos ──────────────────
     for(const subdir of subdirEntries){
       const mod = await readModuleDir(subdir, 0, ()=>{ count++; updateLoadingCount(count); });
       if(mod) rawModules.push(mod);
     }
+    // Vídeos na raiz com subdirs em modo fresh? → módulo anônimo
+    if(topVideos.length>0 && rawModules.length>0){
+      rawModules.unshift({name:'Geral', lessons:topVideos.sort((a,b)=>naturalSort(a.name,b.name)), extras:topExtras, subModules:[]});
+    }
+
     const normalizedModules = normalizeModules(rawModules);
     const totalModVids = normalizedModules.reduce((s,m)=>s+countLessonsDeep(m),0);
     if(totalModVids > 0 || normalizedModules.some(m=>countFilesInRawModule(m)>0)){
-      if(merge){ modules=[...modules,...normalizedModules]; }
-      else      { modules=normalizedModules; lessons=[]; done=new Set(); }
+      modules=normalizedModules; lessons=[]; done=new Set();
       isModular = true;
       document.body.classList.add('is-modular');
-      // Primeiro rebuild para gerar chave de storage correta
       rebuildLessonsFromModules();
-      // Aplica ordem customizada (se existir)
-      if(!merge) applyModuleOrder(loadModuleOrder());
-      // Rebuild final com ordem correta
+      applyModuleOrder(loadModuleOrder());
       rebuildLessonsFromModules();
       const stored = loadFromStorage();
       if(stored) applyStoredProgress(stored);
       buildSortedLessons();
       hideLoading();
       renderModularPlaylist();
-      if(!merge) playLesson(getResumeIdx(stored));
+      playLesson(getResumeIdx(stored));
       const totalItems = normalizedModules.reduce((s,m)=>s+countFilesInRawModule(m),0);
       toast(`${totalItems} item(s) em ${normalizedModules.length} módulo(s)`);
       return;
@@ -2397,11 +2903,17 @@ async function readDirFlat(dirHandle, outFiles, outExtras, depth, onFile){
   await Promise.all(subs.map(s=>readDirFlat(s, outFiles, outExtras, depth+1, onFile)));
 }
 
+function _fileUrl(f){ return f._uri ? f._uri : URL.createObjectURL(f._webFile || f); }
+
 function rebuildLessonsFromModules(){
   lessons = []; let idx=0;
   function add(mod){
-    for(const f of mod.lessons)
-      lessons.push({file:f, url:URL.createObjectURL(f), name:f.name.replace(/\.[^.]+$/,''), idx:idx++});
+    for(const f of mod.lessons){
+      // _displayName: nome da pasta "Conteúdo X" (atribuído por normalizeModules)
+      // Fallback: nome do arquivo sem extensão (comportamento original)
+      const name = f._displayName || f.name.replace(/\.[^.]+$/,'');
+      lessons.push({file:f, url:_fileUrl(f), name:name, idx:idx++});
+    }
     (mod.subModules||[]).forEach(add);
   }
   modules.forEach(add);
@@ -2416,8 +2928,8 @@ function getResumeIdx(stored){
 function loadFiles(files, merge, extras=[]){
   const vids = files.filter(f=>isVideo(f.name));
   if(!vids.length && !extras.length){ toast('Nenhum arquivo encontrado'); return; }
-  if(!vids.length && !merge){ 
-    extraFiles = extras.map(e=>({...e, type:fileType(e.name), url:URL.createObjectURL(e.file)}));
+  if(!vids.length && !merge){
+    extraFiles = extras.map(e=>({...e, type:fileType(e.name), url:_fileUrl(e.file)}));
     isModular=false; modules=[]; document.body.classList.remove('is-modular');
     buildSortedLessons();
     renderPlaylist(sortedLessons);
@@ -2427,14 +2939,14 @@ function loadFiles(files, merge, extras=[]){
   vids.sort((a,b)=>naturalSort(a.name,b.name));
   if(!merge){
     done=new Set(); Object.keys(lessonTimes).forEach(k=>delete lessonTimes[k]);
-    lessons   = vids.map((f,i)=>({file:f, url:URL.createObjectURL(f), name:f.name.replace(/\.[^.]+$/,''), idx:i}));
-    extraFiles= extras.map(e=>({...e, type:fileType(e.name), url:URL.createObjectURL(e.file)}));
+    lessons   = vids.map((f,i)=>({file:f, url:_fileUrl(f), name:f.name.replace(/\.[^.]+$/,''), idx:i}));
+    extraFiles= extras.map(e=>({...e, type:fileType(e.name), url:_fileUrl(e.file)}));
     isModular=false; modules=[]; document.body.classList.remove('is-modular');
     const stored=loadFromStorage(); if(stored) applyStoredProgress(stored);
   } else {
     const off = lessons.length;
-    lessons    = [...lessons,...vids.map((f,i)=>({file:f, url:URL.createObjectURL(f), name:f.name.replace(/\.[^.]+$/,''), idx:off+i}))];
-    extraFiles = [...extraFiles,...extras.map(e=>({...e, type:fileType(e.name), url:URL.createObjectURL(e.file)}))];
+    lessons    = [...lessons,...vids.map((f,i)=>({file:f, url:_fileUrl(f), name:f.name.replace(/\.[^.]+$/,''), idx:off+i}))];
+    extraFiles = [...extraFiles,...extras.map(e=>({...e, type:fileType(e.name), url:_fileUrl(e.file)}))];
   }
   buildSortedLessons();
   renderPlaylist(sortedLessons);
@@ -2449,6 +2961,7 @@ function renderPlaylist(list){
   totalCount.textContent = lessons.length; updateDoneCount();
   if(!list.length && !extraFiles.length){ playlistEl.innerHTML='<div style="padding:32px 16px;font-size:12px;color:var(--text3);text-align:center;">Nenhum vídeo encontrado</div>'; return; }
   playlistEl.innerHTML = '';
+  renderFavoritesModule(playlistEl);
   if(!isModular && extraFiles.length){
     renderExtraItems(playlistEl, extraFiles);
     const sep=document.createElement('div'); sep.className='section-label'; sep.textContent=`${list.length} ${list.length===1?'aula':'aulas'}`; playlistEl.appendChild(sep);
@@ -2467,11 +2980,12 @@ function renderBatch(list, start, container, indent=0){
 function renderModularPlaylist(){
   totalCount.textContent = lessons.length; updateDoneCount();
   playlistEl.innerHTML   = '';
+  renderFavoritesModule(playlistEl);
 
   function renderMod(mod, container, depth, parentModArray){
     const key = mod.name;
-    if(!(key in collapsedModules)) collapsedModules[key]=false;
     const idxs   = collectModuleLessonIdxs(mod);
+    if(!(key in collapsedModules)) collapsedModules[key] = !idxs.includes(currentIdx);
     const modDone= idxs.filter(i=>done.has(i)).length;
     const totalItems = idxs.length + ((mod.extras||[]).length);
 
@@ -2527,10 +3041,21 @@ function renderModularPlaylist(){
       toggleModule(key, header, body);
     });
 
+    /* Barra de progresso do módulo (abaixo do cabeçalho) */
+    const modProgWrap = document.createElement('div');
+    modProgWrap.className = 'module-prog-wrap';
+    const modProgFill = document.createElement('div');
+    modProgFill.className = 'module-prog-fill';
+    const modPct = idxs.length > 0 ? Math.round(modDone/idxs.length*100) : 0;
+    modProgFill.style.width = modPct+'%';
+    modProgWrap.appendChild(modProgFill);
+
     wrap.appendChild(header);
+    wrap.appendChild(modProgWrap);
 
     if(mod.extras && mod.extras.length){
-      const eu = mod.extras.map(e=>({...e, type:fileType(e.name), url:URL.createObjectURL(e.file)}));
+      // usa _fileUrl() para suportar tanto arquivos nativos SAF ({_uri}) quanto File objects
+      const eu = mod.extras.map(e=>({...e, type:fileType(e.name), url:_fileUrl(e.file)}));
       renderExtraItems(body, eu, (depth+1)*12);
     }
 
@@ -2556,6 +3081,52 @@ function collectModuleLessonIdxs(mod){
   const idxs   = mod.lessons.map(f=>byFile.get(f.name)).filter(Boolean).map(l=>l.idx);
   (mod.subModules||[]).forEach(sub=>idxs.push(...collectModuleLessonIdxs(sub)));
   return idxs;
+}
+
+const FAV_MODULE_KEY = '__favoritos__';
+
+function renderFavoritesModule(container){
+  /* Não mostra durante busca */
+  const q = document.getElementById('search-input')?.value;
+  if(q && q.trim()) return;
+  if(!favorites.size) return;
+  const favLessons = [...favorites].map(i=>lessons[i]).filter(Boolean).sort((a,b)=>a.idx-b.idx);
+  if(!favLessons.length) return;
+  /* Colapsado por padrão; expande automaticamente se a aula atual está nos favoritos */
+  if(!(FAV_MODULE_KEY in collapsedModules))
+    collapsedModules[FAV_MODULE_KEY] = !(currentIdx >= 0 && favorites.has(currentIdx));
+
+  const wrap = document.createElement('div');
+  wrap.id='fav-module-wrap'; wrap.className='module-wrap';
+
+  const header = document.createElement('div');
+  header.className='module-header fav-module'+(collapsedModules[FAV_MODULE_KEY]?' collapsed':'');
+
+  const starEl=document.createElement('span');
+  starEl.style.cssText='flex-shrink:0;display:flex;align-items:center;justify-content:center;';
+  starEl.innerHTML=`<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:var(--amber);fill:var(--amber);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+  header.appendChild(starEl);
+
+  const arrow=document.createElement('svg');
+  arrow.setAttribute('viewBox','0 0 24 24'); arrow.classList.add('module-arrow');
+  arrow.innerHTML=`<polyline points="6 9 12 15 18 9"/>`;
+  header.appendChild(arrow);
+
+  const titleEl=document.createElement('span'); titleEl.className='module-title'; titleEl.textContent='Favoritos';
+  header.appendChild(titleEl);
+
+  const cntBadge=document.createElement('span'); cntBadge.className='module-count';
+  cntBadge.textContent=`${favLessons.length} aula${favLessons.length!==1?'s':''}`;
+  header.appendChild(cntBadge);
+
+  const body=document.createElement('div');
+  body.className='module-body'+(collapsedModules[FAV_MODULE_KEY]?' collapsed':'');
+
+  header.addEventListener('click',()=>{ toggleModule(FAV_MODULE_KEY, header, body); });
+  favLessons.forEach(l=>body.appendChild(buildLessonItem(l, 0, true)));
+
+  wrap.appendChild(header); wrap.appendChild(body);
+  container.insertBefore(wrap, container.firstChild);
 }
 
 function toggleModule(key, header, body){
@@ -2596,10 +3167,10 @@ function updateCollapseAllBtn(){
   label.textContent = anyExpanded ? 'Recolher' : 'Expandir';
 }
 
-function buildLessonItem(l, indent=0){
+function buildLessonItem(l, indent=0, _favMode=false){
   const item = document.createElement('div');
   item.className = 'lesson-item'+(l.idx===currentIdx?' active':'');
-  item.id        = 'lesson-'+l.idx;
+  item.id        = (_favMode?'fav-':'')+'lesson-'+l.idx;
   item.style.marginLeft = indent+'px';
   item.onclick   = ()=>{ playLesson(l.idx); if(isMobile()) closeMobileSidebar(); };
 
@@ -2609,30 +3180,67 @@ function buildLessonItem(l, indent=0){
 
   const thumb = document.createElement('div');
   thumb.className = 'lesson-thumb'+(done.has(l.idx)?' done':'');
-  const tvid = document.createElement('video');
-  tvid.src     = l.url;
-  tvid.preload = 'metadata';
-  tvid.muted   = true;
-  tvid.style.cssText = 'width:100%;height:100%;object-fit:cover;';
-  thumb.appendChild(tvid);
-
   const info   = document.createElement('div'); info.className='lesson-info';
   const nm     = document.createElement('div'); nm.className='lesson-name'; nm.textContent=l.name;
-  const meta   = document.createElement('div'); meta.className='lesson-meta'; meta.textContent='…';
-  tvid.addEventListener('loadedmetadata',()=>{ meta.textContent=fmtTime(tvid.duration); },{once:true});
+  const meta   = document.createElement('div'); meta.className='lesson-meta';
+  if(l._idb && !l.url){
+    /* placeholder IDB: mostra ícone até carregar */
+    thumb.classList.add('file-icon');
+    thumb.innerHTML=`<svg viewBox="0 0 24 24" style="stroke:var(--text3);"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>`;
+    meta.textContent='—';
+  } else {
+    const tvid = document.createElement('video');
+    tvid.src     = l.url;
+    tvid.preload = 'metadata';
+    tvid.muted   = true;
+    tvid.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+    tvid.id = 'thumb-vid-'+l.idx;
+    thumb.appendChild(tvid);
+    meta.textContent='…';
+    tvid.addEventListener('loadedmetadata',()=>{
+      const dur=tvid.duration;
+      meta.textContent=fmtTime(dur);
+      lessonDurations[l.idx]=dur;
+      /* Atualiza barra de progresso assim que a duração é conhecida */
+      const pbar=document.getElementById('prog-'+l.idx);
+      const savedT=lessonTimes[l.idx];
+      if(pbar&&savedT&&dur>0) pbar.style.width=Math.min(100,savedT/dur*100)+'%';
+    },{once:true});
+  }
+  if(!_favMode) meta.id='meta-'+l.idx;
 
-  const resumeEl = document.createElement('div'); resumeEl.className='lesson-resume'; resumeEl.id='resume-'+l.idx;
+  const resumeEl = document.createElement('div'); resumeEl.className='lesson-resume';
+  if(!_favMode) resumeEl.id='resume-'+l.idx;
   const savedT   = lessonTimes[l.idx];
   if(savedT&&savedT>2) resumeEl.textContent='↩ '+fmtTime(savedT);
   info.appendChild(nm); info.appendChild(meta); info.appendChild(resumeEl);
 
   const status = document.createElement('div');
   status.className = 'lesson-status'+(done.has(l.idx)?' done':(l.idx===currentIdx?' playing':''));
-  status.id = 'status-'+l.idx;
+  if(!_favMode) status.id = 'status-'+l.idx;
   if(done.has(l.idx))      status.innerHTML=`<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>`;
   else if(l.idx===currentIdx) status.innerHTML=`<span></span>`;
 
-  item.appendChild(num); item.appendChild(thumb); item.appendChild(info); item.appendChild(status);
+  /* Barra de progresso (2px na base do item) */
+  const progBar = document.createElement('div');
+  progBar.className = 'lesson-prog-bar';
+  if(!_favMode) progBar.id = 'prog-'+l.idx;
+  if(!done.has(l.idx) && lessonTimes[l.idx] && lessonDurations[l.idx]){
+    progBar.style.width = Math.min(100, lessonTimes[l.idx]/lessonDurations[l.idx]*100)+'%';
+  } else if(done.has(l.idx)){
+    progBar.style.width = '100%';
+  } else {
+    progBar.style.width = '0%';
+  }
+
+  const favBtn = document.createElement('button');
+  favBtn.className = 'lesson-fav-btn'+(favorites.has(l.idx)?' is-fav':'');
+  favBtn.title = 'Favoritar';
+  favBtn.innerHTML = `<svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+  favBtn.onclick = e=>{ e.stopPropagation(); toggleFavorite(l.idx); };
+
+  item.appendChild(num); item.appendChild(thumb); item.appendChild(info);
+  item.appendChild(favBtn); item.appendChild(status); item.appendChild(progBar);
   return item;
 }
 
@@ -2675,17 +3283,28 @@ function openExtraFile(ex){
    XLSX VIEWER
 ═══════════════════════════════════════════ */
 function openXlsx(ex){
-  const reader=new FileReader();
-  reader.onload=e=>{
+  function processBuffer(buf){
     try{
-      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      const wb=XLSX.read(new Uint8Array(buf),{type:'array'});
       xlsxSheets={};
       wb.SheetNames.forEach(n=>{ xlsxSheets[n]=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:''}); });
       document.getElementById('xlsx-modal-title').textContent=ex.name.replace(/\.[^.]+$/,'');
       renderXlsxTabs(wb.SheetNames, wb.SheetNames[0]);
+      window._nativeHidePlayer?.();
       document.getElementById('xlsx-modal').classList.add('active');
-    }catch(e){ toast('Erro ao ler planilha: '+e.message); }
-  };
+    }catch(err){ toast('Erro ao ler planilha: '+err.message); }
+  }
+  /* Arquivo nativo SAF: ex.file é um objeto {_uri, _native, name} — não é um File real.
+     Usa fetch via proxy URL https://localhost/_saf_/?uri=… para ler como ArrayBuffer. */
+  if(ex.file && ex.file._uri){
+    fetch(ex.file._uri)
+      .then(r=>r.arrayBuffer())
+      .then(processBuffer)
+      .catch(e=>toast('Erro ao ler planilha: '+e.message));
+    return;
+  }
+  const reader=new FileReader();
+  reader.onload=e=>processBuffer(e.target.result);
   reader.readAsArrayBuffer(ex.file);
 }
 function renderXlsxTabs(names, active){
@@ -2718,35 +3337,130 @@ function closeXlsx(){ document.getElementById('xlsx-modal').classList.remove('ac
 /* ═══════════════════════════════════════════
    PLAYER
 ═══════════════════════════════════════════ */
-function playLesson(idx){
+async function playLesson(idx){
   if(idx<0||idx>=lessons.length) return;
+
+  /* ── IDB lazy load: carrega blob sob demanda (APK) ── */
+  const l0=lessons[idx];
+  if(l0._idb && !l0.url){
+    showLoading('Carregando vídeo…');
+    const file=await _idbGet(l0._fname||l0.name);
+    if(!file){
+      hideLoading();
+      showModal('Vídeo não encontrado',
+        'O arquivo não está mais disponível offline. Abra os vídeos novamente.',
+        [{label:'Abrir Vídeos',cls:'primary',action:()=>{closeModal();openFolder();}},
+         {label:'Cancelar',cls:'secondary',action:closeModal}]);
+      return;
+    }
+    l0.file=file; l0.url=URL.createObjectURL(file); l0._idb=false;
+    /* Atualiza thumbnail na playlist */
+    const thumbEl=document.getElementById('lesson-'+idx)?.querySelector('.lesson-thumb');
+    if(thumbEl){
+      thumbEl.classList.remove('file-icon'); thumbEl.innerHTML='';
+      const tv=document.createElement('video'); tv.src=l0.url; tv.preload='metadata'; tv.muted=true;
+      tv.style.cssText='width:100%;height:100%;object-fit:cover;';
+      tv.id='thumb-vid-'+idx;
+      const metaEl=document.getElementById('meta-'+idx);
+      tv.addEventListener('loadedmetadata',()=>{ if(metaEl) metaEl.textContent=fmtTime(tv.duration); },{once:true});
+      thumbEl.appendChild(tv);
+    }
+    hideLoading();
+  }
+
   if(currentIdx>=0 && video.currentTime>2){ lessonTimes[currentIdx]=video.currentTime; updateResumeIndicator(currentIdx); }
   closeHistorySession();
   if(abState>0) clearAB();
   exitFrameMode();
   currentIdx=idx; const l=lessons[idx];
-  video.src=l.url; video.style.display='block'; emptyState.style.display='none';
-  nowTitle.textContent=l.name; video.playbackRate=speeds[speedIdx];
+  video.style.display='block'; emptyState.style.display='none';
+
+  /* ── Playlist nativa (background-safe): ExoPlayer gerencia toda a fila ──────────
+     Quando todas as aulas a partir de idx têm URI nativa (content:// via SAF),
+     carregamos a lista completa no ExoPlayer via setPlaylist().
+     Isso garante que o app continue reproduzindo mesmo minimizado, pois o
+     PlaybackService (foreground service) avança automaticamente sem depender do WebView.
+     O evento "trackChanged" (nativo → JS) atualiza a UI quando o app voltar ao foco.
+
+     seekToItem: se já estamos em modo playlist e o destino está dentro da fila atual,
+     usa seekToItem() para evitar recriar a playlist e o race condition do trackChanged
+     (trackChanged dispara antes do await resolver, usando o _nativePlaylistStartIdx antigo). */
+  const plug = Platform.isCapacitor ? window.Capacitor?.Plugins?.VideoPlayer : null;
+  if(_nativePlaylistMode && idx >= _nativePlaylistStartIdx && plug && typeof plug.seekToItem==='function'){
+    /* Navega dentro da playlist existente — sem recriar a fila */
+    const playlistIdx = idx - _nativePlaylistStartIdx;
+    plug.seekToItem({index: playlistIdx}).catch(()=>{});
+    if(_audioOnly) plug.hide().catch(()=>{}); // preserva modo áudio entre trocas
+    window._nativePlayerSkipSrc && window._nativePlayerSkipSrc();
+    video.src=l.url; // atualiza vs.src sem acionar loadVideo
+  } else if(canNativePlaylist(idx)){
+    const items=lessons.slice(idx).map(lo=>({uri:lo.file._uri, title:lo.name, artist:'StudyPlay'}));
+    try{
+      /* ⚠ Defina _nativePlaylistStartIdx ANTES do await para que o evento trackChanged
+         (disparado pelo Java durante setMediaItems, antes do resolve) use o índice correto */
+      _nativePlaylistMode=true;
+      _nativePlaylistStartIdx=idx;
+      await plug.setPlaylist({items});
+      if(_audioOnly) plug.hide().catch(()=>{}); // preserva modo áudio ao criar nova playlist
+      /* Atualiza vs.src sem acionar loadVideo novamente (flag interna) */
+      window._nativePlayerSkipSrc && window._nativePlayerSkipSrc();
+      video.src=l.url; // atualiza estado interno; loadVideo é ignorado
+    }catch(e){
+      /* Fallback para modo single-video se setPlaylist falhar */
+      _nativePlaylistMode=false;
+      video.src=l.url;
+    }
+  } else {
+    _nativePlaylistMode=false;
+    video.src=l.url;
+  }
+
+  /* ── MediaSession API — Dynamic Island / Ilha Dinâmica / Tela de bloqueio ── */
+  if('mediaSession' in navigator){
+    navigator.mediaSession.metadata=new MediaMetadata({
+      title: l.name,
+      artist: 'StudyPlay',
+      album: isModular && modules.length ? (modules.find(m=>m.lessons&&m.lessons.find(f=>f.name===l.file.name))||{name:'VideoAulas'}).name : 'VideoAulas'
+    });
+    navigator.mediaSession.setActionHandler('play',  ()=>{ video.play(); });
+    navigator.mediaSession.setActionHandler('pause', ()=>{ video.pause(); });
+    navigator.mediaSession.setActionHandler('nexttrack',     ()=>nextLesson());
+    navigator.mediaSession.setActionHandler('previoustrack', ()=>prevLesson());
+    navigator.mediaSession.setActionHandler('seekto', d=>{ if(d.seekTime!=null) video.currentTime=d.seekTime; });
+    navigator.mediaSession.setActionHandler('seekforward',  ()=>{ video.currentTime=Math.min(video.duration,video.currentTime+10); });
+    navigator.mediaSession.setActionHandler('seekbackward', ()=>{ video.currentTime=Math.max(0,video.currentTime-10); });
+  }
+  updateNowTitle(l.name); video.playbackRate=speeds[speedIdx];
 
   seekFill.style.width='0%';
   timeCur.textContent='0:00'; timeDur.textContent='0:00';
 
+  /* Metadados nativos para MediaSession/ExoPlayer → Ilha Dinâmica HyperOS */
+  if(Platform.isCapacitor && typeof window._setNativeVideoMeta==='function'){
+    const moduleName = isModular&&modules.length
+      ? (modules.find(m=>m.lessons&&m.lessons.find(f=>f.name===l.file.name))||{name:'VideoAulas'}).name
+      : 'VideoAulas';
+    window._setNativeVideoMeta(l.name, 'StudyPlay', moduleName);
+  }
 
   const savedTime=lessonTimes[idx];
   if(savedTime&&savedTime>2){
     video.addEventListener('loadedmetadata', function onMeta(){
       video.removeEventListener('loadedmetadata',onMeta);
       if(savedTime<video.duration-5){ video.currentTime=savedTime; toast(`↩ Retomando de ${fmtTime(savedTime)}`); }
-      video.play().catch(()=>{});
+      /* Em modo playlist nativa o ExoPlayer já gerencia play/pausa — não chamar
+         video.play() pois plugin.play() pode reexibir o PlayerView no Java. */
+      if(!_nativePlaylistMode) video.play().catch(()=>{});
       renderChapterMarkers();
     });
   } else {
     video.addEventListener('loadedmetadata', function onMeta2(){ video.removeEventListener('loadedmetadata',onMeta2); renderChapterMarkers(); },{once:true});
-    video.play().catch(()=>{});
+    if(!_nativePlaylistMode) video.play().catch(()=>{});
   }
 
   const ml=document.getElementById('mark-btn').querySelector('.mark-label');
   if(ml) ml.textContent=done.has(idx)?'✓ Concluída':'Marcar concluída';
+  updateFavBtn();
   updatePlaylistActive(); scrollToActive();
   startStatsTimer();
   startHistorySession(idx);
@@ -2770,6 +3484,9 @@ function updatePlaylistActive(){
   });
   const active=document.getElementById('lesson-'+currentIdx);
   if(active) active.classList.add('active');
+  /* Também marca o item no módulo Favoritos, se existir */
+  const favActive=document.getElementById('fav-lesson-'+currentIdx);
+  if(favActive) favActive.classList.add('active');
   if(isModular) refreshModuleCounters();
   lessons.forEach(l=>updateResumeIndicator(l.idx));
 }
@@ -2782,6 +3499,12 @@ function refreshModuleCounters(){
     let badge=header.querySelector('.module-done-badge');
     if(md>0){ if(!badge){ badge=document.createElement('span'); badge.className='module-done-badge'; header.appendChild(badge); } badge.textContent=md+'✓'; }
     else if(badge) badge.remove();
+    // Atualiza barra de progresso do módulo dinamicamente
+    const progWrap = header.nextElementSibling;
+    if(progWrap && progWrap.classList.contains('module-prog-wrap') && idxs.length>0){
+      const fill = progWrap.querySelector('.module-prog-fill');
+      if(fill) fill.style.width = Math.round(md/idxs.length*100)+'%';
+    }
   });
 }
 
@@ -2801,6 +3524,12 @@ function togglePlay(){
 }
 
 video.addEventListener('ended', ()=>{
+  /* Em modo playlist nativa o ExoPlayer avança automaticamente;
+     trackChanged cuida da UI e do loop — não interferir aqui */
+  if(_nativePlaylistMode) return;
+  /* Loop da aula atual — 3 estados: 0=off 1=repetir 1× 2=infinito */
+  if(_loopLesson===2){ video.currentTime=0; video.play().catch(()=>{}); return; }
+  if(_loopLesson===1){ _loopLesson=0; updateLoopUI(); video.currentTime=0; video.play().catch(()=>{}); return; }
   if(currentIdx>=0) lessonTimes[currentIdx]=0;
   closeHistorySession();
   markDone();
@@ -2834,7 +3563,7 @@ function nextLesson(){ if(currentIdx<lessons.length-1) playLesson(currentIdx+1);
 function cycleSpeed(){
   speedIdx=(speedIdx+1)%speeds.length; video.playbackRate=speeds[speedIdx];
   const s=speeds[speedIdx];
-  document.getElementById('speed-btn').textContent=(s%1===0?s.toFixed(0):s.toFixed(2).replace(/0+$/,''))+'×';
+  const sv=document.getElementById('speed-value'); if(sv) sv.textContent=(s%1===0?s.toFixed(0):s.toFixed(2).replace(/0+$/,''))+'×';
   saveToStorage();
 }
 
@@ -2853,6 +3582,25 @@ function markDone(){
 }
 
 function updateDoneCount(){ doneCount.textContent=done.size; }
+
+function toggleFavorite(idx){
+  if(idx==null||idx<0) return;
+  favorites.has(idx) ? favorites.delete(idx) : favorites.add(idx);
+  updateFavBtn();
+  /* Atualiza ícone estrela no item da playlist principal */
+  const fb=document.querySelector('#lesson-'+idx+' .lesson-fav-btn');
+  if(fb) fb.classList.toggle('is-fav', favorites.has(idx));
+  /* Recria o módulo Favoritos no sidebar */
+  document.getElementById('fav-module-wrap')?.remove();
+  renderFavoritesModule(playlistEl);
+  clearTimeout(saveTimer); saveTimer=setTimeout(saveToStorage,2000);
+}
+function updateFavBtn(){
+  const btn=document.getElementById('fav-btn'); if(!btn) return;
+  const isFav=currentIdx>=0&&favorites.has(currentIdx);
+  btn.classList.toggle('is-fav',isFav);
+  btn.title=isFav?'★ Favoritada':'Favoritar aula';
+}
 
 /* ═══════════════════════════════════════════
    BUSCA E SIDEBAR
@@ -2874,10 +3622,13 @@ function toggleSidebar(){
   } else {
     sidebarVisible=!sidebarVisible;
     document.getElementById('sidebar').style.display=sidebarVisible?'flex':'none';
+    document.body.classList.toggle('sidebar-hidden',!sidebarVisible);
   }
 }
 
 function openMobileSidebar(){
+  /* Esconde o PlayerView imediatamente, antes da sidebar animar para dentro */
+  if(window._nativeHidePlayer) window._nativeHidePlayer();
   document.getElementById('sidebar').classList.add('mobile-open');
   document.getElementById('sidebar-backdrop').classList.add('active');
 }
@@ -2887,9 +3638,10 @@ function closeMobileSidebar(){
 }
 
 document.getElementById('video-wrapper').addEventListener('click', function(e){
-  if(!isMobile()) return;
-  if(e.target===video) return;
-  if(document.getElementById('sidebar').classList.contains('mobile-open')) closeMobileSidebar();
+  /* Fechar sidebar ao clicar fora */
+  if(document.getElementById('sidebar').classList.contains('mobile-open')){ closeMobileSidebar(); return; }
+  /* Tap/click no player → play/pause (funciona no APK via proxy video.play/pause) */
+  if(video.src) togglePlay();
 });
 
 window.addEventListener('resize', ()=>{
@@ -2903,6 +3655,7 @@ window.addEventListener('resize', ()=>{
    MODAIS
 ═══════════════════════════════════════════ */
 function showModal(title, desc, actions){
+  window._nativeHidePlayer?.();
   document.getElementById('modal-title').textContent = title;
   document.getElementById('modal-desc').textContent  = desc;
   const acts=document.getElementById('modal-actions'); acts.innerHTML='';
@@ -2914,7 +3667,7 @@ function showModal(title, desc, actions){
 }
 function closeModal(){ document.getElementById('modal-overlay').classList.remove('active'); }
 
-['modal-overlay','progress-modal','stats-modal','shortcuts-modal','theme-modal','xlsx-modal'].forEach(id=>{
+['modal-overlay','progress-modal','stats-modal','shortcuts-modal','theme-modal','xlsx-modal','settings-modal'].forEach(id=>{
   const el=document.getElementById(id); if(!el) return;
   el.addEventListener('click', e=>{
     if(e.target===el){
@@ -3012,13 +3765,8 @@ document.addEventListener('keydown', e=>{
   if(e.code==='KeyP')  prevLesson();
   if(e.code==='KeyM')  markDone();
   if(e.code==='KeyI')  togglePiP();
+  if(e.code==='KeyF')  toggleNativeFullscreen();
   if(e.code==='KeyS')  toggleNotesPanel();
-  if(e.code==='KeyT')  {
-    // Atalho T: iniciar/pausar transcrição
-    if(!window.SpeechRecognition && !window.webkitSpeechRecognition) return;
-    toggleTranscription();
-    toast(isTranscribing && !transcriptionPaused ? '🎙 Transcrição iniciada' : '⏸ Transcrição pausada');
-  }
   if(e.code==='KeyR')  {
     if(document.getElementById('review-overlay').classList.contains('active')) closeReviewMode();
     else openReviewMode();
@@ -3027,12 +3775,44 @@ document.addEventListener('keydown', e=>{
   if(e.code==='KeyC')  addChapterAtCurrent();
   if(e.key==='[')      { if(abState===0||abState===1) setAbA(); }
   if(e.key===']')      { if(abState===1) setAbB(); }
+  if(e.code==='KeyL')  toggleLoop();
   if(e.code==='Escape'){
     if(document.getElementById('review-overlay').classList.contains('active')){ closeReviewMode(); return; }
-    if(document.getElementById('transcription-modal').classList.contains('active')){ closeTranscriptionModal(); return; }
+    if(document.getElementById('settings-modal').classList.contains('active')){ document.getElementById('settings-modal').classList.remove('active'); return; }
     if(abState>0) clearAB();
   }
-  if(e.key==='?')      document.getElementById('shortcuts-modal').classList.add('active');
+});
+
+
+/* ═══════════════════════════════════════════
+   MENU UNIFICADO ⋮
+═══════════════════════════════════════════ */
+function toggleMoreMenu(){
+  const menu = document.getElementById('unified-more-menu');
+  if(!menu) return;
+  const opening = !menu.classList.contains('open');
+  menu.classList.toggle('open');
+  if(opening){
+    /* O PlayerView nativo (Android) renderiza acima do WebView — oculta antes de abrir o menu */
+    window._nativeHidePlayer?.();
+  } else {
+    window._nativeShowPlayer?.();
+  }
+}
+function closeMoreMenu(){
+  const menu = document.getElementById('unified-more-menu');
+  if(menu && menu.classList.contains('open')){
+    menu.classList.remove('open');
+    window._nativeShowPlayer?.();
+  }
+}
+document.addEventListener('click', e=>{
+  const menu = document.getElementById('unified-more-menu');
+  const btn  = document.getElementById('unified-more-btn');
+  if(menu && menu.classList.contains('open') && !menu.contains(e.target) && btn && !btn.contains(e.target)){
+    menu.classList.remove('open');
+    window._nativeShowPlayer?.();
+  }
 });
 
 /* ═══════════════════════════════════════════
@@ -3106,6 +3886,7 @@ function driveUpdateModalInfo(){
 }
 
 function openDriveModal(){
+  window._nativeHidePlayer?.();
   driveUpdateModalInfo();
   driveSetStatus(driveToken?'connected':'disconnected');
   document.getElementById('drive-modal').classList.add('active');
@@ -3348,6 +4129,869 @@ saveToStorage = function(){
   }catch(e){}
 })();
 
+/* ═══════════════════════════════════════════
+   NATIVE EXOPLAYER BRIDGE
+   Substitui o HTMLVideoElement por um proxy que roteia chamadas para o
+   VideoPlayerPlugin (ExoPlayer) quando rodando no APK nativo.
+   Suporta TODOS os formatos — MKV, AVI, MOV, WebM, MP4, etc.
+═══════════════════════════════════════════ */
+/* Detecta Xiaomi/HyperOS/MIUI para aplicar workarounds específicos */
+const _isXiaomi = (()=>{
+  try{
+    const ua=(navigator.userAgent||'').toLowerCase();
+    const brand=(navigator.vendor||'').toLowerCase();
+    return /xiaomi|miui|hyperos|redmi|poco/.test(ua)||/xiaomi/.test(brand);
+  }catch(e){ return false; }
+})();
+
+function installNativePlayer(plugin){
+  /* ── Guarda contra instalação dupla ── */
+  if(window._nativePlayerInstalled) return;
+  window._nativePlayerInstalled = true;
+
+  /* ── Estado espelho do player nativo ── */
+  const vs = {
+    src:'', currentTime:0, duration:NaN,
+    paused:true, ended:false, playbackRate:1, volume:1, muted:false
+  };
+
+  /* Guarda o setter original do <video> para fallback quando ExoPlayer falha */
+  const _nativeSrcDesc = Object.getOwnPropertyDescriptor(HTMLVideoElement.prototype, 'src');
+
+  /* ── Globais para esconder/mostrar o PlayerView ANTES de abrir modais ──────────
+     O PlayerView (View nativa Android) renderiza SEMPRE acima do WebView.
+     Chamar plugin.hide() ANTES de adicionar a classe .active ao modal garante
+     que o PlayerView já está oculto quando o modal fica visível — sem glitch. */
+  window._nativeHidePlayer = ()=>{
+    plugin.hide().catch(()=>{});
+  };
+  window._nativeShowPlayer = ()=>{
+    /* Não mostrar incondicionalmente: verifica se algum overlay ainda está aberto.
+       Caso contrário, fechar um modal enquanto o menu ⋮ está aberto faria o player
+       aparecer sobre o menu. updatePlayerOverlay() faz a checagem completa. */
+    requestAnimationFrame(updatePlayerOverlay);
+  };
+
+  /* Metadados pendentes para o MediaSession nativo (Ilha Dinâmica / HyperOS) */
+  let _meta = {title:'', artist:'StudyPlay', album:''};
+
+  /* Expõe globalmente para playLesson() usar */
+  window._setNativeVideoMeta = function(title, artist, album){
+    _meta = {title:title||'', artist:artist||'StudyPlay', album:album||''};
+  };
+
+  function def(prop, descriptor){
+    Object.defineProperty(video, prop, Object.assign({configurable:true}, descriptor));
+  }
+
+  /* ── Fallback para HTML5 quando ExoPlayer falha ── */
+  function fallbackToHTML5(url){
+    console.warn('[VideoPlayer] ExoPlayer falhou — fallback HTML5:', url);
+    document.body.classList.remove('native-vp');
+    plugin.hide().catch(()=>{});
+    if(_nativeSrcDesc && _nativeSrcDesc.set) _nativeSrcDesc.set.call(video, url);
+    toast('⚠ Usando player HTML5 (ExoPlayer falhou)');
+  }
+
+  /* ── Flag para evitar loadVideo duplicado quando setPlaylist já carregou a fila ──
+     Quando playLesson usa setPlaylist (modo playlist nativa), o setter de video.src
+     é chamado apenas para atualizar o estado interno (vs.src), sem disparar loadVideo.
+     playLesson define window._nativePlayerSkipSrc() antes de setar video.src. */
+  let _skipNextSrc = false;
+  window._nativePlayerSkipSrc = ()=>{ _skipNextSrc = true; };
+
+  /* ── Posicionamento: PlayerView acompanha o <video> em qualquer layout ──
+     doSyncRect(): executa imediatamente, sem debounce.
+     syncRect(delay): debounced (padrão 50ms) — use em resize/orientação para
+     aguardar o layout se acomodar antes de enviar coordenadas ao Java.       */
+  let _syncTimer = 0;
+  function doSyncRect(){
+    /* Em fullscreen/pip o Java já gerencia o layout — não envia updateRect.
+       Em pip-active o .player-area fica position:fixed;inset:0, o que faria o
+       getBoundingClientRect() retornar coordenadas de tela-cheia, corrompendo
+       os valores areaLeft/areaTop/areaWidth/areaHeight armazenados no Java. */
+    if(document.body.classList.contains('native-fullscreen')) return;
+    if(document.body.classList.contains('pip-active')) return;
+    /* Modo áudio: player oculto — não chamar updateRect pois o plugin pode
+       reexibir o PlayerView como efeito colateral (setVisibility interna). */
+    if(_audioOnly) return;
+    /* Mini player quando teclado de notas está aberto */
+    if(document.body.classList.contains('keyboard-notes-open')){
+      const hdr = document.querySelector('header')?.offsetHeight || 54;
+      const w   = window.innerWidth;
+      const h   = Math.min(180, Math.round(w * 0.45));
+      plugin.updateRect({x:0, y:hdr, w:w, h:h}).catch(()=>{});
+      return;
+    }
+    const r = video.getBoundingClientRect();
+    if(r.width > 0 && r.height > 0)
+      plugin.updateRect({x:r.left, y:r.top, w:r.width, h:r.height}).catch(()=>{});
+  }
+  function syncRect(delay){
+    clearTimeout(_syncTimer);
+    _syncTimer = setTimeout(doSyncRect, delay != null ? delay : 50);
+  }
+  /* Expõe globalmente para toggleAudioOnly() e syncRectNative() */
+  window._nativeDoSyncRect = doSyncRect;
+
+  /* ── Limpeza completa ao sair do PiP ──────────────────────────────────────
+     Corrige o bug onde o player fica ampliado/gigante e o viewport ultrapassa
+     a tela ao voltar do Picture-in-Picture no Android.
+
+     Causa raiz: o Android WebView não recalcula dvh/vw/vh automaticamente
+     após o resize da janela PiP, deixando o layout "inflado". O html sem
+     overflow:hidden deixa o body transbordar e o usuário consegue rolar.
+
+     Esta função executa a sequência completa de reset:
+       1. Remove pip-active (desfaz position:fixed;inset:0 no .player-area)
+       2. Reseta scroll/pan fantasma deixado pela animação de expansão
+       3. Força reflow invalidando o cache de layout do browser
+       4. Recria o meta viewport → força o WebView a recalcular vw/vh/dvh
+       5. Duplo rAF para garantir que o layout assentou completamente
+       6. Sincroniza posição do PlayerView nativo (ExoPlayer)
+
+     Exposta globalmente para handlers fora do escopo de installNativePlayer. */
+  function _exitPiPCleanup(){
+    document.body.classList.remove('pip-active');
+
+    /* 1. Reseta scroll/pan fantasma */
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+
+    /* 2. Força reflow síncrono — invalida cache de layout */
+    void document.body.offsetHeight;
+    void document.documentElement.offsetHeight;
+
+    /* 3. Dois frames: aguarda layout assentar após remover pip-active */
+    requestAnimationFrame(()=>{
+      /* Força o WebView a recalcular vw/vh/dvh: reset + restaura meta viewport.
+         Técnica confiável para corrigir scale/dimensões em Android WebView após
+         transição de tamanho de janela (PiP → tela cheia). */
+      const vpMeta = document.querySelector('meta[name="viewport"]');
+      if(vpMeta){
+        const c = vpMeta.getAttribute('content');
+        vpMeta.setAttribute('content', '');
+        void document.documentElement.offsetWidth; /* leitura síncrona = flush */
+        vpMeta.setAttribute('content', c);
+      }
+      window.scrollTo(0, 0);
+      void document.body.offsetHeight;
+
+      requestAnimationFrame(()=>{
+        updatePlayerOverlay();
+        doSyncRect();   /* sem debounce — layout já se acomodou */
+        syncRect(600);  /* fallback para dispositivos lentos */
+      });
+    });
+  }
+  /* Expõe globalmente para pipModeChanged (DOM) e appStateChange (initCapacitor) */
+  window._exitPiPCleanup = _exitPiPCleanup;
+
+  /* ── Propriedades intercept ── */
+  def('src', {
+    get: ()=> vs.src,
+    set: (v)=>{
+      vs.src = v||'';
+      if(!vs.src || vs.src===location.href) return;
+      /* Zera estado imediatamente */
+      vs.currentTime=0; vs.duration=NaN; vs.paused=true; vs.ended=false;
+      /* Se setPlaylist já carregou a fila, ignora loadVideo (evita sobrescrever a playlist) */
+      if(_skipNextSrc){ _skipNextSrc=false; return; }
+      /* loadVideo aguarda o PlaybackService (até 1 s) e cria o PlayerView.
+         SÓ DEPOIS de resolver é que o PlayerView existe — then() garante
+         visibilidade e posição corretas sem race condition. */
+      plugin.loadVideo({
+        uri:   vs.src,
+        title: _meta.title,
+        artist:_meta.artist,
+        album: _meta.album
+      }).then(()=>{
+        requestAnimationFrame(()=>{
+          /* Usa updatePlayerOverlay em vez de plugin.show() direto para respeitar
+             _audioOnly, overlays abertos e demais estados antes de exibir o player. */
+          updatePlayerOverlay();
+          doSyncRect();
+        });
+      }).catch(()=>{
+        /* ExoPlayer falhou (blob URL, permissão revogada, codec, etc.) → HTML5 */
+        fallbackToHTML5(vs.src);
+      });
+    }
+  });
+
+  def('currentTime', {
+    get: ()=> vs.currentTime,
+    /* frameMode=true → passa exact:true para ExoPlayer usar SeekParameters.EXACT (frame-accurate) */
+    set: (v)=>{ vs.currentTime=v; plugin.seekTo({position:v, exact: !!frameMode}).catch(()=>{}); }
+  });
+  def('duration',     { get:()=> vs.duration });
+  def('paused',       { get:()=> vs.paused   });
+  def('ended',        { get:()=> vs.ended    });
+  def('playbackRate', {
+    get: ()=> vs.playbackRate,
+    set: (v)=>{ vs.playbackRate=v; plugin.setSpeed({speed:v}).catch(()=>{}); }
+  });
+  def('volume', {
+    get: ()=> vs.volume,
+    set: (v)=>{ vs.volume=v; if(!vs.muted) plugin.setVolume({volume:v}).catch(()=>{}); }
+  });
+  def('muted', {
+    get: ()=> vs.muted,
+    set: (v)=>{ vs.muted=v; plugin.setVolume({volume:v?0:vs.volume}).catch(()=>{}); }
+  });
+
+  /* ── Métodos intercept ── */
+  video.play  = ()=>{ plugin.resume().catch(()=>{}); return Promise.resolve(); };
+  video.pause = ()=>{ plugin.pause().catch(()=>{}); };
+  video.load  = ()=>{};
+  video.requestPictureInPicture = ()=>{
+    plugin.enterPiP().catch(()=>{});
+    return Promise.resolve();
+  };
+
+  /* ── Eventos do plugin → eventos DOM sintéticos ── */
+  plugin.addListener('loadedmetadata', (e)=>{
+    vs.duration=e.duration||0; vs.currentTime=0;
+    video.dispatchEvent(new Event('loadedmetadata'));
+    video.dispatchEvent(new Event('durationchange'));
+    /* Garante posicionamento correto logo que metadados chegam */
+    requestAnimationFrame(doSyncRect);
+  });
+  plugin.addListener('canplay',    ()=> video.dispatchEvent(new Event('canplay')));
+  plugin.addListener('play',       ()=>{
+    vs.paused=false; vs.ended=false;
+    video.dispatchEvent(new Event('play'));
+  });
+  plugin.addListener('pause',      ()=>{
+    vs.paused=true;
+    video.dispatchEvent(new Event('pause'));
+  });
+  plugin.addListener('ended',      ()=>{
+    vs.paused=true; vs.ended=true;
+    video.dispatchEvent(new Event('ended'));
+  });
+  plugin.addListener('timeupdate', (e)=>{
+    vs.currentTime=e.currentTime;
+    vs.duration   =e.duration;
+    video.dispatchEvent(new Event('timeupdate'));
+  });
+  plugin.addListener('error', ()=> video.dispatchEvent(new Event('error')));
+
+  /* ── Java → JS: pede resincronização de rect (após rotação / retorno do background) ── */
+  plugin.addListener('requestSyncRect', ()=> syncRect(200));
+
+  /* ── Visibilidade: sincroniza PlayerView com display do <video> ── */
+  new MutationObserver(()=>{
+    if(video.style.display!=='none'){
+      document.body.classList.add('native-vp');
+      plugin.show().catch(()=>{});
+      requestAnimationFrame(doSyncRect);
+    } else {
+      document.body.classList.remove('native-vp');
+      plugin.hide().catch(()=>{});
+    }
+  }).observe(video, {attributes:true, attributeFilter:['style']});
+
+  /* ── Posicionamento: PlayerView acompanha o <video> em qualquer layout ──  */
+  /* ResizeObserver: dispara quando o elemento muda de tamanho após reflow     */
+  const _ro = new ResizeObserver(()=> syncRect(50));
+  _ro.observe(video);
+
+  /* window.resize: debounce de 100ms (layout pode não ter terminado ainda)    */
+  window.addEventListener('resize', ()=> syncRect(100));
+
+  /* ── Fullscreen automático na rotação para landscape ──
+     _autoFS = true significa que o fullscreen foi aberto por rotação (não manual).
+     Ao voltar para portrait, o fullscreen automático é desfeito; o manual permanece. */
+  let _autoFS = false;
+  window.addEventListener('orientationchange', ()=>{
+    // Aguarda o WebView terminar de refluir (~350ms no Android)
+    setTimeout(()=>{
+      const isLandscape = window.innerWidth > window.innerHeight;
+      const inFS = document.body.classList.contains('native-fullscreen');
+
+      if(isLandscape && !inFS && vs.src){
+        /* Landscape + vídeo ativo + não está em fullscreen → entra automaticamente */
+        _autoFS = true;
+        plugin.enterFullscreen().catch(()=>{ _autoFS = false; });
+        return; // Java gerencia o layout em fullscreen; syncRect não é necessário aqui
+      }
+
+      if(!isLandscape && inFS && _autoFS){
+        /* Voltou ao portrait e o fullscreen foi automático → sai */
+        _autoFS = false;
+        plugin.exitFullscreen().catch(()=>{});
+        return; // fullscreenChanged listener cuidará do syncRect
+      }
+
+      /* Sem transição de fullscreen: apenas resincroniza a posição do PlayerView */
+      syncRect(0);
+    }, 350);
+  });
+
+  /* visibilitychange: quando o app volta ao primeiro plano, re-sincroniza.
+     Em modo playlist nativa, também verifica se o ExoPlayer avançou de aula
+     enquanto o app estava minimizado e atualiza a UI se necessário.           */
+  document.addEventListener('visibilitychange', async ()=>{
+    if(document.visibilityState !== 'visible') return;
+
+    /* ── Fullscreen travado: o Java já sai via onResume(), mas como garantia extra
+       removemos a classe aqui também caso o evento fullscreenChanged não tenha chegado. */
+    if(document.body.classList.contains('native-fullscreen')){
+      document.body.classList.remove('native-fullscreen');
+    }
+
+    /* ── pip-active travado: PiP pode ter sido fechado enquanto o app estava em background
+       sem o evento pipChanged chegar ao JS. Usa _exitPiPCleanup para reset completo
+       (scroll, viewport, layout, syncRect) — evita o bug do player ampliado. */
+    if(document.body.classList.contains('pip-active')){
+      _exitPiPCleanup(); /* remove pip-active + reset viewport/scroll/layout + syncRect */
+    } else {
+      /* Sem PiP travado: apenas re-exibe player e sincroniza posição */
+      requestAnimationFrame(updatePlayerOverlay);
+      if(vs.src) syncRect(300);
+    }
+    /* Sync de posição da playlist após retornar do background */
+    if(_nativePlaylistMode && typeof plugin.getCurrentIndex==='function'){
+      try{
+        const {index, position} = await plugin.getCurrentIndex();
+        const absIdx = _nativePlaylistStartIdx + index;
+        if(absIdx !== currentIdx && absIdx >= 0 && absIdx < lessons.length){
+          currentIdx = absIdx;
+          const nl = lessons[absIdx];
+          vs.src = nl.file._uri || nl.url || '';
+          vs.currentTime = position || 0;
+          updateNowTitle(nl.name);
+          updatePlaylistActive();
+          scrollToActive();
+          saveToStorage();
+        }
+      }catch(e){}
+    }
+  });
+
+  /* Xiaomi/HyperOS: orientação pode mudar sem evento resize/orientationchange.
+     Polling de 600ms para garantir sincronia. Só roda quando há vídeo ativo e
+     o player não está em fullscreen (Java ignora updateRect nesse estado, mas
+     poupamos a chamada desnecessária).                                         */
+  if(_isXiaomi){
+    setInterval(()=>{
+      if(vs.src && video.style.display!=='none' &&
+         !document.body.classList.contains('native-fullscreen')){
+        doSyncRect();
+      }
+    }, 600);
+  }
+
+  /* ── Fundo da janela preto → letterbox preto do RESIZE_MODE_FIT ── */
+  plugin.enableTransparency().catch(()=>{});
+
+  /* PiP: disponível em todos os dispositivos nativos */
+  document.getElementById('pip-btn').style.display='flex';
+
+  /* Botão áudio-only: disponível no nativo */
+  document.getElementById('audio-only-btn').style.display='flex';
+
+  /* ── Evento fullscreenChanged vindo do plugin Java ── */
+  plugin.addListener('fullscreenChanged', (e)=>{
+    document.body.classList.toggle('native-fullscreen', !!e.active);
+    if(!e.active){
+      /* Ao sair do fullscreen, aguarda um frame para o layout refluir e resincroniza */
+      syncRect(150);
+    }
+    // Atualiza visibilidade do player em relação a overlays HTML
+    requestAnimationFrame(updatePlayerOverlay);
+  });
+
+  /* ── Botão de fone na janela PiP → ativa modo áudio ──
+     Quando o usuário toca no ícone de fone dentro da janela PiP, o Java dispara
+     pipAudioToggle via BroadcastReceiver → notifyListeners. O JS ativa audio-only:
+     o PlayerView some (janela PiP fica preta), o áudio continua pelo PlaybackService. */
+  plugin.addListener('pipAudioToggle', ()=>{
+    if(!_audioOnly){
+      _audioOnly = true;
+      plugin.hide().catch(()=>{});
+      document.getElementById('audio-only-btn')?.classList.add('active-ctrl');
+      releaseWakeLock();
+    }
+  });
+
+  /* ── trackChanged: ExoPlayer avançou para o próximo item da playlist ────────────
+     Disparado pelo nativo quando o player passa para a próxima aula automaticamente.
+     Funciona mesmo com o app minimizado — o event fica em fila e é processado quando
+     o WebView volta ao foco. Atualiza currentIdx, título e UI da playlist.           */
+  plugin.addListener('trackChanged', (e)=>{
+    if(!_nativePlaylistMode) return;
+    const absIdx = _nativePlaylistStartIdx + (e.index||0);
+    if(absIdx < 0 || absIdx >= lessons.length) return;
+    /* Loop: ExoPlayer avançou para próxima faixa, mas loop está ativo → volta à atual */
+    if(_loopLesson > 0 && absIdx !== currentIdx){
+      const selfPlaylistIdx = currentIdx - _nativePlaylistStartIdx;
+      if(selfPlaylistIdx >= 0) plugin.seekToItem({index: selfPlaylistIdx}).catch(()=>{});
+      if(_loopLesson===1){ _loopLesson=0; updateLoopUI(); }
+      if(_audioOnly) plugin.hide().catch(()=>{});
+      return;
+    }
+    currentIdx = absIdx;
+    const nl = lessons[absIdx];
+    /* Re-aplica modo áudio se ativo (ExoPlayer pode reexibir o PlayerView ao trocar faixa) */
+    if(_audioOnly) plugin.hide().catch(()=>{});
+    /* Atualiza vs.src para refletir a aula atual (sem disparar loadVideo) */
+    vs.src = nl.file._uri || nl.url || '';
+    vs.currentTime = 0;
+    /* UI — só atualiza se o app estiver visível (sem sobrecarga em background) */
+    if(document.visibilityState==='visible'){
+      updateNowTitle(nl.name);
+      updatePlaylistActive();
+      scrollToActive();
+      /* Metadados do MediaSession nativo (Ilha Dinâmica) */
+      if('mediaSession' in navigator && navigator.mediaSession.metadata){
+        navigator.mediaSession.metadata.title = nl.name;
+      }
+      if(typeof window._setNativeVideoMeta==='function'){
+        const mod = isModular&&modules.length
+          ? (modules.find(m=>m.lessons&&m.lessons.find(f=>f.name===nl.file.name))||{name:'VideoAulas'}).name
+          : 'VideoAulas';
+        window._setNativeVideoMeta(nl.name,'StudyPlay',mod);
+      }
+    }
+    saveToStorage();
+  });
+
+  /* ── pipChanged: canal confiável via notifyListeners do plugin (não DOM event) ──
+     Só processa a SAÍDA do PiP ({active: false}).
+     A ENTRADA já é gerenciada em togglePiP() que adiciona pip-active antes de
+     chamar plugin.enterPiP(). Ignorar {active:true} aqui previne o bug onde
+     eventos atrasados (enfileirados enquanto o WebView estava throttled no PiP)
+     chegam depois da saída e voltam a adicionar pip-active incorretamente.         */
+  plugin.addListener('pipChanged', (e)=>{
+    if(e.active) return; // entrada gerenciada pelo togglePiP() — ignorar
+    /* Reset completo ao sair do PiP:
+       remove pip-active, reseta scroll/viewport/layout e sincroniza PlayerView.
+       _exitPiPCleanup() resolve o bug do player ampliado e viewport maior que a tela. */
+    _exitPiPCleanup();
+  });
+
+  /* ── playerDestroyed: serviço encerrado (ex: usuário fechou o app) ─────────
+     Reseta o modo playlist para que a próxima reprodução use loadVideo single. */
+  plugin.addListener('playerDestroyed', ()=>{
+    _nativePlaylistMode    = false;
+    _nativePlaylistStartIdx = 0;
+  });
+
+  /* ── Botões Anterior / Próximo da notificação de mídia ────────────────────
+     O PlaybackService dispara esses eventos via BroadcastReceiver quando o
+     usuário toca nos botões da notificação na barra de status.               */
+  plugin.addListener('prevTrack', ()=>{ prevLesson(); });
+  plugin.addListener('nextTrack', ()=>{ nextLesson(); });
+
+  /* ── Esconde o player nativo quando overlays HTML cobrem a tela ──────────────
+     O PlayerView (View nativa Android) renderiza SEMPRE acima do WebView.
+     Quando modais, sidebar mobile ou overlays abrem, eles ficam visualmente
+     cobertos pelo player. A solução: ocultar o player enquanto estiverem abertos.
+     ─────────────────────────────────────────────────────────────────────────── */
+  function updatePlayerOverlay(){
+    // Em fullscreen/pip/audio-only o Java gerencia a visibilidade — não interferir
+    if(document.body.classList.contains('native-fullscreen')) return;
+    if(document.body.classList.contains('pip-active')) return;
+    if(_audioOnly) return;
+    // Sem vídeo ativo ou explicitamente oculto
+    if(!vs.src || video.style.display==='none') return;
+
+    const blocked = !!(
+      document.querySelector('.modal-overlay.active')    ||
+      document.querySelector('#progress-modal.active')   ||
+      /* Em modo teclado de notas, o player é exibido acima da caixa de notas — não bloquear */
+      (!document.body.classList.contains('keyboard-notes-open') && document.querySelector('.notes-mobile-modal.active')) ||
+      document.querySelector('.xlsx-modal.active')       ||
+      document.querySelector('#drive-modal.active')      ||
+      document.querySelector('#review-overlay.active')   ||
+      document.querySelector('#loading-overlay.active')  ||
+      document.querySelector('.sidebar.mobile-open')     ||
+      document.querySelector('#unified-more-menu.open')
+    );
+
+    if(blocked){
+      plugin.hide().catch(()=>{});
+    } else {
+      plugin.show().catch(()=>{});
+      requestAnimationFrame(doSyncRect);
+    }
+  }
+
+  /* Observa classe dos elementos de overlay para reagir quando abrem/fecham */
+  const _overlayTargets = document.querySelectorAll(
+    '.modal-overlay, #progress-modal, .notes-mobile-modal, ' +
+    '.xlsx-modal, #drive-modal, #review-overlay, #loading-overlay, .sidebar, ' +
+    '#unified-more-menu'
+  );
+  const _overlayObs = new MutationObserver(updatePlayerOverlay);
+  _overlayTargets.forEach(el =>
+    _overlayObs.observe(el, {attributes:true, attributeFilter:['class']})
+  );
+}
+
+/* ── PiP nativo: fallback via DOM event (triggerJSEvent do MainActivity) ──
+   Só processa a saída do PiP — entrada gerenciada por togglePiP(). */
+window.addEventListener('pipModeChanged', (e)=>{
+  try{
+    const data = typeof e.detail==='string' ? JSON.parse(e.detail) : e.detail;
+    if(!data.active){
+      /* Usa reset completo se installNativePlayer já rodou; fallback simples caso contrário */
+      if(typeof window._exitPiPCleanup === 'function') window._exitPiPCleanup();
+      else document.body.classList.remove('pip-active');
+    }
+  }catch(_){}
+});
+
+/* ═══════════════════════════════════════════
+   CAPACITOR APK — INICIALIZAÇÃO
+   Restauração automática de sessão + botão Voltar
+═══════════════════════════════════════════ */
+(async function initCapacitor(){
+  if(!Platform.isCapacitor) return;
+
+  /* ── Instala bridge ExoPlayer (antes de qualquer reprodução) ── */
+  try{
+    const VideoPlayer=window.Capacitor?.Plugins?.VideoPlayer;
+    if(VideoPlayer) installNativePlayer(VideoPlayer);
+  }catch(e){ console.warn('VideoPlayer bridge error:',e); }
+
+  /* ── Retorno do background (appStateChange) ─────────────────────────────────
+     Garante que overlays CSS travados (native-fullscreen, pip-active) são limpos
+     e que o player está visível quando o app volta ao primeiro plano.
+     Complementa o onResume() Java + visibilitychange acima.                   */
+  try{
+    const _capApp2 = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+    if(_capApp2 && _capApp2.addListener){
+      _capApp2.addListener('appStateChange', ({isActive})=>{
+        if(!isActive) return;
+        // Limpa estado CSS do fullscreen (Java já trata via onResume)
+        document.body.classList.remove('native-fullscreen');
+        // PiP: usa reset completo via hook global (exposto por installNativePlayer).
+        // Nota: updatePlayerOverlay/syncRect/vs NÃO estão acessíveis aqui por escopo —
+        // usar apenas os hooks window.* expostos por installNativePlayer.
+        if(document.body.classList.contains('pip-active')){
+          if(typeof window._exitPiPCleanup === 'function') window._exitPiPCleanup();
+          else document.body.classList.remove('pip-active');
+        } else {
+          // Sem PiP: re-exibe player e sincroniza rect via hooks globais
+          window._nativeShowPlayer?.();
+          if(typeof window._nativeDoSyncRect === 'function')
+            setTimeout(window._nativeDoSyncRect, 400);
+        }
+      });
+    }
+  }catch(e){}
+
+  /* ── Botão Voltar Android ── */
+  try{
+    const CapApp = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+    if(CapApp && CapApp.addListener){
+      let _backPressedOnce = false, _backPressTimer = null;
+      CapApp.addListener('backButton', ()=>{
+        /* 1. Tela cheia → minimiza player (volta ao player na tela inicial) */
+        if(document.body.classList.contains('native-fullscreen')){
+          const _vp = window.Capacitor?.Plugins?.VideoPlayer;
+          if(_vp) _vp.exitFullscreen().catch(()=>{});
+          return;
+        }
+        /* 2. Overlays abertos → fecha cada um na ordem */
+        if(document.getElementById('review-overlay').classList.contains('active')){ closeReviewMode(); return; }
+        if(document.getElementById('settings-modal').classList.contains('active')){ document.getElementById('settings-modal').classList.remove('active'); return; }
+        if(document.getElementById('unified-more-menu').classList.contains('open')){ closeMoreMenu(); return; }
+        if(document.querySelector('.modal-overlay.active')){ closeModal(); return; }
+        if(document.querySelector('.xlsx-modal.active')){ closeXlsx(); return; }
+        if(document.querySelector('.notes-mobile-modal.active')){ document.getElementById('notes-mobile-modal').classList.remove('active'); return; }
+        if(document.getElementById('drive-modal').classList.contains('active')){ closeDriveModal(); return; }
+        /* 3. Nada aberto → duplo toque para sair */
+        if(_backPressedOnce){
+          clearTimeout(_backPressTimer);
+          _backPressedOnce = false;
+          if(typeof CapApp.minimizeApp==='function') CapApp.minimizeApp();
+        } else {
+          _backPressedOnce = true;
+          toast('Pressione voltar novamente para sair');
+          _backPressTimer = setTimeout(()=>{ _backPressedOnce = false; }, 2000);
+        }
+      });
+    }
+  }catch(e){}
+
+  /* ── MediaSession: estado inicial ── */
+  if('mediaSession' in navigator){
+    navigator.mediaSession.setActionHandler('play',  ()=>video.play());
+    navigator.mediaSession.setActionHandler('pause', ()=>video.pause());
+    navigator.mediaSession.setActionHandler('nexttrack',     nextLesson);
+    navigator.mediaSession.setActionHandler('previoustrack', prevLesson);
+  }
+
+  /* ── Restauração automática via SAF (treeUri persistida) ── */
+  try{
+    const sess=JSON.parse(localStorage.getItem('splay_native_session')||'null');
+    if(!sess||!sess.treeUri) return;
+    const VideoFolder=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.VideoFolder;
+    if(!VideoFolder) return;
+
+    const ago=Math.round((Date.now()-(sess.savedAt||0))/60000);
+    const agoTxt=ago<2?'agora mesmo':ago<60?`${ago} min atrás`:`${Math.round(ago/60)}h atrás`;
+
+    showModal(
+      `📚 Curso anterior encontrado`,
+      `Pasta "${sess.rootName||'?'}" (aberta ${agoTxt}). Deseja reabrir sem precisar selecionar novamente?`,
+      [
+        {label:'▶ Reabrir',        cls:'primary',  action:async()=>{
+          closeModal();
+          /* ── Caminho rápido: restaura do cache salvo (sem re-escanear) ── */
+          if(quickRestore(sess)) return;
+          /* ── Fallback lento: re-escaneia a pasta via Java ── */
+          showLoading('Restaurando curso…');
+          try{
+            const r=await VideoFolder.listPersistedFolder({treeUri:sess.treeUri});
+            if(r&&r.files&&r.files.length){
+              await processNativeFiles(r.files, r.rootName||sess.rootName, false);
+              saveNativeSessionCache(sess.treeUri, sess.rootName||r.rootName||'');
+            } else {
+              toast('Pasta não acessível. Abra novamente.');
+              localStorage.removeItem('splay_native_session');
+            }
+          }catch(e){
+            toast('Erro ao restaurar: '+e.message);
+            localStorage.removeItem('splay_native_session');
+          }
+          hideLoading();
+        }},
+        {label:'Abrir outra pasta', cls:'secondary', action:()=>closeModal()}
+      ]
+    );
+  }catch(e){}
+})();
+
+/* Restaura playlist completa a partir dos blobs no IDB */
+async function _restoreFromIDB(names, session){
+  showLoading('Restaurando curso…','Carregando lista de aulas…');
+  lessons=[]; isModular=false; modules=[]; done=new Set();
+  document.body.classList.remove('is-modular');
+
+  /* Cria placeholders — URL será carregada sob demanda */
+  names.forEach((fname,i)=>{
+    lessons.push({
+      file:{name:fname}, url:null,
+      name:fname.replace(/\.[^.]+$/,''),
+      idx:i,
+      _idb:true, _fname:fname
+    });
+  });
+
+  buildSortedLessons();
+  const stored=loadFromStorage();
+  if(stored) applyStoredProgress(stored);
+  renderPlaylist(sortedLessons);
+  hideLoading();
+
+  /* Reproduz a última aula vista (carrega do IDB) */
+  const startIdx=stored?getResumeIdx(stored):0;
+  await playLesson(startIdx);
+  toast(`${names.length} aula(s) restaurada(s) ✓`);
+}
+
+/* ── MediaSession: atualiza estado play/pause ── */
+video.addEventListener('play',  ()=>{ try{ if('mediaSession' in navigator) navigator.mediaSession.playbackState='playing'; }catch(e){} });
+video.addEventListener('pause', ()=>{ try{ if('mediaSession' in navigator) navigator.mediaSession.playbackState='paused';  }catch(e){} });
+video.addEventListener('timeupdate', ()=>{
+  try{
+    if('mediaSession' in navigator && video.duration && !isNaN(video.duration)){
+      navigator.mediaSession.setPositionState({ duration:video.duration, playbackRate:video.playbackRate, position:video.currentTime });
+    }
+  }catch(e){}
+});
+
+
+/* ═══════════════════════════════════════════
+   LOOP DA AULA ATUAL — 3 estados
+   0 = desativado | 1 = repetir 1× | 2 = loop infinito
+═══════════════════════════════════════════ */
+let _loopLesson = 0;
+function toggleLoop(){
+  _loopLesson = (_loopLesson + 1) % 3;
+  updateLoopUI();
+}
+function updateLoopUI(){
+  const btn = document.getElementById('loop-btn');
+  if(!btn) return;
+  const badge = btn.querySelector('.loop-count-badge');
+  btn.classList.remove('active-ctrl','active-ctrl-green');
+  if(badge) badge.style.display='none';
+  if(_loopLesson===1){
+    btn.classList.add('active-ctrl');                   /* âmbar = repetir 1× */
+    if(badge){ badge.style.display='block'; badge.textContent='1×'; }
+    btn.title='Repetindo 1× — próximo clique: loop infinito';
+    toast('🔁 Repetir 1 vez');
+  } else if(_loopLesson===2){
+    btn.classList.add('active-ctrl-green');             /* verde = loop infinito */
+    btn.title='Loop infinito ativo — próximo clique: desativar';
+    toast('🔁 Loop infinito ativado');
+  } else {
+    btn.title='Repetir esta aula em loop';
+    toast('🔁 Loop desativado');
+  }
+}
+
+/* ═══════════════════════════════════════════
+   SLEEP TIMER
+═══════════════════════════════════════════ */
+let _sleepTimer = null;
+let _sleepMinutes = 0;
+let _sleepEndTime = 0;
+
+function openSleepTimer(){
+  if(_sleepTimer){
+    const remaining = Math.max(0, Math.round((_sleepEndTime - Date.now()) / 60000));
+    showModal('⏱ Timer de sono',
+      `Timer ativo: ${remaining} min restante(s). O que deseja fazer?`,
+      [{label:`Cancelar timer`, cls:'danger',   action:()=>{ clearSleepTimer(); closeModal(); }},
+       {label:'Manter',         cls:'secondary', action:closeModal}]
+    );
+    return;
+  }
+  showModal('⏱ Timer de sono', 'Pausar a reprodução automaticamente após:', [
+    {label:'15 min', cls:'secondary', action:()=>{ setSleepTimer(15); closeModal(); }},
+    {label:'30 min', cls:'secondary', action:()=>{ setSleepTimer(30); closeModal(); }},
+    {label:'60 min', cls:'primary',   action:()=>{ setSleepTimer(60); closeModal(); }},
+    {label:'Fechar', cls:'secondary', action:closeModal}
+  ]);
+}
+
+function setSleepTimer(min){
+  clearSleepTimer();
+  _sleepMinutes = min;
+  _sleepEndTime = Date.now() + min * 60000;
+  _sleepTimer = setTimeout(()=>{
+    video.pause();
+    _sleepTimer = null; _sleepMinutes = 0; _sleepEndTime = 0;
+    document.getElementById('sleep-btn')?.classList.remove('active-ctrl');
+    showModal('⏱ Timer de sono',
+      `Reprodução pausada após ${min} minuto(s). Boa noite! 🌙`,
+      [{label:'Continuar', cls:'primary', action:()=>{ closeModal(); video.play().catch(()=>{}); }},
+       {label:'OK', cls:'secondary', action:closeModal}]
+    );
+  }, min * 60000);
+  document.getElementById('sleep-btn')?.classList.add('active-ctrl');
+  toast(`⏱ Pausa em ${min} min`);
+}
+
+function clearSleepTimer(){
+  if(_sleepTimer){ clearTimeout(_sleepTimer); _sleepTimer = null; }
+  _sleepMinutes = 0; _sleepEndTime = 0;
+  document.getElementById('sleep-btn')?.classList.remove('active-ctrl');
+}
+
+/* ═══════════════════════════════════════════
+   CONFIGURAÇÕES / SOBRE
+═══════════════════════════════════════════ */
+function openSettings(){
+  window._nativeHidePlayer?.();
+  // Atualiza contagem de erros no crash log
+  try{
+    const saved = JSON.parse(localStorage.getItem('splay_crash_log')||'[]');
+    const el = document.getElementById('crash-log-count');
+    if(el) el.textContent = saved.length + (saved.length===1?' erro':' erros');
+  }catch(e){}
+  document.getElementById('settings-modal').classList.add('active');
+}
+
+function clearCrashLog(){
+  _crashLog.length = 0;
+  try{ localStorage.removeItem('splay_crash_log'); }catch(e){}
+  const el = document.getElementById('crash-log-count');
+  if(el) el.textContent = '0 erros';
+  toast('Log de erros limpo ✓');
+}
+
+function rateApp(e){
+  e.preventDefault();
+  if(Platform.isCapacitor){
+    const pkg = 'com.jcorelabs.studyplay';
+    try{
+      window.Capacitor?.Plugins?.App?.openUrl?.({url:'market://details?id='+pkg});
+    }catch(_){
+      window.open('https://play.google.com/store/apps/details?id='+pkg,'_blank');
+    }
+  } else {
+    toast('Disponível apenas no app Android');
+  }
+}
+
+function openExternalLink(e, url){
+  e.preventDefault();
+  if(Platform.isCapacitor){
+    try{ window.Capacitor?.Plugins?.Browser?.open({url}); }catch(_){}
+  } else {
+    window.open(url,'_blank');
+  }
+}
+
+/* ═══════════════════════════════════════════
+   GESTOS SWIPE NO PLAYER (mobile)
+═══════════════════════════════════════════ */
+(function initSwipeGestures(){
+  const wrapper = document.getElementById('video-wrapper');
+  let tStartX = 0, tStartY = 0, tStartTime = 0;
+  let lastTapTime = 0, lastTapX = 0;
+
+  function showHint(text){
+    let hint = wrapper.querySelector('.swipe-hint');
+    if(!hint){
+      hint = document.createElement('div');
+      hint.className = 'swipe-hint';
+      wrapper.appendChild(hint);
+    }
+    hint.textContent = text;
+    hint.style.opacity = '1';
+    hint.style.transform = 'translate(-50%,-50%) scale(1.05)';
+    clearTimeout(hint._t);
+    hint._t = setTimeout(()=>{ hint.style.opacity='0'; hint.style.transform='translate(-50%,-50%) scale(.9)'; }, 750);
+  }
+
+  wrapper.addEventListener('touchstart', (e)=>{
+    if(e.touches.length !== 1) return;
+    tStartX = e.touches[0].clientX;
+    tStartY = e.touches[0].clientY;
+    tStartTime = Date.now();
+  }, {passive:true});
+
+  wrapper.addEventListener('touchend', (e)=>{
+    if(e.changedTouches.length !== 1) return;
+    const dx = e.changedTouches[0].clientX - tStartX;
+    const dy = e.changedTouches[0].clientY - tStartY;
+    const dt = Date.now() - tStartTime;
+    const tapX = e.changedTouches[0].clientX;
+    const w = wrapper.getBoundingClientRect().width;
+
+    /* Toque curto (não swipe) → verificar duplo toque */
+    if(Math.abs(dx) < 15 && Math.abs(dy) < 15 && dt < 250){
+      const now = Date.now();
+      if(now - lastTapTime < 350 && Math.abs(tapX - lastTapX) < 60){
+        /* Duplo toque: esquerda → −10s | direita → +10s */
+        if(!video.src) return;
+        if(tapX < w/2){ skipTime(-10); showHint('◀◀ −10s'); }
+        else           { skipTime(+10); showHint('+10s ▶▶'); }
+        lastTapTime = 0;
+        return;
+      }
+      lastTapTime = now;
+      lastTapX = tapX;
+    }
+
+    /* Swipe horizontal: avança/volta 30 s */
+    if(Math.abs(dx) > 55 && Math.abs(dy) < 50 && dt < 450 && video.src && video.duration){
+      const delta = dx > 0 ? 30 : -30;
+      skipTime(delta);
+      showHint(delta > 0 ? '+30s ▶▶' : '◀◀ −30s');
+    }
+  }, {passive:true});
+})();
 
 window.addEventListener('beforeunload', ()=>{
   if(currentIdx>=0 && video.currentTime>2) lessonTimes[currentIdx]=video.currentTime;
