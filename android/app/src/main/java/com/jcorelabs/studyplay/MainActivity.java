@@ -1,30 +1,16 @@
 package com.jcorelabs.studyplay;
 
-import android.Manifest;
-import android.content.Intent;
-import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
 import android.content.res.Configuration;
-import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.PowerManager;
 import android.view.KeyEvent;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.JSObject;
 
 public class MainActivity extends BridgeActivity {
-
-    private static final String PREFS_NAME          = "studyplay_prefs";
-    private static final String PREF_BATTERY_REQ   = "battery_opt_requested";
-    private static final String PREF_NOTIF_REQ      = "notif_permission_requested";
-    private static final int    REQ_NOTIF_PERMISSION = 2001;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -44,57 +30,9 @@ public class MainActivity extends BridgeActivity {
             wv.setWebViewClient(new VideoWebViewClient(getBridge()));
         }
 
-        // Solicita isenção de otimização de bateria uma vez por instalação.
-        // Essencial no HyperOS/Xiaomi para reprodução contínua com tela desligada.
-        requestBatteryOptimizationExemptionOnce();
-
-        // Solicita permissão de notificação (Android 13+).
-        // Sem ela, a notificação MediaStyle não aparece → Hyper Island não ativa.
-        requestNotificationPermissionOnce();
-    }
-
-    /**
-     * Solicita permissão POST_NOTIFICATIONS em Android 13+ (API 33+).
-     * Sem essa permissão, a notificação de mídia (MediaStyle) não aparece no painel
-     * de notificações nem na Hyper Island (Ilha Dinâmica) do HyperOS.
-     * Executado apenas uma vez por instalação.
-     */
-    private void requestNotificationPermissionOnce() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return; // < Android 13
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        if (prefs.getBoolean(PREF_NOTIF_REQ, false)) return;
-
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                new String[]{Manifest.permission.POST_NOTIFICATIONS},
-                REQ_NOTIF_PERMISSION);
-        }
-        prefs.edit().putBoolean(PREF_NOTIF_REQ, true).apply();
-    }
-
-    /**
-     * Abre o diálogo do sistema para isentar o app da otimização de bateria.
-     * Executado apenas na primeira instalação. O usuário pode aceitar ou recusar.
-     */
-    private void requestBatteryOptimizationExemptionOnce() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return;
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        if (prefs.getBoolean(PREF_BATTERY_REQ, false)) return; // já pediu antes
-
-        try {
-            PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
-            if (pm != null && !pm.isIgnoringBatteryOptimizations(getPackageName())) {
-                Intent intent = new Intent(
-                    android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                    Uri.parse("package:" + getPackageName()));
-                startActivity(intent);
-            }
-            // Marca como pedido independente da resposta do usuário
-            prefs.edit().putBoolean(PREF_BATTERY_REQ, true).apply();
-        } catch (Exception ignored) {
-            // Alguns fabricantes (Samsung Knox, etc.) podem bloquear este intent
-        }
+        // As permissões de notificação e de bateria NÃO são mais pedidas ao abrir o app
+        // (apareciam juntas, sem contexto). O JS pede cada uma no momento certo, via
+        // VideoPlayerPlugin.requestNotificationPermission / requestBatteryExemption.
     }
 
     /**

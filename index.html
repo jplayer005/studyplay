@@ -806,7 +806,7 @@ body.is-modular .btn-organize{display:flex;}
     <div class="settings-section" style="margin-top:8px;">Sobre o app</div>
     <div class="settings-row">
       <span class="settings-label">Versão</span>
-      <span class="settings-value">2.0.0</span>
+      <span class="settings-value">2.1.0</span>
     </div>
     <div class="settings-row">
       <span class="settings-label">Política de Privacidade</span>
@@ -1468,6 +1468,9 @@ function loadFromStorage(){
 function applyStoredProgress(data){
   if(!data) return;
   const nameToIdx = new Map(lessons.map(l=>[l.key||l.name, l.idx]));
+  /* Dados antigos guardam só o nome: mapeia também o nome puro para a 1ª aula com
+     esse nome (cobre nomes que passaram a ter repetição ao acrescentar módulos). */
+  lessons.forEach(l=>{ if(!nameToIdx.has(l.name)) nameToIdx.set(l.name, l.idx); });
   done = new Set();
   (data.done||[]).forEach(name=>{ const i=nameToIdx.get(name); if(i!==undefined) done.add(i); });
   favorites = new Set();
@@ -2037,6 +2040,7 @@ function toggleAudioOnly(){
     plug.hide().catch(()=>{});
     releaseWakeLock();
     toast('🎧 Modo áudio — vídeo oculto, tela pode ser desligada');
+    askBatteryExemptionOnce(plug);
   } else {
     plug.show().catch(()=>{});
     if(!video.paused) requestWakeLock();
@@ -2044,6 +2048,21 @@ function toggleAudioOnly(){
     toast('▶ Vídeo retomado');
   }
   document.getElementById('audio-only-btn')?.classList.toggle('active-ctrl',_audioOnly);
+}
+/* Pedido de isenção de bateria: só na primeira vez que o modo áudio é usado, com
+   explicação (antes o diálogo do sistema surgia sozinho ao abrir o app). */
+function askBatteryExemptionOnce(plug){
+  try{
+    if(localStorage.getItem('splay_bat_asked')) return;
+    if(typeof plug.requestBatteryExemption!=='function') return;
+    localStorage.setItem('splay_bat_asked','1');
+  }catch(e){ return; }
+  setTimeout(()=>{
+    showModal('Tocar com a tela desligada',
+      'Alguns celulares (Xiaomi, Samsung) interrompem o áudio quando a tela apaga para economizar bateria. Para evitar isso, permita que o StudyPlay ignore a economia de bateria. Você pode mudar isso depois nas configurações do Android.',
+      [{label:'Permitir', cls:'primary', action:()=>{ closeModal(); plug.requestBatteryExemption().catch(()=>{}); }},
+       {label:'Agora não', cls:'secondary', action:closeModal}]);
+  }, 600);
 }
 function syncRectNative(plug){
   /* Usa o doSyncRect interno se disponível (mais preciso, respeita fullscreen) */
@@ -2663,6 +2682,10 @@ function refreshNativeSessionCache(){
    para o caminho lento via listPersistedFolder).
 ───────────────────────────────────────────────────────────── */
 function quickRestore(sess){
+  /* Cache salvo pela versão 2.0 (sem chave do curso nem caminhos de arquivo):
+     refaz UMA varredura da pasta para gravar o cache novo. Evita identificadores
+     diferentes para aulas com nome repetido. */
+  if(!sess.courseKey) return false;
   const hasFlat   =!sess.isModular&&sess.lessonsCache&&sess.lessonsCache.length>0;
   const hasMod    = sess.isModular&&sess.modulesCache&&sess.modulesCache.length>0;
   if(!hasFlat&&!hasMod) return false;
@@ -3045,7 +3068,7 @@ function rebuildLessonsFromModules(){
       // _displayName: nome da pasta "Conteúdo X" (atribuído por normalizeModules)
       // Fallback: nome do arquivo sem extensão (comportamento original)
       const name = f._displayName || f.name.replace(/\.[^.]+$/,'');
-      lessons.push({file:f, url:_fileUrl(f), name:name, idx:idx++});
+      lessons.push({file:f, url:_fileUrl(f), name:name, idx:idx++, module:mod.name});
     }
     (mod.subModules||[]).forEach(add);
   }
@@ -3565,7 +3588,7 @@ async function playLesson(idx){
     window._nativePlayerSkipSrc && window._nativePlayerSkipSrc();
     video.src=l.url; // atualiza vs.src sem acionar loadVideo
   } else if(canNativePlaylist(idx)){
-    const items=lessons.slice(idx).map(lo=>({uri:lo.file._uri, title:lo.name, artist:'StudyPlay'}));
+    const items=lessons.slice(idx).map(lo=>({uri:lo.file._uri, title:lo.name, artist:lo.module||'StudyPlay'}));
     try{
       /* ⚠ Defina _nativePlaylistStartIdx ANTES do await para que o evento trackChanged
          (disparado pelo Java durante setMediaItems, antes do resolve) use o índice correto */
@@ -3606,12 +3629,23 @@ async function playLesson(idx){
   seekFill.style.width='0%';
   timeCur.textContent='0:00'; timeDur.textContent='0:00';
 
+  /* Android 13+: a notificação de mídia precisa de permissão. Pedida aqui, na
+     primeira reprodução, e não ao abrir o app (antes aparecia sem contexto). */
+  if(Platform.isCapacitor && plug && typeof plug.requestNotificationPermission==='function'){
+    try{
+      if(!localStorage.getItem('splay_notif_asked')){
+        localStorage.setItem('splay_notif_asked','1');
+        plug.requestNotificationPermission().catch(()=>{});
+      }
+    }catch(e){}
+  }
+
   /* Metadados nativos para MediaSession/ExoPlayer → Ilha Dinâmica HyperOS */
   if(Platform.isCapacitor && typeof window._setNativeVideoMeta==='function'){
     const moduleName = isModular&&modules.length
       ? (modules.find(m=>m.lessons&&m.lessons.find(f=>f.name===l.file.name))||{name:'VideoAulas'}).name
       : 'VideoAulas';
-    window._setNativeVideoMeta(l.name, 'StudyPlay', moduleName);
+    window._setNativeVideoMeta(l.name, moduleName!=='VideoAulas' ? moduleName : 'StudyPlay', moduleName);
   }
 
   const savedTime=lessonTimes[idx];
@@ -4783,7 +4817,7 @@ function installNativePlayer(plugin){
         const mod = isModular&&modules.length
           ? (modules.find(m=>m.lessons&&m.lessons.find(f=>f.name===nl.file.name))||{name:'VideoAulas'}).name
           : 'VideoAulas';
-        window._setNativeVideoMeta(nl.name,'StudyPlay',mod);
+        window._setNativeVideoMeta(nl.name, mod!=='VideoAulas' ? mod : 'StudyPlay', mod);
       }
     }
     saveToStorage();

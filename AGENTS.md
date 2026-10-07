@@ -20,30 +20,40 @@ APK output: `android/app/build/outputs/apk/debug/app-debug.apk`
 
 ## Architecture
 
-Capacitor 8 Android app. Toda a lógica do app está em `www/index.html` (~3400 linhas). Sem bundler, sem framework — vanilla JS + CSS inline.
+Capacitor 8 Android app. Toda a lógica e o CSS do app estão em `www/index.html` (~5200 linhas). Sem bundler, sem framework — vanilla JS + CSS inline. Fontes e biblioteca de planilhas ficam embutidas em `www/fonts/` e `www/lib/` (o app funciona sem internet; a biblioteca XLSX só é carregada ao abrir uma planilha).
 
 ### File map
 
 | Path | Role |
 |---|---|
-| `www/index.html` | App completo: player de videoaulas + Capacitor + persistência IDB |
+| `www/index.html` | App completo: player de videoaulas + ponte Capacitor |
+| `www/fonts/`, `www/lib/` | Fontes Sora/JetBrains Mono (OFL) e SheetJS (Apache-2.0), com as licenças |
+| `index.html` (raiz) | Cópia de `www/index.html`, mantida igual |
 | `capacitor.config.json` | App ID, nome, plugins — copiado para `android/app/src/main/assets/` pelo `cap sync` |
+| `android/app/src/main/java/com/jcorelabs/studyplay/` | `MainActivity`, `VideoFolderPlugin` (pasta SAF, salvar arquivo, abrir link), `VideoPlayerPlugin` (ExoPlayer, PiP, tela cheia, timer de sono, permissões), `PlaybackService` (serviço de mídia/notificação), `VideoWebViewClient` (proxy `https://localhost/_saf_/` com Range) |
 | `assets/icon.png` | Ícone fonte para geração via `@capacitor/assets` |
 
 ### Diferenças do modo web vs APK
 
 `Platform.isCapacitor` controla comportamento nativo:
 
-- **`true` (APK)**: `showDirectoryPicker` indisponível → usa `<input type="file" multiple>`; vídeos salvos em IndexedDB; restauração automática na inicialização; MediaSession para Dynamic Island / controles de tela bloqueada; botão Voltar tratado via `Capacitor.Plugins.App`
-- **`false` (web)**: comportamento normal do browser
+- **`true` (APK)**: pasta escolhida pelo seletor nativo (SAF); vídeos tocados pelo ExoPlayer (`VideoPlayerPlugin`) por cima do WebView; playlist nativa continua tocando com a tela desligada; MediaSession para tela de bloqueio / Ilha Dinâmica; exportar notas/progresso pelo seletor nativo; botão Voltar via `Capacitor.Plugins.App`
+- **`false` (web)**: comportamento normal do browser (`showDirectoryPicker`, `<video>`)
 
-### Persistência de vídeos (IDB)
+### Layout responsivo
 
-Quando o usuário abre vídeos no APK:
-1. Metadados da sessão salvos em `localStorage` (`splay_apk_session`)
-2. Blobs dos arquivos salvos em `IndexedDB` (`studyplay_v1_videos`) em background
-3. Na próxima abertura: modal pergunta se quer reabrir o curso anterior
-4. Vídeos carregados sob demanda (lazy loading do IDB ao clicar na aula)
+- **Celular na vertical** (`max-width:559px` + portrait): vídeo 16:9 no topo, controles em duas linhas (`.ctrl-main` / `.ctrl-aux`) e lista de aulas abaixo. Não há gaveta lateral.
+- **Celular na horizontal** (`orientation:landscape` + `max-height:520px`): cabeçalho oculto; ações dele ficam no menu ⋮ (`.menu-land-only`); playlist à esquerda, ocultável.
+- **Tablet/desktop**: cabeçalho + playlist lateral.
+
+### Progresso salvo (localStorage)
+
+- A chave do curso (`_courseKey`) é calculada UMA vez ao abrir o curso (`freezeCourseKey()`) a partir das 5 primeiras aulas na ordem original. **Não recalcular depois de reordenar módulos**, senão o progresso "some".
+- Cada aula tem `l.key`: o nome, ou nome + caminho quando há nomes repetidos (`assignLessonKeys()`). Progresso, favoritos e posições usam `l.key`.
+- Aulas são ligadas aos módulos pelo **objeto do arquivo** (`_lessonByFile`), nunca pelo nome.
+- `setDone(idx, valor)` define a conclusão; `markDone()` só alterna (botão/atalho M). O fim do vídeo usa `setDone(...,true)`.
+- Sessão do APK (`splay_native_session`) guarda pasta, módulos, PDFs/planilhas e a chave do curso para reabrir sem re-escanear.
+- Preferências: `splay_set_auto90`, `splay_set_autofs`.
 
 ### MediaSession / Dynamic Island / Ilha Dinâmica Xiaomi
 

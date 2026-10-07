@@ -519,7 +519,7 @@ public class PlaybackService extends MediaSessionService {
         // é um controle de transporte de mídia. SEM esta categoria, o HyperOS não promove
         // a notificação para a cápsula dinâmica (Media Capsule / Dynamic Island).
         Notification.Builder builder = new Notification.Builder(this, MEDIA_CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setContentText(artist)
             .setContentIntent(openApp)

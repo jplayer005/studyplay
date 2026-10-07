@@ -1,5 +1,6 @@
 package com.jcorelabs.studyplay;
 
+import android.Manifest;
 import android.app.PendingIntent;
 import android.app.PictureInPictureParams;
 import android.app.RemoteAction;
@@ -7,6 +8,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -17,6 +19,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.PowerManager;
+import android.provider.Settings;
 import android.util.Log;
 import android.util.Rational;
 import android.view.View;
@@ -25,6 +29,8 @@ import android.widget.FrameLayout;
 
 import java.util.Collections;
 
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
@@ -347,6 +353,41 @@ public class VideoPlayerPlugin extends Plugin {
             ExoPlayer p = PlaybackService.getPlayer();
             if (p != null) p.setVolume(vol);
         });
+        call.resolve();
+    }
+
+    /** Pede a permissão de notificação (Android 13+), necessária para a notificação de mídia. */
+    @PluginMethod
+    public void requestNotificationPermission(PluginCall call) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                && ContextCompat.checkSelfPermission(getContext(), Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED) {
+            getActivity().runOnUiThread(() ->
+                ActivityCompat.requestPermissions(getActivity(),
+                    new String[]{Manifest.permission.POST_NOTIFICATIONS}, 2001));
+        }
+        call.resolve();
+    }
+
+    /**
+     * Abre o diálogo do sistema para isentar o app da otimização de bateria.
+     * Importante em Xiaomi/HyperOS para a reprodução continuar com a tela desligada.
+     * Chamado pelo JS só quando o usuário ativa o modo áudio, depois de explicar o motivo.
+     */
+    @PluginMethod
+    public void requestBatteryExemption(PluginCall call) {
+        try {
+            PowerManager pm = (PowerManager) getContext().getSystemService(Context.POWER_SERVICE);
+            String pkg = getContext().getPackageName();
+            if (pm != null && !pm.isIgnoringBatteryOptimizations(pkg)) {
+                Intent i = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                    Uri.parse("package:" + pkg));
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                getContext().startActivity(i);
+            }
+        } catch (Exception ignored) {
+            // Alguns fabricantes bloqueiam este diálogo
+        }
         call.resolve();
     }
 
