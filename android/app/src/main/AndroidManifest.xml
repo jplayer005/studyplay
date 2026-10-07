@@ -58,7 +58,4 @@
          reprodução contínua — o usuário ainda decide nas configurações, mas o app
          pode exibir o diálogo do sistema via ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS) -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-    <!-- WifiLock: mantém WiFi ativo durante streaming para evitar travamentos -->
-    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
 </manifest>

@@ -109,6 +109,7 @@ public class VideoPlayerPlugin extends Plugin {
 
     private final Handler  handler        = new Handler(Looper.getMainLooper());
     private       long     lastSentPos    = -1;
+    private       int      decoderRetries = 0;
     private       Runnable timeUpdateTask = null;
 
     // ── Ciclo de vida ─────────────────────────────────────────────────────────
@@ -893,6 +894,7 @@ public class VideoPlayerPlugin extends Plugin {
          */
         @Override
         public void onMediaItemTransition(@Nullable MediaItem mediaItem, int reason) {
+            decoderRetries = 0;
             ExoPlayer p = PlaybackService.getPlayer();
             int index   = (p != null) ? p.getCurrentMediaItemIndex() : 0;
             String title = "";
@@ -945,12 +947,18 @@ public class VideoPlayerPlugin extends Plugin {
             Log.e(TAG, "ExoPlayer error code=" + error.errorCode, error);
 
             // Retry automático para falhas de decodificador de hardware (comum no Xiaomi)
+            // O fallback para decodificador de software já é automático
+            // (DefaultRenderersFactory.setEnableDecoderFallback). Aqui só tentamos
+            // reiniciar no máximo 2 vezes por item; antes era uma tentativa a cada
+            // 0,5 s para sempre.
             ExoPlayer p = PlaybackService.getPlayer();
             if (p != null
                     && (error.errorCode == PlaybackException.ERROR_CODE_DECODER_INIT_FAILED
                     ||  error.errorCode == PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED)
-                    && p.getCurrentMediaItem() != null) {
-                Log.w(TAG, "Hardware decoder failed — retrying with software decoder");
+                    && p.getCurrentMediaItem() != null
+                    && decoderRetries < 2) {
+                decoderRetries++;
+                Log.w(TAG, "Decoder failed — retry " + decoderRetries + "/2");
                 handler.postDelayed(() -> {
                     ExoPlayer rp = PlaybackService.getPlayer();
                     if (rp != null) { rp.prepare(); rp.play(); }

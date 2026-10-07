@@ -12,8 +12,14 @@ if (typeof window.Capacitor === 'undefined') {
   window.Capacitor = { isNativePlatform: function(){ return false; }, getPlatform: function(){ return 'web'; }, Plugins: {} };
 }
 </script>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
+/* ── FONTES (embutidas no app: funcionam sem internet) ── */
+@font-face{font-family:'Sora';font-style:normal;font-weight:400;font-display:swap;src:url('fonts/sora-latin-400-normal.woff2') format('woff2');}
+@font-face{font-family:'Sora';font-style:normal;font-weight:500;font-display:swap;src:url('fonts/sora-latin-500-normal.woff2') format('woff2');}
+@font-face{font-family:'Sora';font-style:normal;font-weight:600;font-display:swap;src:url('fonts/sora-latin-600-normal.woff2') format('woff2');}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400;font-display:swap;src:url('fonts/jetbrains-mono-latin-400-normal.woff2') format('woff2');}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:500;font-display:swap;src:url('fonts/jetbrains-mono-latin-500-normal.woff2') format('woff2');}
+
 /* ── TEMAS ── */
 :root,[data-theme="dark"] {
   --bg:#0d0f14; --bg2:#13161e; --bg3:#1a1e2a; --bg4:#222636;
@@ -923,7 +929,7 @@ body.keyboard-notes-open .notes-mobile-box .notes-list{display:none;}
 
       <div class="search-box">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" placeholder="Buscar aula…" id="search-input" oninput="filterLessons()">
+        <input type="text" placeholder="Buscar aula…" id="search-input" oninput="filterLessonsDebounced()">
       </div>
     </div>
     <div class="playlist" id="playlist">
@@ -1130,7 +1136,6 @@ body.keyboard-notes-open .notes-mobile-box .notes-list{display:none;}
   <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
 </button>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 /* ═══════════════════════════════════════════
    CONSTANTES E ESTADO GLOBAL
@@ -3241,6 +3246,64 @@ function updateCollapseAllBtn(){
   label.textContent = anyExpanded ? 'Recolher' : 'Expandir';
 }
 
+/* ── Leitura preguiçosa de duração/miniatura ── */
+let _metaObs = null;
+let _metaActive = 0;
+const _metaQueue = [];
+function _metaObserver(){
+  if(_metaObs) return _metaObs;
+  _metaObs = new IntersectionObserver(entries=>{
+    entries.forEach(en=>{
+      if(!en.isIntersecting) return;
+      _metaObs.unobserve(en.target);
+      const job = en.target._lazy; en.target._lazy = null;
+      if(job) { _metaQueue.push(job); }
+    });
+    _drainMetaQueue();
+  }, {root:null, rootMargin:'120px'});
+  return _metaObs;
+}
+function _drainMetaQueue(){
+  /* No máximo 3 leituras de metadados ao mesmo tempo (poupa o proxy de arquivos) */
+  while(_metaActive < 3 && _metaQueue.length){
+    const {l, thumb, meta} = _metaQueue.shift();
+    if(!meta.isConnected) continue;           /* item já saiu da tela/lista */
+    _metaActive++;
+    _readLessonMeta(l, thumb, meta, ()=>{ _metaActive--; _drainMetaQueue(); });
+  }
+}
+function _readLessonMeta(l, thumb, meta, done){
+  const showThumb = thumb.offsetParent !== null;   /* miniatura oculta no celular */
+  const tvid = document.createElement('video');
+  tvid.preload = 'metadata'; tvid.muted = true;
+  let finished = false;
+  const finish = ()=>{
+    if(finished) return; finished = true;
+    clearTimeout(timer);
+    if(!showThumb){ tvid.removeAttribute('src'); tvid.load(); }   /* libera o arquivo */
+    done();
+  };
+  const timer = setTimeout(finish, 8000);
+  tvid.addEventListener('loadedmetadata',()=>{
+    const dur = tvid.duration;
+    if(dur>0 && isFinite(dur)){
+      meta.textContent = fmtTime(dur);
+      lessonDurations[l.idx] = dur;
+      const pbar = document.getElementById('prog-'+l.idx);
+      const savedT = lessonTimes[l.idx];
+      if(pbar && savedT && dur>0) pbar.style.width = Math.min(100,savedT/dur*100)+'%';
+    }
+    finish();
+  },{once:true});
+  tvid.addEventListener('error',()=>{ meta.textContent='—'; finish(); },{once:true});
+  if(showThumb){
+    tvid.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+    tvid.id = 'thumb-vid-'+l.idx;
+    thumb.appendChild(tvid);
+  }
+  tvid.src = l.url;
+}
+
 function buildLessonItem(l, indent=0, _favMode=false){
   const item = document.createElement('div');
   item.className = 'lesson-item'+(l.idx===currentIdx?' active':'');
@@ -3263,23 +3326,14 @@ function buildLessonItem(l, indent=0, _favMode=false){
     thumb.innerHTML=`<svg viewBox="0 0 24 24" style="stroke:var(--text3);"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>`;
     meta.textContent='—';
   } else {
-    const tvid = document.createElement('video');
-    tvid.src     = l.url;
-    tvid.preload = 'metadata';
-    tvid.muted   = true;
-    tvid.style.cssText = 'width:100%;height:100%;object-fit:cover;';
-    tvid.id = 'thumb-vid-'+l.idx;
-    thumb.appendChild(tvid);
-    meta.textContent='…';
-    tvid.addEventListener('loadedmetadata',()=>{
-      const dur=tvid.duration;
-      meta.textContent=fmtTime(dur);
-      lessonDurations[l.idx]=dur;
-      /* Atualiza barra de progresso assim que a duração é conhecida */
-      const pbar=document.getElementById('prog-'+l.idx);
-      const savedT=lessonTimes[l.idx];
-      if(pbar&&savedT&&dur>0) pbar.style.width=Math.min(100,savedT/dur*100)+'%';
-    },{once:true});
+    /* A duração (e a miniatura, no desktop) só é lida quando o item aparece na
+       tela. Antes cada aula criava um <video> na hora: 847 leituras simultâneas
+       de arquivo ao abrir, buscar ou reordenar. */
+    meta.textContent = lessonDurations[l.idx]>0 ? fmtTime(lessonDurations[l.idx]) : '…';
+    if(!(lessonDurations[l.idx]>0)){
+      item._lazy = {l, thumb, meta};
+      _metaObserver().observe(item);
+    }
   }
   if(!_favMode) meta.id='meta-'+l.idx;
 
@@ -3356,7 +3410,24 @@ function openExtraFile(ex){
 /* ═══════════════════════════════════════════
    XLSX VIEWER
 ═══════════════════════════════════════════ */
+/* A biblioteca de planilhas (~900 KB) só é carregada quando você abre uma planilha. */
+let _xlsxLibPromise = null;
+function loadXlsxLib(){
+  if(window.XLSX) return Promise.resolve();
+  if(_xlsxLibPromise) return _xlsxLibPromise;
+  _xlsxLibPromise = new Promise((res,rej)=>{
+    const sc=document.createElement('script');
+    sc.src='lib/xlsx.full.min.js';
+    sc.onload=()=>res();
+    sc.onerror=()=>{ _xlsxLibPromise=null; rej(new Error('biblioteca de planilhas indisponível')); };
+    document.head.appendChild(sc);
+  });
+  return _xlsxLibPromise;
+}
 function openXlsx(ex){
+  loadXlsxLib().then(()=>_openXlsx(ex)).catch(e=>toast('Erro ao abrir planilha: '+e.message));
+}
+function _openXlsx(ex){
   function processBuffer(buf){
     try{
       const wb=XLSX.read(new Uint8Array(buf),{type:'array'});
@@ -3628,13 +3699,31 @@ function seekClick(e){
   video.currentTime=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*video.duration;
 }
 
-document.getElementById('seekbar').addEventListener('touchstart', handleSeekTouch, {passive:true});
-document.getElementById('seekbar').addEventListener('touchmove',  handleSeekTouch, {passive:true});
+/* Arrastar o dedo na barra enviava uma busca ao ExoPlayer a cada pixel. Agora a
+   barra e o tempo acompanham o dedo na hora, e a busca real é limitada a ~6/s
+   mais uma busca final ao soltar. */
+let _seekLast = 0, _seekPending = null;
 function handleSeekTouch(e){
   if(!video.duration) return;
   const r=document.getElementById('seekbar').getBoundingClientRect();
-  const t=e.touches[0]; video.currentTime=Math.max(0,Math.min(1,(t.clientX-r.left)/r.width))*video.duration;
+  const t=e.touches[0];
+  const pct=Math.max(0,Math.min(1,(t.clientX-r.left)/r.width));
+  _seekPending = pct*video.duration;
+  seekFill.style.width=(pct*100)+'%';
+  timeCur.textContent=fmtTime(_seekPending);
+  const now=Date.now();
+  if(now-_seekLast>160){ _seekLast=now; video.currentTime=_seekPending; _seekPending=null; }
 }
+function endSeekTouch(){
+  if(_seekPending!=null){ video.currentTime=_seekPending; _seekPending=null; }
+}
+(function(){
+  const sb=document.getElementById('seekbar');
+  sb.addEventListener('touchstart', handleSeekTouch, {passive:true});
+  sb.addEventListener('touchmove',  handleSeekTouch, {passive:true});
+  sb.addEventListener('touchend',   endSeekTouch);
+  sb.addEventListener('touchcancel',endSeekTouch);
+})();
 
 function skipTime(s){ video.currentTime=Math.max(0,video.currentTime+s); }
 function prevLesson(){ if(currentIdx>0) playLesson(currentIdx-1); }
@@ -3695,6 +3784,11 @@ function updateFavBtn(){
 /* ═══════════════════════════════════════════
    BUSCA E SIDEBAR
 ═══════════════════════════════════════════ */
+let _filterTimer = null;
+function filterLessonsDebounced(){
+  clearTimeout(_filterTimer);
+  _filterTimer = setTimeout(filterLessons, 180);
+}
 function filterLessons(){
   const q=document.getElementById('search-input').value.toLowerCase();
   if(!lessons.length) return;

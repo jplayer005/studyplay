@@ -11,7 +11,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -26,6 +25,7 @@ import androidx.media3.common.MediaItem;
 import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.Player;
 import androidx.media3.exoplayer.DefaultLoadControl;
+import androidx.media3.exoplayer.DefaultRenderersFactory;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.session.MediaSession;
 import androidx.media3.session.MediaSessionService;
@@ -110,7 +110,6 @@ public class PlaybackService extends MediaSessionService {
     private MediaSession             mediaSession;
     private ExoPlayer                player;
     private NextPrevInterceptPlayer  interceptPlayer;
-    private WifiManager.WifiLock     wifiLock;
     private BroadcastReceiver        notifActionReceiver;
 
     /**
@@ -166,7 +165,12 @@ public class PlaybackService extends MediaSessionService {
             .setBufferDurationsMs(15_000, 50_000, 2_500, 5_000)
             .build();
 
-        player = new ExoPlayer.Builder(this)
+        // Se o decodificador de hardware falhar ao iniciar (comum em alguns Xiaomi),
+        // o ExoPlayer tenta o próximo decodificador disponível (software) sozinho.
+        DefaultRenderersFactory renderers = new DefaultRenderersFactory(this)
+            .setEnableDecoderFallback(true);
+
+        player = new ExoPlayer.Builder(this, renderers)
             .setLoadControl(loadControl)
             .setAudioAttributes(
                 new AudioAttributes.Builder()
@@ -229,17 +233,6 @@ public class PlaybackService extends MediaSessionService {
         // ── 4. Receptor de ações dos botões da notificação ───────────────────
         registerNotifActionReceiver();
 
-        // ── 5. WifiLock ───────────────────────────────────────────────────────
-        try {
-            WifiManager wm = (WifiManager) getApplicationContext()
-                .getSystemService(Context.WIFI_SERVICE);
-            if (wm != null) {
-                wifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF,
-                    "studyplay:wifi");
-                wifiLock.setReferenceCounted(false);
-                wifiLock.acquire();
-            }
-        } catch (Exception ignored) {}
     }
 
     /**
@@ -357,7 +350,6 @@ public class PlaybackService extends MediaSessionService {
             try { unregisterReceiver(notifActionReceiver); } catch (Exception ignored) {}
             notifActionReceiver = null;
         }
-        if (wifiLock     != null && wifiLock.isHeld()) { wifiLock.release(); wifiLock = null; }
         if (player       != null) { player.release();       player       = null; }
         if (mediaSession != null) {
             try { removeSession(mediaSession); } catch (Exception ignored) {}
