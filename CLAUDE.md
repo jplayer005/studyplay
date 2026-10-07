@@ -66,3 +66,19 @@ O app implementa a `MediaSession API`:
 
 - **`cap sync android` deve rodar antes de `gradlew assembleDebug`** sempre que `www/index.html` mudar.
 - O `android/app/src/main/assets/capacitor.config.json` é gerado pelo `cap sync`; edite apenas o `capacitor.config.json` raiz.
+
+## Reproduzir o build em outra maquina
+
+Pre-requisitos: Node (lockfile em `package-lock.json`), JDK, Android SDK com platform 36. O Gradle 8.14.3 vem do wrapper em `android/gradle/wrapper`.
+
+```bash
+npm ci
+npx cap sync android          # gera android/app/src/main/assets/public, config.xml e capacitor-cordova-android-plugins
+# criar android/local.properties (nao versionado) com: sdk.dir=<caminho do Android SDK>
+cd android && ./gradlew.bat assembleDebug
+```
+
+- `.gitattributes` forca LF; sem ele o clone no Windows vira CRLF e o `assets/public/index.html` do APK sai maior que o original.
+- Nao versionados de proposito: `node_modules`, `*.apk`, `android/build`, `android/.gradle`, `android/local.properties` e o `~/.android/debug.keystore` (assina o APK debug; outra maquina gera outra assinatura e nao atualiza por cima do app instalado).
+- `www/index.html` e a fonte do app; o `index.html` da raiz e uma copia mantida igual a ele.
+- Notas de preferencia do Claude para este projeto: `docs/memoria-claude/`.
