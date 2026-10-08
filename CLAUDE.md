@@ -28,7 +28,7 @@ Capacitor 8 Android app. Toda a lógica e o CSS do app estão em `www/index.html
 |---|---|
 | `www/index.html` | App completo: player de videoaulas + ponte Capacitor |
 | `www/fonts/`, `www/lib/` | Fontes Sora/JetBrains Mono (OFL) e SheetJS (Apache-2.0), com as licenças |
-| `index.html` (raiz) | Cópia de `www/index.html`, mantida igual |
+| `index.html`, `fonts/`, `lib/` (raiz) | Cópias de `www/index.html`, `www/fonts/` e `www/lib/`, mantidas iguais: a raiz é publicada pelo GitHub Pages (versão web). `tests/09-copia-raiz.test.js` falha se divergirem |
 | `capacitor.config.json` | App ID, nome, plugins — copiado para `android/app/src/main/assets/` pelo `cap sync` |
 | `android/app/src/main/java/com/jcorelabs/studyplay/` | `MainActivity`, `VideoFolderPlugin` (pasta SAF, salvar arquivo, abrir link), `VideoPlayerPlugin` (ExoPlayer, PiP, tela cheia, timer de sono, permissões), `PlaybackService` (serviço de mídia/notificação), `VideoWebViewClient` (proxy `https://localhost/_saf_/` com Range) |
 | `assets/icon.png` | Ícone fonte para geração via `@capacitor/assets` |
