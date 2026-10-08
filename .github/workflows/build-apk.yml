@@ -69,9 +69,10 @@ jobs:
           ./gradlew assembleDebug --no-daemon
 
       - name: Mostrar a assinatura do APK
+        # Só informativo: nunca derruba a compilação.
         run: |
-          # Compare o SHA1 abaixo com o do seu PC: keytool -list -v -keystore %USERPROFILE%\.android\debug.keystore -storepass android
-          keytool -printcert -jarfile android/app/build/outputs/apk/debug/app-debug.apk | grep -E "Owner|SHA1|SHA256"
+          # Compare o SHA-1 abaixo com o do seu PC: keytool -list -v -keystore %USERPROFILE%\.android\debug.keystore -storepass android
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs android/app/build/outputs/apk/debug/app-debug.apk | grep -E "certificate DN|SHA-1|SHA-256" || true
 
       - name: Publicar o APK
         uses: actions/upload-artifact@v4
