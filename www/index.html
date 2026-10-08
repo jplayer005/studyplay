@@ -1481,6 +1481,31 @@ function assignLessonKeys(){
     const p = l.file && l.file._path;
     l.key = l.name+' ⟨'+(p||('#'+n))+'⟩';
   });
+  refreshDupNames();
+}
+/* Nomes de aula que aparecem mais de uma vez (para mostrar o módulo ao lado) */
+let _dupNames = new Set();
+function refreshDupNames(){
+  const c = new Map();
+  lessons.forEach(l=>c.set(l.name,(c.get(l.name)||0)+1));
+  _dupNames = new Set([...c].filter(([,n])=>n>1).map(([k])=>k));
+}
+function lessonKeyOf(l){ return l ? (l.key||l.name) : ''; }
+function currentLessonKey(){ return currentIdx>=0 ? lessonKeyOf(lessons[currentIdx]) : ''; }
+
+/* Notas, capítulos e histórico apontam para a aula pela CHAVE (nome, ou nome + caminho
+   quando há nomes repetidos). Itens antigos só têm o nome: caem no 1º nome igual. */
+function lessonIdxOfItem(item){
+  if(item.lessonKey){
+    const i = lessons.findIndex(l=>lessonKeyOf(l)===item.lessonKey);
+    if(i>=0) return i;
+  }
+  return lessons.findIndex(l=>l.name===item.lessonName);
+}
+function itemBelongsToCurrent(item){ return currentIdx>=0 && lessonIdxOfItem(item)===currentIdx; }
+/* Texto da etiqueta: nome da aula (+ módulo, só quando o nome se repete) */
+function lessonTagText(item){
+  return (item.module && _dupNames.has(item.lessonName)) ? item.lessonName+' · '+item.module : item.lessonName;
 }
 function saveToStorage(){
   try{
@@ -1753,20 +1778,19 @@ function buildReviewItems(){
   reviewItems = [];
   chapters.forEach(c=>{
     reviewItems.push({
-      id: c.id, type:'chapter', label:c.label, lessonName:c.lessonName,
+      id: c.id, type:'chapter', label:c.label, lessonName:c.lessonName, lessonKey:c.lessonKey, module:c.module,
       ts:c.ts, tsLabel:fmtTime(c.ts), createdAt:c.createdAt||0
     });
   });
   notes.forEach(n=>{
     reviewItems.push({
       id: n.id, type:'note', label:n.text.slice(0,60)+(n.text.length>60?'…':''),
-      lessonName:n.lessonName, ts:n.ts, tsLabel:n.tsLabel, createdAt:n.createdAt||0
+      lessonName:n.lessonName, lessonKey:n.lessonKey, module:n.module, ts:n.ts, tsLabel:n.tsLabel, createdAt:n.createdAt||0
     });
   });
+  reviewItems.forEach(it=>{ it.lessonIdx = lessonIdxOfItem(it); });   /* uma busca por item, não por comparação */
   reviewItems.sort((a,b)=>{
-    const ai = lessons.findIndex(l=>l.name===a.lessonName);
-    const bi = lessons.findIndex(l=>l.name===b.lessonName);
-    if(ai!==bi) return ai-bi;
+    if(a.lessonIdx!==b.lessonIdx) return a.lessonIdx-b.lessonIdx;
     return a.ts-b.ts;
   });
 }
@@ -1818,7 +1842,7 @@ function renderReviewBody(){
       <span class="review-item-ts">${escH(item.tsLabel)}</span>
       <div class="review-item-info">
         <div class="review-item-label">${escH(item.label)}</div>
-        <div class="review-item-lesson">${escH(item.lessonName)}</div>
+        <div class="review-item-lesson">${escH(lessonTagText(item))}</div>
       </div>
       <span class="review-item-type ${item.type}">${item.type==='chapter'?'capítulo':'nota'}</span>
     </div>
@@ -1842,7 +1866,7 @@ function jumpToReviewItem(idx){
   if(idx<0||idx>=list.length) return;
   reviewCurrentIdx = idx;
   const item = list[idx];
-  const tIdx = lessons.findIndex(l=>l.name===item.lessonName);
+  const tIdx = lessonIdxOfItem(item);
 
   const goToTime = () => {
     video.currentTime = item.ts;
@@ -1894,6 +1918,7 @@ function closeHistorySession(){
   studyHistory.push({
     id: uid(),
     lessonName: lesson.name,
+    lessonKey: lessonKeyOf(lesson),
     lessonIdx: historySessionLesson,
     date, time,
     startedAt: historySessionStart,
@@ -1955,7 +1980,7 @@ function formatDateLabel(dateStr){
 
 function jumpToHistoryEntry(id){
   const h = studyHistory.find(x=>x.id===id); if(!h) return;
-  const lIdx = lessons.findIndex(l=>l.name===h.lessonName);
+  const lIdx = lessonIdxOfItem(h);
   if(lIdx>=0){ playLesson(lIdx); document.getElementById('stats-modal').classList.remove('active'); }
 }
 
@@ -2235,13 +2260,14 @@ function checkABLoop(){
    CAPÍTULOS
 ═══════════════════════════════════════════ */
 function currentLessonName(){ return currentIdx>=0&&lessons[currentIdx]?lessons[currentIdx].name:''; }
+function currentModuleName(){ return currentIdx>=0&&lessons[currentIdx]?(lessons[currentIdx].module||''):''; }
 function addChapterAtCurrent(){
   if(!video.src||!video.duration) return;
   const ts   = video.currentTime;
-  const name = `Capítulo ${chapters.filter(c=>c.lessonName===currentLessonName()).length+1}`;
+  const name = `Capítulo ${chapters.filter(itemBelongsToCurrent).length+1}`;
   const label = window.prompt('Nome do capítulo:', name);
   if(label===null) return;
-  chapters.push({id:uid(), lessonName:currentLessonName(), ts, label:label||name, createdAt:Date.now()});
+  chapters.push({id:uid(), lessonName:currentLessonName(), lessonKey:currentLessonKey(), module:currentModuleName(), ts, label:label||name, createdAt:Date.now()});
   chapters.sort((a,b)=>a.ts-b.ts);
   renderChapterMarkers();
   saveToStorage();
@@ -2255,8 +2281,7 @@ function renderChapterMarkers(){
   const container = document.getElementById('chapter-markers');
   container.innerHTML = '';
   if(!video.duration) return;
-  const cur = currentLessonName();
-  chapters.filter(c=>c.lessonName===cur).forEach(c=>{
+  chapters.filter(itemBelongsToCurrent).forEach(c=>{
     const pct = c.ts/video.duration*100;
     const m   = document.createElement('div');
     m.className = 'chapter-marker';
@@ -2271,8 +2296,7 @@ function seekbarHover(e){
   const rect = document.getElementById('seekbar').getBoundingClientRect();
   const pct  = (e.clientX-rect.left)/rect.width;
   const t    = Math.max(0,Math.min(1,pct))*video.duration;
-  const cur  = currentLessonName();
-  const nearby = chapters.filter(c=>c.lessonName===cur&&Math.abs(c.ts-t)<video.duration*0.03);
+  const nearby = chapters.filter(c=>itemBelongsToCurrent(c)&&Math.abs(c.ts-t)<video.duration*0.03);
   const tip  = document.getElementById('chapter-tooltip');
   if(nearby.length){
     tip.textContent = nearby[0].label+' · '+fmtTime(nearby[0].ts);
@@ -2368,7 +2392,7 @@ function addNote(isMob){
   if(!text){ toast('Escreva algo antes de adicionar'); return; }
   const ts         = isMob?noteMobileTimestamp:noteTimestamp;
   const lessonName = currentIdx>=0&&lessons[currentIdx]?lessons[currentIdx].name:'—';
-  notes.push({id:uid(), lessonName, ts, tsLabel:fmtTime(ts), text, createdAt:Date.now()});
+  notes.push({id:uid(), lessonName, lessonKey:currentLessonKey(), module:currentModuleName(), ts, tsLabel:fmtTime(ts), text, createdAt:Date.now()});
   ta.value = '';
   renderNotes(); if(isMob) renderNotesMobile();
   saveToStorage(); toast('Nota adicionada ✓');
@@ -2382,7 +2406,7 @@ function renderNoteHTML(n){
     <div class="note-ts">
       <span style="cursor:pointer;" onclick="jumpToNote('${n.id}')">▶ ${escH(n.tsLabel)}</span>
       <div style="display:flex;align-items:center;gap:4px;">
-        <span class="note-lesson-tag" title="${escH(n.lessonName)}">${escH(n.lessonName)}</span>
+        <span class="note-lesson-tag" title="${escH(lessonTagText(n))}">${escH(lessonTagText(n))}</span>
         <button class="note-del" onclick="deleteNote('${n.id}')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
     </div>
@@ -2403,7 +2427,7 @@ function renderNotesMobile(){
 }
 function jumpToNote(id){
   const n = notes.find(x=>x.id===id); if(!n) return;
-  const tIdx = lessons.findIndex(l=>l.name===n.lessonName);
+  const tIdx = lessonIdxOfItem(n);
   if(tIdx>=0 && tIdx!==currentIdx){
     playLesson(tIdx);
     video.addEventListener('loadedmetadata', function once(){ video.removeEventListener('loadedmetadata',once); video.currentTime=n.ts; },{once:true});
@@ -2412,9 +2436,10 @@ function jumpToNote(id){
 function exportNotes(){
   if(!notes.length){ toast('Nenhuma nota para exportar'); return; }
   const byLesson = {};
-  [...notes].sort((a,b)=>a.ts-b.ts).forEach(n=>{ if(!byLesson[n.lessonName]) byLesson[n.lessonName]=[]; byLesson[n.lessonName].push(n); });
+  /* agrupa pela aula (chave), mostrando o módulo no título quando o nome se repete */
+  [...notes].sort((a,b)=>a.ts-b.ts).forEach(n=>{ const g = lessonTagText(n)+'\u0000'+(n.lessonKey||''); if(!byLesson[g]) byLesson[g]=[]; byLesson[g].push(n); });
   let md = `# Notas de Estudo\nExportado em ${new Date().toLocaleString('pt-BR')}\n\n`;
-  Object.entries(byLesson).forEach(([lesson,ns])=>{ md+=`## ${lesson}\n\n`; ns.forEach(n=>{md+=`**[${n.tsLabel}]** ${n.text}\n\n`;}); });
+  Object.entries(byLesson).forEach(([g,ns])=>{ const lesson = g.split('\u0000')[0]; md+=`## ${lesson}\n\n`; ns.forEach(n=>{md+=`**[${n.tsLabel}]** ${n.text}\n\n`;}); });
   saveTextFile('notas_videoaulas_'+localDate()+'.md','text/markdown',md)
     .then(ok=>{ if(ok) toast('Notas exportadas ✓'); });
 }
@@ -2580,7 +2605,7 @@ function _wrapFile(f, displayName){
      URL.createObjectURL falharia com "Overload resolution failed" de novo.
      Solução: sempre subir até o File original antes de guardar em _webFile. */
   const realFile = f._webFile || f;
-  return {_webFile: realFile, name: realFile.name || '', size: realFile.size || 0, type: realFile.type || '', _displayName: displayName};
+  return {_webFile: realFile, name: realFile.name || '', size: realFile.size || 0, type: realFile.type || '', _displayName: displayName, _path: realFile._path};
 }
 
 function normalizeModules(mods){
@@ -2967,6 +2992,7 @@ async function processDirectory(dir, merge){
     try{
       const f = await entryGetFile(entry);
       if(!f) continue;
+      try{ f._path = f.name; }catch(_){}
       if(isVideo(f.name))        { topVideos.push(f); rootCount++; }
       else if(isContent(f.name)) { topExtras.push({file:f, name:f.name}); rootCount++; }
     }catch(e){}
@@ -3074,7 +3100,8 @@ function countLessonsDeep(mod){
   return mod.lessons.length + (mod.subModules||[]).reduce((s,m)=>s+countLessonsDeep(m),0);
 }
 
-async function readModuleDir(dirHandle, depth, onFile){
+async function readModuleDir(dirHandle, depth, onFile, prefix=''){
+  const here = (prefix ? prefix+'/' : '') + (dirHandle.name||'');
   const modLessons=[], modExtras=[], subModules=[];
   let entries = [];
   try{ entries = await readAllEntries(dirHandle); }catch(e){ return null; }
@@ -3089,6 +3116,7 @@ async function readModuleDir(dirHandle, depth, onFile){
     try{
       const f = await entryGetFile(entry);
       if(!f) continue;
+      try{ f._path = here+'/'+f.name; }catch(_){}      /* identifica a aula mesmo com nomes repetidos */
       if(isVideo(f.name))        { modLessons.push(f); onFile&&onFile(f); }
       else if(isContent(f.name)) modExtras.push({file:f, name:f.name});
     }catch(e){}
@@ -3096,7 +3124,7 @@ async function readModuleDir(dirHandle, depth, onFile){
   for(const entry of dirEntries){
     if(depth < MAX_DEPTH-1){
       try{
-        const sub = await readModuleDir(entry, depth+1, onFile);
+        const sub = await readModuleDir(entry, depth+1, onFile, here);
         if(sub) subModules.push(sub);
       }catch(e){}
     }

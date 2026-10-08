@@ -1,10 +1,10 @@
 name: Gerar APK (debug)
 
-# Roda a cada envio para a branch de otimização e também sob demanda
+# Roda a cada envio para a main e para a branch de otimização, e também sob demanda
 # (aba Actions > Gerar APK (debug) > Run workflow).
 on:
   push:
-    branches: [claude/otimizacao-android]
+    branches: [main, claude/otimizacao-android]
   workflow_dispatch:
 
 jobs:
@@ -35,18 +35,28 @@ jobs:
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0"
 
-      # Opcional: se o segredo DEBUG_KEYSTORE_BASE64 existir, o APK é assinado com a
-      # MESMA chave do seu PC e instala por cima do app atual, sem apagar os dados.
-      - name: Chave de debug (opcional)
+      # Assinatura do APK. Cada execução do GitHub roda numa máquina nova e, sem a chave
+      # abaixo, o Android Studio/Gradle cria uma chave de debug NOVA a cada vez: cada APK
+      # fica com assinatura diferente e não instala por cima do anterior.
+      # Com o segredo DEBUG_KEYSTORE_BASE64 (o debug.keystore do seu PC em base64), todo APK
+      # sai com a MESMA assinatura do APK que você compila no PC e atualiza o app sem apagar dados.
+      - name: Chave de debug (a mesma do seu PC)
         env:
           KS: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
         run: |
           if [ -n "$KS" ]; then
             mkdir -p ~/.android
             echo "$KS" | base64 -d > ~/.android/debug.keystore
-            echo "Usando a chave de debug fornecida."
+            if keytool -list -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey > /tmp/ks.txt 2>&1; then
+              echo "Usando a chave de debug do segredo DEBUG_KEYSTORE_BASE64."
+              grep -i "SHA" /tmp/ks.txt || true
+            else
+              echo "::error::O segredo DEBUG_KEYSTORE_BASE64 não é um debug.keystore válido (senha 'android', alias 'androiddebugkey'). Confira como foi gerado."
+              cat /tmp/ks.txt
+              exit 1
+            fi
           else
-            echo "Sem chave fornecida: o APK usa uma chave nova (não instala por cima do app já instalado)."
+            echo "::warning::Segredo DEBUG_KEYSTORE_BASE64 ausente: o APK sai com uma chave nova e NÃO instala por cima do app já instalado."
           fi
 
       - name: Sincronizar o Capacitor
@@ -57,6 +67,11 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
+
+      - name: Mostrar a assinatura do APK
+        run: |
+          # Compare o SHA1 abaixo com o do seu PC: keytool -list -v -keystore %USERPROFILE%\.android\debug.keystore -storepass android
+          keytool -printcert -jarfile android/app/build/outputs/apk/debug/app-debug.apk | grep -E "Owner|SHA1|SHA256"
 
       - name: Publicar o APK
         uses: actions/upload-artifact@v4

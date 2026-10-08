@@ -65,6 +65,14 @@ O diferencial do app é abrir e já seguir o curso. Regras que garantem isso:
 - **Sessão do APK:** reabre pelo cache (`quickRestore`), sem varrer a pasta. Só refaz a varredura se o cache for da versão 2.0 E houver nomes de aula repetidos.
 - **Medir:** Configurações > Tempos de abertura (`Diag`) mostra cada etapa no aparelho (varredura nativa, montar o curso, desenhar a lista, fila nativa, aula pronta).
 
+### Testes automáticos
+
+`tests/` tem os testes do app (Playwright + Chromium, sem celular). Rodam sozinhos no GitHub (workflow *Testes automáticos*) a cada envio. Localmente: `cd tests && npm install && npx playwright install chromium && node run-all.js`. Veja `tests/README.md`. **Ao mudar progresso, fila nativa, layout ou notas, rode os testes antes de enviar.** Eles não cobrem o Java: isso só se confere no celular.
+
+### Assinatura do APK compilado no GitHub
+
+O workflow *Gerar APK (debug)* usa o segredo `DEBUG_KEYSTORE_BASE64` (o `debug.keystore` do PC em base64). Sem ele, cada compilação nasce com uma chave nova e o APK não instala por cima do anterior. Notas e capítulos guardam `lessonKey` (a chave da aula) além do nome.
+
 ### MediaSession / Dynamic Island / Ilha Dinâmica Xiaomi
 
 O app implementa a `MediaSession API`:
