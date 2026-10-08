@@ -155,6 +155,7 @@ public class VideoFolderPlugin extends Plugin {
         }
 
         JSArray files = new JSArray();
+        final long scanStart = System.currentTimeMillis();
         try {
             // Obtém o Document ID da raiz da árvore e inicia scan otimizado
             String rootDocId = DocumentsContract.getTreeDocumentId(treeUri);
@@ -168,6 +169,7 @@ public class VideoFolderPlugin extends Plugin {
         JSObject ret = new JSObject();
         ret.put("treeUri",  treeUri.toString());
         ret.put("rootName", rootName);
+        ret.put("scanMs",   System.currentTimeMillis() - scanStart);   // diagnóstico (Configurações)
         ret.put("files",    files);
         call.resolve(ret);
     }

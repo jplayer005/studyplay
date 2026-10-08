@@ -445,25 +445,7 @@ public class VideoPlayerPlugin extends Plugin {
             if (playerView.getPlayer() != player) playerView.setPlayer(player);
             playerView.setVisibility(View.VISIBLE);
 
-            List<MediaItem> mediaItems = new ArrayList<>();
-            for (int i = 0; i < items.length(); i++) {
-                try {
-                    JSONObject item = items.getJSONObject(i);
-                    String uriStr = item.optString("uri",    "");
-                    String title  = item.optString("title",  "");
-                    String artist = item.optString("artist", "StudyPlay");
-                    if (uriStr.isEmpty()) continue;
-
-                    Uri uri = resolveUri(uriStr);
-                    // Inclui artwork do app em cada faixa da playlist
-                    mediaItems.add(new MediaItem.Builder()
-                        .setUri(uri)
-                        .setMediaMetadata(buildMetadata(title, artist, ""))
-                        .build());
-                } catch (Exception e) {
-                    Log.w(TAG, "setPlaylist item " + i + ": " + e.getMessage());
-                }
-            }
+            List<MediaItem> mediaItems = buildMediaItems(items);
             if (mediaItems.isEmpty()) { call.resolve(); return; }
 
             player.removeListener(playerListener);
@@ -481,6 +463,53 @@ public class VideoPlayerPlugin extends Plugin {
             Log.e(TAG, "setPlaylist failed", e);
             call.reject("Failed: " + e.getMessage());
         }
+    }
+
+    /** Converte o array vindo do JS ({uri,title,artist}) em MediaItems do ExoPlayer. */
+    private List<MediaItem> buildMediaItems(JSArray items) {
+        List<MediaItem> mediaItems = new ArrayList<>();
+        for (int i = 0; i < items.length(); i++) {
+            try {
+                JSONObject item = items.getJSONObject(i);
+                String uriStr = item.optString("uri",    "");
+                String title  = item.optString("title",  "");
+                String artist = item.optString("artist", "StudyPlay");
+                if (uriStr.isEmpty()) continue;
+
+                Uri uri = resolveUri(uriStr);
+                // Inclui artwork do app em cada faixa da playlist
+                mediaItems.add(new MediaItem.Builder()
+                    .setUri(uri)
+                    .setMediaMetadata(buildMetadata(title, artist, ""))
+                    .build());
+            } catch (Exception e) {
+                Log.w(TAG, "playlist item " + i + ": " + e.getMessage());
+            }
+        }
+        return mediaItems;
+    }
+
+    /**
+     * appendPlaylist({items}) — acrescenta itens ao FIM da fila atual sem interromper
+     * a reprodução. O JS manda as primeiras aulas em setPlaylist (o vídeo começa logo)
+     * e o restante do curso por aqui, em blocos, em segundo plano.
+     */
+    @PluginMethod
+    public void appendPlaylist(PluginCall call) {
+        final JSArray items = call.getArray("items");
+        if (items == null || items.length() == 0) { call.resolve(); return; }
+        getActivity().runOnUiThread(() -> {
+            try {
+                ExoPlayer player = PlaybackService.getPlayer();
+                if (player == null) { call.reject("Player unavailable"); return; }
+                List<MediaItem> list = buildMediaItems(items);
+                if (!list.isEmpty()) player.addMediaItems(list);
+                call.resolve();
+            } catch (Exception e) {
+                Log.e(TAG, "appendPlaylist failed", e);
+                call.reject("Failed: " + e.getMessage());
+            }
+        });
     }
 
     /**

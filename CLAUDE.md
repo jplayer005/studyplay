@@ -55,6 +55,16 @@ Capacitor 8 Android app. Toda a lógica e o CSS do app estão em `www/index.html
 - Sessão do APK (`splay_native_session`) guarda pasta, módulos, PDFs/planilhas e a chave do curso para reabrir sem re-escanear.
 - Preferências: `splay_set_auto90`, `splay_set_autofs`.
 
+### Velocidade de abertura (não regredir)
+
+O diferencial do app é abrir e já seguir o curso. Regras que garantem isso:
+
+- **Tocar antes de desenhar:** ao abrir/reabrir, `playLesson()` é chamado ANTES de `renderModularPlaylist()`, para a fila nativa sair primeiro.
+- **Fila nativa em partes:** `setPlaylist` recebe só as primeiras `QUEUE_FIRST_CHUNK` (30) aulas; o resto entra por `appendPlaylist` em blocos de 150 (`_appendRestOfQueue`). Montar ~850 itens com capa antes de tocar era a maior espera. `_nativeQueue` só ganha os arquivos depois que o nativo confirma o bloco; aula fora da fila refaz a fila a partir dela.
+- **Durações:** nunca criar um `<video>` por aula na abertura. Ordem: cache salvo por curso (`splay_dur_<chave>`) → aulas visíveis (4 por vez, via `IntersectionObserver`) → leitura em segundo plano das que faltam (`_warmupStep`, 1 por vez, só com o app visível).
+- **Sessão do APK:** reabre pelo cache (`quickRestore`), sem varrer a pasta. Só refaz a varredura se o cache for da versão 2.0 E houver nomes de aula repetidos.
+- **Medir:** Configurações > Tempos de abertura (`Diag`) mostra cada etapa no aparelho (varredura nativa, montar o curso, desenhar a lista, fila nativa, aula pronta).
+
 ### MediaSession / Dynamic Island / Ilha Dinâmica Xiaomi
 
 O app implementa a `MediaSession API`:
