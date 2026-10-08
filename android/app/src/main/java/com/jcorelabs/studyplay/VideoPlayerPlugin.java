@@ -1,5 +1,6 @@
 package com.jcorelabs.studyplay;
 
+import android.Manifest;
 import android.app.PendingIntent;
 import android.app.PictureInPictureParams;
 import android.app.RemoteAction;
@@ -7,6 +8,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -17,6 +19,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.PowerManager;
+import android.provider.Settings;
 import android.util.Log;
 import android.util.Rational;
 import android.view.View;
@@ -25,6 +29,8 @@ import android.widget.FrameLayout;
 
 import java.util.Collections;
 
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
@@ -108,6 +114,8 @@ public class VideoPlayerPlugin extends Plugin {
     private int areaLeft, areaTop, areaWidth, areaHeight;
 
     private final Handler  handler        = new Handler(Looper.getMainLooper());
+    private       long     lastSentPos    = -1;
+    private       int      decoderRetries = 0;
     private       Runnable timeUpdateTask = null;
 
     // ── Ciclo de vida ─────────────────────────────────────────────────────────
@@ -348,6 +356,57 @@ public class VideoPlayerPlugin extends Plugin {
         call.resolve();
     }
 
+    /** Pede a permissão de notificação (Android 13+), necessária para a notificação de mídia. */
+    @PluginMethod
+    public void requestNotificationPermission(PluginCall call) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                && ContextCompat.checkSelfPermission(getContext(), Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED) {
+            getActivity().runOnUiThread(() ->
+                ActivityCompat.requestPermissions(getActivity(),
+                    new String[]{Manifest.permission.POST_NOTIFICATIONS}, 2001));
+        }
+        call.resolve();
+    }
+
+    /**
+     * Abre o diálogo do sistema para isentar o app da otimização de bateria.
+     * Importante em Xiaomi/HyperOS para a reprodução continuar com a tela desligada.
+     * Chamado pelo JS só quando o usuário ativa o modo áudio, depois de explicar o motivo.
+     */
+    @PluginMethod
+    public void requestBatteryExemption(PluginCall call) {
+        try {
+            PowerManager pm = (PowerManager) getContext().getSystemService(Context.POWER_SERVICE);
+            String pkg = getContext().getPackageName();
+            if (pm != null && !pm.isIgnoringBatteryOptimizations(pkg)) {
+                Intent i = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                    Uri.parse("package:" + pkg));
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                getContext().startActivity(i);
+            }
+        } catch (Exception ignored) {
+            // Alguns fabricantes bloqueiam este diálogo
+        }
+        call.resolve();
+    }
+
+    /** setSleepTimer({minutes}) — 0 cancela. O timer roda no PlaybackService. */
+    @PluginMethod
+    public void setSleepTimer(PluginCall call) {
+        final int minutes = call.getInt("minutes", 0);
+        getActivity().runOnUiThread(() -> PlaybackService.setSleepTimer(minutes));
+        call.resolve();
+    }
+
+    /** getSleepTimer() → {remainingMs} */
+    @PluginMethod
+    public void getSleepTimer(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("remainingMs", PlaybackService.getSleepRemainingMs());
+        call.resolve(ret);
+    }
+
     @PluginMethod
     public void stop(PluginCall call) {
         getActivity().runOnUiThread(() -> {
@@ -386,25 +445,7 @@ public class VideoPlayerPlugin extends Plugin {
             if (playerView.getPlayer() != player) playerView.setPlayer(player);
             playerView.setVisibility(View.VISIBLE);
 
-            List<MediaItem> mediaItems = new ArrayList<>();
-            for (int i = 0; i < items.length(); i++) {
-                try {
-                    JSONObject item = items.getJSONObject(i);
-                    String uriStr = item.optString("uri",    "");
-                    String title  = item.optString("title",  "");
-                    String artist = item.optString("artist", "StudyPlay");
-                    if (uriStr.isEmpty()) continue;
-
-                    Uri uri = resolveUri(uriStr);
-                    // Inclui artwork do app em cada faixa da playlist
-                    mediaItems.add(new MediaItem.Builder()
-                        .setUri(uri)
-                        .setMediaMetadata(buildMetadata(title, artist, ""))
-                        .build());
-                } catch (Exception e) {
-                    Log.w(TAG, "setPlaylist item " + i + ": " + e.getMessage());
-                }
-            }
+            List<MediaItem> mediaItems = buildMediaItems(items);
             if (mediaItems.isEmpty()) { call.resolve(); return; }
 
             player.removeListener(playerListener);
@@ -422,6 +463,53 @@ public class VideoPlayerPlugin extends Plugin {
             Log.e(TAG, "setPlaylist failed", e);
             call.reject("Failed: " + e.getMessage());
         }
+    }
+
+    /** Converte o array vindo do JS ({uri,title,artist}) em MediaItems do ExoPlayer. */
+    private List<MediaItem> buildMediaItems(JSArray items) {
+        List<MediaItem> mediaItems = new ArrayList<>();
+        for (int i = 0; i < items.length(); i++) {
+            try {
+                JSONObject item = items.getJSONObject(i);
+                String uriStr = item.optString("uri",    "");
+                String title  = item.optString("title",  "");
+                String artist = item.optString("artist", "StudyPlay");
+                if (uriStr.isEmpty()) continue;
+
+                Uri uri = resolveUri(uriStr);
+                // Inclui artwork do app em cada faixa da playlist
+                mediaItems.add(new MediaItem.Builder()
+                    .setUri(uri)
+                    .setMediaMetadata(buildMetadata(title, artist, ""))
+                    .build());
+            } catch (Exception e) {
+                Log.w(TAG, "playlist item " + i + ": " + e.getMessage());
+            }
+        }
+        return mediaItems;
+    }
+
+    /**
+     * appendPlaylist({items}) — acrescenta itens ao FIM da fila atual sem interromper
+     * a reprodução. O JS manda as primeiras aulas em setPlaylist (o vídeo começa logo)
+     * e o restante do curso por aqui, em blocos, em segundo plano.
+     */
+    @PluginMethod
+    public void appendPlaylist(PluginCall call) {
+        final JSArray items = call.getArray("items");
+        if (items == null || items.length() == 0) { call.resolve(); return; }
+        getActivity().runOnUiThread(() -> {
+            try {
+                ExoPlayer player = PlaybackService.getPlayer();
+                if (player == null) { call.reject("Player unavailable"); return; }
+                List<MediaItem> list = buildMediaItems(items);
+                if (!list.isEmpty()) player.addMediaItems(list);
+                call.resolve();
+            } catch (Exception e) {
+                Log.e(TAG, "appendPlaylist failed", e);
+                call.reject("Failed: " + e.getMessage());
+            }
+        });
     }
 
     /**
@@ -835,10 +923,13 @@ public class VideoPlayerPlugin extends Plugin {
         timeUpdateTask = new Runnable() {
             @Override public void run() {
                 ExoPlayer p = PlaybackService.getPlayer();
-                if (p != null && p.isPlaying()) {
+                if (p != null) {
                     long pos = p.getCurrentPosition();
                     long dur = p.getDuration();
-                    if (dur > 0) {
+                    // Tocando: envia sempre. Pausado: só quando a posição mudou
+                    // (busca com o vídeo parado), senão a barra não acompanhava.
+                    if (dur > 0 && (p.isPlaying() || pos != lastSentPos)) {
+                        lastSentPos = pos;
                         JSObject e = new JSObject();
                         e.put("currentTime", pos / 1000.0);
                         e.put("duration",    dur / 1000.0);
@@ -873,6 +964,7 @@ public class VideoPlayerPlugin extends Plugin {
          */
         @Override
         public void onMediaItemTransition(@Nullable MediaItem mediaItem, int reason) {
+            decoderRetries = 0;
             ExoPlayer p = PlaybackService.getPlayer();
             int index   = (p != null) ? p.getCurrentMediaItemIndex() : 0;
             String title = "";
@@ -925,12 +1017,18 @@ public class VideoPlayerPlugin extends Plugin {
             Log.e(TAG, "ExoPlayer error code=" + error.errorCode, error);
 
             // Retry automático para falhas de decodificador de hardware (comum no Xiaomi)
+            // O fallback para decodificador de software já é automático
+            // (DefaultRenderersFactory.setEnableDecoderFallback). Aqui só tentamos
+            // reiniciar no máximo 2 vezes por item; antes era uma tentativa a cada
+            // 0,5 s para sempre.
             ExoPlayer p = PlaybackService.getPlayer();
             if (p != null
                     && (error.errorCode == PlaybackException.ERROR_CODE_DECODER_INIT_FAILED
                     ||  error.errorCode == PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED)
-                    && p.getCurrentMediaItem() != null) {
-                Log.w(TAG, "Hardware decoder failed — retrying with software decoder");
+                    && p.getCurrentMediaItem() != null
+                    && decoderRetries < 2) {
+                decoderRetries++;
+                Log.w(TAG, "Decoder failed — retry " + decoderRetries + "/2");
                 handler.postDelayed(() -> {
                     ExoPlayer rp = PlaybackService.getPlayer();
                     if (rp != null) { rp.prepare(); rp.play(); }

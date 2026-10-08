@@ -1,0 +1,98 @@
+name: Gerar APK (debug)
+
+# Roda a cada envio para a main e para a branch de otimização, e também sob demanda
+# (aba Actions > Gerar APK (debug) > Run workflow).
+on:
+  push:
+    branches: [main, claude/otimizacao-android]
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    env:
+      # Usadas só para decidir se o envio ao Firebase roda (segredos não podem ser lidos direto em "if")
+      FB_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+      FB_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Componentes do Android SDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0"
+
+      # Assinatura do APK. Cada execução do GitHub roda numa máquina nova e, sem a chave
+      # abaixo, o Android Studio/Gradle cria uma chave de debug NOVA a cada vez: cada APK
+      # fica com assinatura diferente e não instala por cima do anterior.
+      # Com o segredo DEBUG_KEYSTORE_BASE64 (o debug.keystore do seu PC em base64), todo APK
+      # sai com a MESMA assinatura do APK que você compila no PC e atualiza o app sem apagar dados.
+      - name: Chave de debug (a mesma do seu PC)
+        env:
+          KS: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KS" ]; then
+            mkdir -p ~/.android
+            echo "$KS" | base64 -d > ~/.android/debug.keystore
+            if keytool -list -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey > /tmp/ks.txt 2>&1; then
+              echo "Usando a chave de debug do segredo DEBUG_KEYSTORE_BASE64."
+              grep -i "SHA" /tmp/ks.txt || true
+            else
+              echo "::error::O segredo DEBUG_KEYSTORE_BASE64 não é um debug.keystore válido (senha 'android', alias 'androiddebugkey'). Confira como foi gerado."
+              cat /tmp/ks.txt
+              exit 1
+            fi
+          else
+            echo "::warning::Segredo DEBUG_KEYSTORE_BASE64 ausente: o APK sai com uma chave nova e NÃO instala por cima do app já instalado."
+          fi
+
+      - name: Sincronizar o Capacitor
+        run: npx cap sync android
+
+      - name: Compilar o APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Mostrar a assinatura do APK
+        # Só informativo: nunca derruba a compilação.
+        run: |
+          # Compare o SHA-1 abaixo com o do seu PC: keytool -list -v -keystore %USERPROFILE%\.android\debug.keystore -storepass android
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs android/app/build/outputs/apk/debug/app-debug.apk | grep -E "certificate DN|SHA-1|SHA-256" || true
+
+      - name: Publicar o APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: StudyPlay-2.1.0-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      # Envio ao Firebase App Distribution (app "App Tester" do celular).
+      # Só roda se os dois segredos existirem no repositório:
+      #   FIREBASE_APP_ID               ID do app Android no Firebase (1:123...:android:abc...)
+      #   FIREBASE_SERVICE_ACCOUNT      conteúdo do JSON da chave de serviço
+      - name: Enviar ao App Tester (Firebase)
+        if: ${{ env.FB_APP_ID != '' && env.FB_SA != '' }}
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+          appId: ${{ secrets.FIREBASE_APP_ID }}
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          testers: jcorelabs@gmail.com
+          file: android/app/build/outputs/apk/debug/app-debug.apk
+          releaseNotes: "StudyPlay 2.1.0 (debug) - ${{ github.event.head_commit.message }}"
+

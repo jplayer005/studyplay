@@ -18,6 +18,8 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.ActivityCallback;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -70,6 +72,67 @@ public class VideoFolderPlugin extends Plugin {
         new Thread(() -> resolveFolder(call, finalUri)).start();
     }
 
+    // ── Salva um arquivo de texto via seletor do sistema (SAF) ─────────────
+    // O download por link blob: (a.download) é ignorado pelo WebView do Android,
+    // então exportar notas/progresso precisa deste caminho nativo.
+    @PluginMethod
+    public void saveTextFile(PluginCall call) {
+        String filename = call.getString("filename", "arquivo.txt");
+        String mime     = call.getString("mime", "text/plain");
+        if (call.getString("content") == null) { call.reject("missing content"); return; }
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType(mime);
+        intent.putExtra(Intent.EXTRA_TITLE, filename);
+        startActivityForResult(call, intent, "handleSaveFile");
+    }
+
+    @ActivityCallback
+    private void handleSaveFile(PluginCall call, ActivityResult result) {
+        if (call == null) return;
+        if (result.getResultCode() != Activity.RESULT_OK || result.getData() == null
+                || result.getData().getData() == null) {
+            call.reject("cancelled");
+            return;
+        }
+        final Uri uri = result.getData().getData();
+        final String content = call.getString("content", "");
+        new Thread(() -> {
+            try (OutputStream os = getContext().getContentResolver().openOutputStream(uri, "wt")) {
+                if (os == null) { call.reject("write_failed: stream"); return; }
+                os.write(content.getBytes(StandardCharsets.UTF_8));
+                os.flush();
+                JSObject ret = new JSObject();
+                ret.put("uri", uri.toString());
+                call.resolve(ret);
+            } catch (Exception e) {
+                Log.e(TAG, "saveTextFile failed", e);
+                call.reject("write_failed: " + e.getMessage());
+            }
+        }).start();
+    }
+
+    // ── Abre um link no navegador/loja (http, https ou market) ──────────────
+    @PluginMethod
+    public void openUrl(PluginCall call) {
+        String url = call.getString("url");
+        if (url == null || url.isEmpty()) { call.reject("missing url"); return; }
+        Uri uri = Uri.parse(url);
+        String scheme = uri.getScheme();
+        if (scheme == null || !(scheme.equals("http") || scheme.equals("https") || scheme.equals("market"))) {
+            call.reject("scheme_not_allowed");
+            return;
+        }
+        try {
+            Intent i = new Intent(Intent.ACTION_VIEW, uri);
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(i);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("no_handler: " + e.getMessage());
+        }
+    }
+
     // ── Re-lê uma pasta salva (persistida entre sessões) ──────
     @PluginMethod
     public void listPersistedFolder(PluginCall call) {
@@ -92,6 +155,7 @@ public class VideoFolderPlugin extends Plugin {
         }
 
         JSArray files = new JSArray();
+        final long scanStart = System.currentTimeMillis();
         try {
             // Obtém o Document ID da raiz da árvore e inicia scan otimizado
             String rootDocId = DocumentsContract.getTreeDocumentId(treeUri);
@@ -105,6 +169,7 @@ public class VideoFolderPlugin extends Plugin {
         JSObject ret = new JSObject();
         ret.put("treeUri",  treeUri.toString());
         ret.put("rootName", rootName);
+        ret.put("scanMs",   System.currentTimeMillis() - scanStart);   // diagnóstico (Configurações)
         ret.put("files",    files);
         call.resolve(ret);
     }

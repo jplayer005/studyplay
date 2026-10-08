@@ -12,8 +12,14 @@ if (typeof window.Capacitor === 'undefined') {
   window.Capacitor = { isNativePlatform: function(){ return false; }, getPlatform: function(){ return 'web'; }, Plugins: {} };
 }
 </script>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
+/* ── FONTES (embutidas no app: funcionam sem internet) ── */
+@font-face{font-family:'Sora';font-style:normal;font-weight:400;font-display:swap;src:url('fonts/sora-latin-400-normal.woff2') format('woff2');}
+@font-face{font-family:'Sora';font-style:normal;font-weight:500;font-display:swap;src:url('fonts/sora-latin-500-normal.woff2') format('woff2');}
+@font-face{font-family:'Sora';font-style:normal;font-weight:600;font-display:swap;src:url('fonts/sora-latin-600-normal.woff2') format('woff2');}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400;font-display:swap;src:url('fonts/jetbrains-mono-latin-400-normal.woff2') format('woff2');}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:500;font-display:swap;src:url('fonts/jetbrains-mono-latin-500-normal.woff2') format('woff2');}
+
 /* ── TEMAS ── */
 :root,[data-theme="dark"] {
   --bg:#0d0f14; --bg2:#13161e; --bg3:#1a1e2a; --bg4:#222636;
@@ -29,7 +35,7 @@ if (typeof window.Capacitor === 'undefined') {
 [data-theme="light"] {
   --bg:#f0f2f8; --bg2:#ffffff; --bg3:#f4f6fb; --bg4:#e8ecf4;
   --accent:#6c63ff; --accent2:#5b52e8; --accent3:#0ea5e9;
-  --text:#1a1d2e; --text2:#4b5563; --text3:#9ca3af;
+  --text:#1a1d2e; --text2:#4b5563; --text3:#6b7280;
   --border:rgba(0,0,0,0.08); --border2:rgba(0,0,0,0.15);
   --green:#059669; --amber:#d97706; --red:#dc2626; --pink:#db2777;
   --chapter-line:rgba(108,99,255,.6);
@@ -529,94 +535,146 @@ body.keyboard-notes-open .notes-mobile-box .notes-list{display:none;}
 #landscape-title-bar{display:none;padding:4px calc(12px + var(--safe-l)) 4px calc(12px + var(--safe-r));background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;overflow:hidden;}
 #landscape-now-title{display:block;font-size:11px;font-weight:500;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
+/* ── GRUPOS DE CONTROLES ──
+   display:contents faz os dois grupos se comportarem como filhos diretos da linha
+   (layout antigo de desktop). No celular na vertical eles viram duas linhas. */
+.ctrl-main,.ctrl-aux{display:contents;}
+.seekbar{touch-action:none;}
+/* área de toque da barra de progresso maior que a barra visível */
+.seekbar::before{content:'';position:absolute;left:0;right:0;top:-12px;bottom:-12px;}
+
+/* ── FEEDBACK DE TOQUE E FOCO ── */
+button,.btn-icon,.ctrl-btn,.lesson-item,.module-header,.extra-item,.settings-row-clickable,.progress-option{-webkit-tap-highlight-color:transparent;}
+.btn-icon:active,.ctrl-btn:active,.unified-menu-btn:active,.modal-btn:active,.btn-load:active,.mark-done-btn:active,.fav-ctrl-btn:active,.btn-collapse-all:active{transform:scale(.94);}
+.lesson-item:active,.module-header:active,.extra-item:active{background:var(--bg4);}
+button:focus-visible,.btn-icon:focus-visible,.ctrl-btn:focus-visible,[tabindex]:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent2);outline-offset:2px;}
+
+/* ── INTERRUPTOR (Configurações) ── */
+.switch{position:relative;width:42px;height:24px;border-radius:12px;background:var(--bg4);border:1px solid var(--border2);flex-shrink:0;transition:background .2s,border-color .2s;}
+.switch i{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.35);transition:transform .2s;}
+.switch.on{background:var(--accent);border-color:var(--accent);}
+.switch.on i{transform:translateX(18px);}
+.settings-label{padding-right:12px;line-height:1.35;}
+
+/* ── MÓDULOS: título legível, selo único, modo organizar ── */
+.module-title{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.3;}
+.module-count.complete{color:var(--green);background:rgba(52,211,153,.14);}
+.module-drag-handle{display:none;}
+body.organize-mode .module-drag-handle{display:flex;opacity:.7;width:28px;height:28px;touch-action:none;}
+.btn-organize{display:none;}
+body.is-modular .btn-organize{display:flex;}
+.btn-organize.on{background:rgba(108,99,255,.18);border-color:rgba(108,99,255,.4);color:var(--accent2);}
+.sidebar-title-row{flex-wrap:wrap;}
+.lesson-item{min-height:48px;}
+.lesson-name{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.menu-land-only{display:none;}
+.lesson-item.active{box-shadow:inset 3px 0 0 var(--accent);}
+
 /* ── RESPONSIVE ── */
 @media(min-width:560px) and (max-width:899px){:root{--sidebar:260px;}}
 @media(min-width:900px) and (max-width:1024px){:root{--sidebar:280px;}}
 
-@media(max-width:559px){
-  :root{--sidebar:82vw;--header-h:50px;}
-  header{gap:6px;padding:0 10px;padding-top:var(--safe-t);height:calc(var(--header-h) + var(--safe-t));}
-  .header-spacer{display:none;}
-  .logo{gap:5px;font-size:13px;flex-shrink:0;}
-  .logo-icon{width:26px;height:26px;border-radius:6px;}
-  .logo-icon svg{width:12px;height:12px;}
+/* ═══════════════════════════════════════════════════════════
+   CELULAR NA VERTICAL
+   Vídeo 16:9 no topo, controles e a lista de aulas logo abaixo
+   (como no YouTube). Não existe mais gaveta lateral.
+═══════════════════════════════════════════════════════════ */
+@media(max-width:559px) and (orientation:portrait){
+  :root{--header-h:52px;}
+  header{gap:8px;padding:0 12px;padding-top:var(--safe-t);height:calc(var(--header-h) + var(--safe-t));}
+  .header-spacer{display:block;}
   .logo-text{display:none;}
-  .progress-badge{font-size:9px;padding:3px 6px;flex-shrink:0;}
-  .btn-icon{width:28px;height:28px;min-width:28px;border-radius:7px;flex-shrink:0;}
-  .btn-icon svg{width:13px;height:13px;}
-  #notes-toggle-btn{display:flex;flex-shrink:0;}
-  #mobile-notes-fab{display:none;}
-  .btn-load{height:28px;padding:0 8px;font-size:11px;border-radius:7px;gap:4px;flex-shrink:0;}
-  .sidebar{position:fixed !important;top:0;left:0;z-index:40;width:min(82vw,300px) !important;height:100dvh !important;transform:translateX(-100%);transition:transform .26s cubic-bezier(.4,0,.2,1) !important;border-right:1px solid var(--border2) !important;}
-  .sidebar.mobile-open{transform:translateX(0) !important;}
-  /* Garante que o botão "Recolher" não fique atrás da status bar */
-  .sidebar .sidebar-header{padding-top:calc(14px + var(--safe-t));}
-  #sidebar-backdrop.active{display:block;}
-  /* Sidebar toggle dentro da controls-bar (abaixo do PlayerView, sempre acessível) */
-  #ctrl-sidebar-btn{display:flex;}
+  .logo-icon{width:30px;height:30px;}
+  .progress-badge{font-size:11px;padding:6px 9px;flex-shrink:0;}
+  .pb-label{display:none;}
+  header>*{flex-shrink:0;}
+  .header-spacer{flex:1;flex-shrink:1;}
+  .btn-icon{width:40px;height:40px;min-width:40px;border-radius:10px;}
+  .btn-icon svg{width:18px;height:18px;}
+  #notes-toggle-btn{display:flex;}
+  .btn-load{height:40px;width:40px;padding:0;justify-content:center;border-radius:10px;}
+  .btn-load svg{width:18px !important;height:18px !important;}
+  .btn-load-text{display:none;}
+  #header-sidebar-toggle{display:none;}
+  #mobile-sidebar-toggle,#mobile-notes-fab,#ctrl-sidebar-btn,#sidebar-backdrop{display:none !important;}
+
+  .main{flex-direction:column;}
+  .player-area{flex:none;width:100%;order:1;}
+  .video-wrapper{flex:none;width:100%;aspect-ratio:16/9;}
+  .sidebar{order:2;position:static !important;transform:none !important;width:100% !important;height:auto !important;flex:1 1 0;min-height:0;border-right:none !important;border-top:1px solid var(--border);}
+  .sidebar .sidebar-header{padding:10px 12px 8px;}
+  .playlist{padding:6px 8px calc(8px + var(--safe-b));}
   .notes-panel{display:none !important;}
   .lesson-thumb{display:none;}
-  .lesson-name{font-size:11px;}
-  .lesson-meta,.lesson-resume{font-size:9px;}
-  .lesson-status{width:15px;height:15px;}
-  .controls-bar{padding:8px 11px;padding-bottom:calc(8px + var(--safe-b));}
-  .ctrl-row{gap:4px;flex-wrap:nowrap;}
-  .ctrl-btn{width:30px;height:30px;border-radius:7px;}
-  .ctrl-btn svg{width:13px;height:13px;}
-  .mark-done-btn{padding:0 7px;height:30px;font-size:11px;}
-  .fav-ctrl-btn{padding:0 7px;height:30px;}
+  .lesson-num{width:24px;}
+  .lesson-name{font-size:13px;}
+  .lesson-meta,.lesson-resume{font-size:10px;}
+  .lesson-status{width:20px;height:20px;}
+  .lesson-fav-btn{width:36px;height:36px;}
+  .module-header{padding:10px 10px;}
+  .module-title{font-size:13px;}
+
+  .controls-bar{padding:8px 12px 6px;}
+  /* Digitando na busca (teclado aberto): recolhe os controles e encolhe o vídeo
+     para sobrar espaço para os resultados. */
+  body.search-open .controls-bar{display:none;}
+  body.search-open .video-wrapper{aspect-ratio:auto;height:92px;}
+  .now-title{font-size:13px;}
+  .ctrl-row{flex-direction:column;align-items:stretch;gap:6px;}
+  .ctrl-main{display:flex;align-items:center;justify-content:space-between;gap:6px;}
+  .ctrl-aux{display:flex;align-items:center;justify-content:space-between;gap:6px;}
+  .ctrl-main .ctrl-btn{width:46px;height:46px;border-radius:12px;}
+  .ctrl-main .ctrl-btn.primary{width:58px;height:50px;border-radius:14px;}
+  .ctrl-main .ctrl-btn svg{width:19px;height:19px;}
+  .ctrl-aux .ctrl-btn,.ctrl-aux .fav-ctrl-btn,.ctrl-aux .mark-done-btn{flex:1 1 0;min-width:0;max-width:56px;height:42px;width:auto;border-radius:11px;padding:0;justify-content:center;}
   .mark-done-btn .mark-label{display:none;}
-  .vol-row{display:none;}
-  .ab-label{display:none;}
-  #mobile-sidebar-toggle{bottom:calc(18px + var(--safe-b) + 58px);}
-  #mobile-notes-fab{bottom:calc(18px + var(--safe-b) + 58px);}
-  #toast{bottom:calc(20px + var(--safe-b));right:14px;font-size:12px;}
+  .vol-row,.ab-label{display:none;}
+  #frame-badge{height:30px;}
+  #toast{bottom:calc(20px + var(--safe-b));right:14px;left:14px;text-align:center;font-size:12px;}
   .stats-grid{grid-template-columns:1fr;}
   .theme-btn span{display:none;}
-  #header-sidebar-toggle{display:none;}
-}
-@media(max-width:559px) and (orientation:landscape){
-  :root{--header-h:36px;}
-  header{padding-left:calc(10px + var(--safe-l));padding-right:calc(10px + var(--safe-r));}
-  #mobile-sidebar-toggle{display:none;}
-  #mobile-notes-fab{display:none;}
-  #sidebar-backdrop{display:none !important;}
-  .controls-bar{padding:4px 11px;padding-bottom:calc(4px + var(--safe-b));}
-  .now-playing{display:none;}
-  #landscape-title-bar{display:block;}
+  /* Menu ⋮ vira um painel que sobe da base da tela (antes abria por cima do vídeo e ficava cortado) */
+  #unified-more-menu{position:fixed;left:0;right:0;bottom:0;top:auto;max-height:64dvh;border-radius:18px 18px 0 0;padding:18px 14px calc(14px + var(--safe-b));z-index:60;box-shadow:0 -10px 40px rgba(0,0,0,.45);}
+  #unified-more-menu::before{content:'';position:absolute;top:7px;left:50%;width:38px;height:4px;margin-left:-19px;border-radius:2px;background:var(--border2);}
+  .unified-menu-btn{min-height:44px;}
 }
 
-/* ── PAISAGEM EM PHONE/TABLET MÉDIO (560-1024px) ──
-   Header flutua fixo apenas sobre a área do player;
-   sidebar fica em altura total; title-bar aparece abaixo do header. */
-@media(min-width:560px) and (max-width:1024px) and (orientation:landscape){
-  :root{--header-h:42px;}
-  header{
-    position:fixed;top:0;right:0;left:var(--sidebar);
-    height:calc(var(--header-h) + var(--safe-t));
-    z-index:30;
-  }
-  .logo-text{display:none;}
-  .progress-badge{display:none;}
-  /* sidebar cresce para 100dvh (header saiu do fluxo normal) */
+/* ═══════════════════════════════════════════════════════════
+   CELULAR NA HORIZONTAL (pouca altura)
+   Sem cabeçalho (as ações vão para o menu ⋮): toda a altura é do
+   vídeo. Playlist fixa à esquerda, ocultável pelo botão de lista.
+═══════════════════════════════════════════════════════════ */
+@media(orientation:landscape) and (max-height:520px){
+  :root{--sidebar:clamp(210px,32vw,300px);}
+  body{padding-left:var(--safe-l);padding-right:var(--safe-r);}
+  header{display:none;}
   .main{height:100dvh;}
-  /* sidebar-header respeitando safe-area do topo */
-  .sidebar .sidebar-header{padding-top:calc(14px + var(--safe-t));}
-  /* player-area recua o conteúdo para baixo do header fixo */
-  .player-area{padding-top:calc(var(--header-h) + var(--safe-t));}
+  .sidebar .sidebar-header{padding:8px 10px 6px;padding-top:calc(8px + var(--safe-t));}
+  .search-box{height:32px;}
+  .playlist{padding:6px;}
+  .lesson-thumb{display:none;}
+  .lesson-item{min-height:44px;padding:6px 8px;}
+  .module-header{padding:8px;}
+  .notes-panel{display:none !important;}
+  .player-area{padding-top:0;}
+  #landscape-title-bar{display:block;padding-top:calc(3px + var(--safe-t));padding-bottom:3px;}
   .now-playing{display:none;}
-  #landscape-title-bar{display:block;}
-  .controls-bar{padding:5px 14px;padding-bottom:calc(5px + var(--safe-b));}
-  /* sidebar oculta → header expande para cobrir a largura toda */
-  body.sidebar-hidden header{left:0;}
-  /* tudo na mesma linha — sem quebra de linha */
-  .ctrl-row{flex-wrap:nowrap;gap:4px;}
-  .ctrl-btn{width:28px;height:28px;border-radius:7px;}
-  .ctrl-btn svg{width:13px;height:13px;}
-  .mark-done-btn{padding:0 7px;height:28px;font-size:10px;}
+  .controls-bar{padding:4px 12px;padding-bottom:calc(4px + var(--safe-b));}
+  .progress-row{margin-bottom:4px;}
+  .ctrl-row{flex-wrap:nowrap;gap:4px;align-items:center;}
+  .ctrl-main,.ctrl-aux{display:flex;align-items:center;gap:4px;}
+  .ctrl-aux{flex:1;min-width:0;}
+  .ctrl-btn,.fav-ctrl-btn,.mark-done-btn{width:36px;height:36px;border-radius:9px;padding:0;justify-content:center;flex-shrink:1;min-width:30px;}
+  .ctrl-btn.primary{width:44px;}
+  .ctrl-btn svg{width:15px;height:15px;}
   .mark-done-btn .mark-label{display:none;}
-  .fav-ctrl-btn{padding:0 6px;height:28px;}
-  .vol-row{display:none;}
+  .vol-row,.ab-label{display:none;}
+  #ctrl-sidebar-btn{display:flex;}
+  .menu-land-only{display:flex;}
+  #sidebar-backdrop{display:none !important;}
+  #mobile-sidebar-toggle,#mobile-notes-fab{display:none !important;}
+  #unified-more-menu{max-height:calc(100dvh - 90px);}
+  body.sidebar-hidden .sidebar{display:none;}
 }
 
 /* On mobile (≤799px): hide overflow-item header buttons (accessible via unified ⋮) */
@@ -703,7 +761,6 @@ body.keyboard-notes-open .notes-mobile-box .notes-list{display:none;}
       <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">L</span></div><span class="shortcut-desc">Ciclar loop da aula (1× / infinito / desativado)</span></div>
       <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">I</span></div><span class="shortcut-desc">Picture-in-Picture</span></div>
       <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">R</span></div><span class="shortcut-desc">Abrir / fechar modo revisão</span></div>
-      <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">T</span></div><span class="shortcut-desc">Iniciar / pausar transcrição</span></div>
       <div class="shortcut-row"><div class="shortcut-key"><span class="kbd">?</span></div><span class="shortcut-desc">Mostrar esta lista</span></div>
     </div>
     <div class="modal-actions"><button class="modal-btn secondary" onclick="document.getElementById('shortcuts-modal').classList.remove('active')">Fechar</button></div>
@@ -738,9 +795,17 @@ body.keyboard-notes-open .notes-mobile-box .notes-list{display:none;}
   <div class="modal-box" style="max-width:380px;">
     <div class="modal-title">⚙ Configurações</div>
     <div class="settings-section">Reprodução</div>
-    <div class="settings-row">
-      <span class="settings-label">Auto-completar aula a 90%</span>
-      <span class="settings-value" style="color:var(--green);">Ativado</span>
+    <div class="settings-row settings-row-clickable" onclick="toggleSetting('auto90')" role="switch" aria-checked="true" id="row-auto90">
+      <span class="settings-label">Concluir aula automaticamente aos 90%</span>
+      <span class="switch" id="sw-auto90"><i></i></span>
+    </div>
+    <div class="settings-row settings-row-clickable" onclick="toggleSetting('autofs')" role="switch" aria-checked="false" id="row-autofs">
+      <span class="settings-label">Tela cheia ao girar o celular</span>
+      <span class="switch" id="sw-autofs"><i></i></span>
+    </div>
+    <div class="settings-row settings-row-clickable" onclick="document.getElementById('settings-modal').classList.remove('active');openDiag()">
+      <span class="settings-label">Tempos de abertura</span>
+      <span class="settings-value">ver →</span>
     </div>
     <div class="settings-row settings-row-clickable" onclick="clearCrashLog()">
       <span class="settings-label">Log de erros</span>
@@ -749,7 +814,7 @@ body.keyboard-notes-open .notes-mobile-box .notes-list{display:none;}
     <div class="settings-section" style="margin-top:8px;">Sobre o app</div>
     <div class="settings-row">
       <span class="settings-label">Versão</span>
-      <span class="settings-value">2.0.0</span>
+      <span class="settings-value">2.1.0</span>
     </div>
     <div class="settings-row">
       <span class="settings-label">Política de Privacidade</span>
@@ -864,7 +929,7 @@ body.keyboard-notes-open .notes-mobile-box .notes-list{display:none;}
     <span class="logo-text">StudyPlay</span>
   </div>
   <div class="header-spacer"></div>
-  <div class="progress-badge">Concluídas: <span id="done-count">0</span> / <span id="total-count">0</span></div>
+  <div class="progress-badge" title="Aulas concluídas"><span class="pb-label">Concluídas: </span><span id="done-count">0</span> / <span id="total-count">0</span></div>
 
   <!-- Botões secundários: visíveis no desktop, acessíveis via ⋮ no mobile -->
   <button class="btn-icon overflow-item" id="review-btn" onclick="openReviewMode()" title="Modo revisão (R)">
@@ -900,9 +965,9 @@ body.keyboard-notes-open .notes-mobile-box .notes-list{display:none;}
     <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
   </button>
 
-  <button class="btn-load" onclick="openFolder()">
+  <button class="btn-load" onclick="openFolder()" aria-label="Abrir pasta de videoaulas">
     <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:white;fill:none;stroke-width:2;stroke-linecap:round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-    Abrir Pasta
+    <span class="btn-load-text">Abrir Pasta</span>
   </button>
 
   <button id="header-sidebar-toggle" class="btn-icon" onclick="toggleSidebar()" title="Ocultar/mostrar playlist">
@@ -916,6 +981,10 @@ body.keyboard-notes-open .notes-mobile-box .notes-list{display:none;}
     <div class="sidebar-header">
       <div class="sidebar-title-row">
         <div class="sidebar-title">Playlist</div>
+        <button class="btn-collapse-all btn-organize" id="btn-organize" onclick="toggleOrganizeMode()" title="Reordenar módulos arrastando">
+          <svg viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+          <span id="organize-label">Organizar</span>
+        </button>
         <button class="btn-collapse-all expanded" id="btn-collapse-all" onclick="toggleCollapseAll()" title="Recolher / expandir todos os módulos">
           <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
           <span id="collapse-all-label">Recolher</span>
@@ -924,7 +993,7 @@ body.keyboard-notes-open .notes-mobile-box .notes-list{display:none;}
 
       <div class="search-box">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" placeholder="Buscar aula…" id="search-input" oninput="filterLessons()">
+        <input type="text" placeholder="Buscar aula…" id="search-input" oninput="filterLessonsDebounced()">
       </div>
     </div>
     <div class="playlist" id="playlist">
@@ -967,65 +1036,73 @@ body.keyboard-notes-open .notes-mobile-box .notes-list{display:none;}
         <span class="time-label right" id="time-dur">0:00</span>
       </div>
       <div class="ctrl-row">
-        <!-- Sidebar toggle — mobile only, dentro da controls-bar (abaixo do PlayerView) -->
-        <button id="ctrl-sidebar-btn" class="ctrl-btn" onclick="openMobileSidebar()" title="Playlist">
+        <!-- Playlist: só aparece no celular na horizontal (na vertical a lista fica abaixo do vídeo) -->
+        <button id="ctrl-sidebar-btn" class="ctrl-btn" onclick="toggleSidebar()" title="Mostrar/ocultar playlist" aria-label="Playlist">
           <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
         </button>
-        <button class="ctrl-btn" onclick="prevLesson()" title="Anterior (P)">
-          <svg viewBox="0 0 24 24"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
-        </button>
-        <button class="ctrl-btn" onclick="skipTime(-10)" title="-10s (←)">
-          <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
-        </button>
-        <button class="ctrl-btn primary" id="play-btn" onclick="togglePlay()" title="Play/Pause (Espaço)">
-          <svg id="play-icon" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        </button>
-        <button class="ctrl-btn" onclick="skipTime(10)" title="+10s (→)">
-          <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-4.5"/></svg>
-        </button>
-        <button class="ctrl-btn" onclick="nextLesson()" title="Próxima (N)">
-          <svg viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
-        </button>
-        <!-- Loop aula (antes do modo áudio) -->
-        <button class="ctrl-btn" id="loop-btn" onclick="toggleLoop()" title="Repetir esta aula em loop" style="position:relative;">
-          <svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="10" y1="8" x2="12" y2="8"/></svg>
-          <span class="loop-count-badge" style="display:none;position:absolute;bottom:2px;right:2px;font-size:8px;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--amber);line-height:1;pointer-events:none;">1×</span>
-        </button>
-        <!-- Botão Áudio (apenas áudio, tela pode ser desligada) -->
-        <button class="ctrl-btn" id="audio-only-btn" onclick="toggleAudioOnly()" title="Apenas áudio — desliga a tela" style="display:none;">
-          <svg viewBox="0 0 24 24"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
-        </button>
-        <!-- PiP (mostrado/oculto por JS) -->
-        <button class="ctrl-btn" id="pip-btn" onclick="togglePiP()" title="Picture-in-Picture (I)" style="display:none;">
-          <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="10" y="10" width="11" height="7" rx="1" fill="none" stroke-width="1.8"/></svg>
-        </button>
-        <!-- Tela cheia (logo após PiP) -->
-        <button class="ctrl-btn" id="fs-btn" onclick="toggleNativeFullscreen()" title="Tela cheia (F)">
-          <svg id="fs-icon" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
-        </button>
-        <!-- Botão ⋮ Unificado — abre menu com todos os controles extras -->
-        <button class="ctrl-btn" id="unified-more-btn" onclick="toggleMoreMenu()" title="Mais opções">
-          <svg viewBox="0 0 24 24" fill="var(--text2)" stroke="none"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
-        </button>
 
-        <div class="ab-label" id="ab-label" style="display:none;">
-          <span id="ab-label-text">A-B</span>
+        <!-- Grupo principal: transporte -->
+        <div class="ctrl-main">
+          <button class="ctrl-btn" onclick="prevLesson()" title="Anterior (P)" aria-label="Aula anterior">
+            <svg viewBox="0 0 24 24"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
+          </button>
+          <button class="ctrl-btn" onclick="skipTime(-10)" title="-10s (←)" aria-label="Voltar 10 segundos">
+            <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
+          </button>
+          <button class="ctrl-btn primary" id="play-btn" onclick="togglePlay()" title="Play/Pause (Espaço)" aria-label="Reproduzir ou pausar">
+            <svg id="play-icon" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          </button>
+          <button class="ctrl-btn" onclick="skipTime(10)" title="+10s (→)" aria-label="Avançar 10 segundos">
+            <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-4.5"/></svg>
+          </button>
+          <button class="ctrl-btn" onclick="nextLesson()" title="Próxima (N)" aria-label="Próxima aula">
+            <svg viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+          </button>
         </div>
-        <!-- Frame badge -->
-        <div id="frame-badge">
-          <svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-          <span id="frame-badge-text">fr</span>
-        </div>
-        <button class="fav-ctrl-btn" id="fav-btn" onclick="toggleFavorite(currentIdx)" title="Favoritar aula">
-          <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-        </button>
-        <button class="mark-done-btn" onclick="markDone()" id="mark-btn">
-          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-          <span class="mark-label">Marcar concluída</span>
-        </button>
-        <div class="vol-row">
-          <svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-          <input type="range" class="vol-slider" id="vol-slider" min="0" max="1" step="0.02" value="1" oninput="setVol(this.value)">
+
+        <!-- Grupo secundário -->
+        <div class="ctrl-aux">
+          <!-- Loop aula (antes do modo áudio) -->
+          <button class="ctrl-btn" id="loop-btn" onclick="toggleLoop()" title="Repetir esta aula em loop" aria-label="Repetir aula" style="position:relative;">
+            <svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="10" y1="8" x2="12" y2="8"/></svg>
+            <span class="loop-count-badge" style="display:none;position:absolute;bottom:2px;right:2px;font-size:8px;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--amber);line-height:1;pointer-events:none;">1×</span>
+          </button>
+          <!-- Botão Áudio (apenas áudio, tela pode ser desligada) -->
+          <button class="ctrl-btn" id="audio-only-btn" onclick="toggleAudioOnly()" title="Apenas áudio — desliga a tela" aria-label="Modo apenas áudio" style="display:none;">
+            <svg viewBox="0 0 24 24"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+          </button>
+          <!-- PiP (mostrado/oculto por JS) -->
+          <button class="ctrl-btn" id="pip-btn" onclick="togglePiP()" title="Picture-in-Picture (I)" aria-label="Picture-in-Picture" style="display:none;">
+            <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="10" y="10" width="11" height="7" rx="1" fill="none" stroke-width="1.8"/></svg>
+          </button>
+          <!-- Tela cheia -->
+          <button class="ctrl-btn" id="fs-btn" onclick="toggleNativeFullscreen()" title="Tela cheia (F)" aria-label="Tela cheia">
+            <svg id="fs-icon" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+          </button>
+          <!-- Botão ⋮ Unificado — abre menu com todos os controles extras -->
+          <button class="ctrl-btn" id="unified-more-btn" onclick="toggleMoreMenu()" title="Mais opções" aria-label="Mais opções">
+            <svg viewBox="0 0 24 24" fill="var(--text2)" stroke="none"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
+          </button>
+
+          <div class="ab-label" id="ab-label" style="display:none;">
+            <span id="ab-label-text">A-B</span>
+          </div>
+          <!-- Frame badge -->
+          <div id="frame-badge">
+            <svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            <span id="frame-badge-text">fr</span>
+          </div>
+          <button class="fav-ctrl-btn" id="fav-btn" onclick="toggleFavorite(currentIdx)" title="Favoritar aula" aria-label="Favoritar aula">
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </button>
+          <button class="mark-done-btn" onclick="markDone()" id="mark-btn" aria-label="Marcar aula como concluída">
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            <span class="mark-label">Marcar concluída</span>
+          </button>
+          <div class="vol-row">
+            <svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+            <input type="range" class="vol-slider" id="vol-slider" min="0" max="1" step="0.02" value="1" oninput="setVol(this.value)" aria-label="Volume">
+          </div>
         </div>
       </div>
 
@@ -1095,6 +1172,23 @@ body.keyboard-notes-open .notes-mobile-box .notes-list{display:none;}
               <svg viewBox="0 0 24 24"><path d="M22 12A10 10 0 1 1 12 2"/><path d="M22 2L12 12"/><path d="M16 2h6v6"/></svg>
               Google Drive
             </button>
+            <!-- Itens do cabeçalho: no celular na horizontal o cabeçalho é ocultado para dar altura ao vídeo -->
+            <button class="unified-menu-btn menu-land-only" onclick="closeMoreMenu();openFolder()">
+              <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              Abrir pasta
+            </button>
+            <button class="unified-menu-btn menu-land-only" onclick="closeMoreMenu();toggleNotesPanel()">
+              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              Notas
+            </button>
+            <button class="unified-menu-btn menu-land-only" onclick="closeMoreMenu();openStats()">
+              <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              Estatísticas
+            </button>
+            <button class="unified-menu-btn menu-land-only" onclick="closeMoreMenu();openSettings()">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              Configurações
+            </button>
           </div>
         </div>
 
@@ -1131,7 +1225,6 @@ body.keyboard-notes-open .notes-mobile-box .notes-list{display:none;}
   <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
 </button>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 /* ═══════════════════════════════════════════
    CONSTANTES E ESTADO GLOBAL
@@ -1237,61 +1330,6 @@ const Platform = (function(){
 })();
 
 /* ═══════════════════════════════════════════
-   IDB — PERSISTÊNCIA DE VÍDEOS (ANDROID APK)
-   Blobs salvos em IndexedDB para restauração automática
-═══════════════════════════════════════════ */
-const _IDB_DB    = 'studyplay_v1_videos';
-const _IDB_STORE = 'vids';
-const _IDB_SESS  = 'splay_apk_session';
-let   _idbConn   = null;
-
-function _idbOpen(){
-  if(_idbConn) return Promise.resolve(_idbConn);
-  return new Promise((res,rej)=>{
-    const r=indexedDB.open(_IDB_DB,1);
-    r.onupgradeneeded=e=>{ if(!e.target.result.objectStoreNames.contains(_IDB_STORE)) e.target.result.createObjectStore(_IDB_STORE,{keyPath:'name'}); };
-    r.onsuccess=e=>{ _idbConn=e.target.result; res(_idbConn); };
-    r.onerror=()=>rej(r.error);
-  });
-}
-async function _idbSave(file){
-  try{
-    const db=await _idbOpen();
-    await new Promise((res,rej)=>{ const tx=db.transaction(_IDB_STORE,'readwrite'); tx.objectStore(_IDB_STORE).put({name:file.name,blob:file,sz:file.size,mt:file.type||'video/mp4'}); tx.oncomplete=res; tx.onerror=()=>rej(tx.error); });
-  }catch(e){}
-}
-async function _idbGet(name){
-  try{
-    const db=await _idbOpen();
-    return new Promise((res,rej)=>{ const req=db.transaction(_IDB_STORE,'readonly').objectStore(_IDB_STORE).get(name); req.onsuccess=()=>{ const r=req.result; res(r?new File([r.blob],r.name,{type:r.mt}):null); }; req.onerror=()=>rej(req.error); });
-  }catch(e){ return null; }
-}
-async function _idbKeys(){
-  try{
-    const db=await _idbOpen();
-    return new Promise((res,rej)=>{ const req=db.transaction(_IDB_STORE,'readonly').objectStore(_IDB_STORE).getAllKeys(); req.onsuccess=()=>res(req.result||[]); req.onerror=()=>rej(req.error); });
-  }catch(e){ return []; }
-}
-async function _idbClear(){
-  try{ const db=await _idbOpen(); await new Promise((res,rej)=>{ const tx=db.transaction(_IDB_STORE,'readwrite'); tx.objectStore(_IDB_STORE).clear(); tx.oncomplete=res; tx.onerror=()=>rej(tx.error); }); }catch(e){}
-}
-// Salva lista de nomes de arquivos no localStorage (metadados da sessão)
-function _idbSaveSession(names){ try{ localStorage.setItem(_IDB_SESS,JSON.stringify({names,savedAt:Date.now()})); }catch(e){} }
-function _idbGetSession(){ try{ const r=localStorage.getItem(_IDB_SESS); return r?JSON.parse(r):null; }catch(e){return null;} }
-// Salva blobs em background, sem bloquear a UI
-function _idbBgSave(files){
-  if(!Platform.isCapacitor||!files.length) return;
-  const q=[...files]; let n=0;
-  async function next(){
-    if(!q.length){ if(n>0) toast(`📦 ${n} vídeo(s) salvos para acesso offline`); return; }
-    await _idbSave(q.shift()); n++;
-    setTimeout(next,20);
-  }
-  setTimeout(next,1200);
-}
-
-
-/* ═══════════════════════════════════════════
    HELPERS
 ═══════════════════════════════════════════ */
 function ext(n){ return (n||'').split('.').pop().toLowerCase(); }
@@ -1313,10 +1351,74 @@ function fileType(n){
 }
 function escH(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function fmtTime(s){ s=Math.floor(s||0); const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=s%60; return h?`${h}:${String(m).padStart(2,'0')}:${String(sc).padStart(2,'0')}`:`${m}:${String(sc).padStart(2,'0')}`; }
+/* Data local (AAAA-MM-DD). toISOString() usa UTC e, no Brasil, vira o dia às 21h. */
+function localDate(d){
+  d = d || new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2); }
 
 function naturalSort(a, b){
   return String(a).localeCompare(String(b), undefined, {numeric:true, sensitivity:'base'});
+}
+
+/* ═══════════════════════════════════════════
+   DIAGNÓSTICO DE TEMPOS (Configurações > Tempos de abertura)
+   Mostra quanto cada etapa de abrir/reabrir o curso levou NO SEU aparelho.
+═══════════════════════════════════════════ */
+const Diag = {
+  marks: [],
+  reset(){ this.marks = []; },
+  mark(label, ms){
+    this.marks.push({label, ms: Math.round(ms)});
+    if(this.marks.length>30) this.marks.shift();
+    try{ localStorage.setItem('splay_diag', JSON.stringify({at:Date.now(), marks:this.marks})); }catch(e){}
+  },
+  text(){
+    let list = this.marks;
+    if(!list.length){
+      try{ const d = JSON.parse(localStorage.getItem('splay_diag')||'null'); if(d) list = d.marks; }catch(e){}
+    }
+    if(!list.length) return 'Nenhuma medição ainda. Abra ou reabra um curso e volte aqui.';
+    const f = ms => ms>=1000 ? (ms/1000).toFixed(1).replace('.',',')+' s' : ms+' ms';
+    return list.map(m=>m.label+': '+f(m.ms)).join('\n');
+  }
+};
+let _playT0 = 0;
+function openDiag(){
+  showModal('Tempos de abertura', Diag.text(), [{label:'Fechar', cls:'secondary', action:closeModal}]);
+  document.getElementById('modal-desc').style.whiteSpace='pre-line';
+}
+
+/* ═══════════════════════════════════════════
+   PREFERÊNCIAS (Configurações)
+═══════════════════════════════════════════ */
+const SETTING_DEFAULTS = { auto90:true, autofs:false };
+const _settings = Object.assign({}, SETTING_DEFAULTS);
+(function loadSettings(){
+  try{
+    Object.keys(SETTING_DEFAULTS).forEach(k=>{
+      const v = localStorage.getItem('splay_set_'+k);
+      if(v!==null) _settings[k] = v==='1';
+    });
+  }catch(e){}
+})();
+function renderSettingsSwitches(){
+  Object.keys(SETTING_DEFAULTS).forEach(k=>{
+    const sw = document.getElementById('sw-'+k), row = document.getElementById('row-'+k);
+    if(sw) sw.classList.toggle('on', !!_settings[k]);
+    if(row) row.setAttribute('aria-checked', _settings[k] ? 'true' : 'false');
+  });
+}
+function toggleSetting(k){
+  _settings[k] = !_settings[k];
+  try{ localStorage.setItem('splay_set_'+k, _settings[k]?'1':'0'); }catch(e){}
+  renderSettingsSwitches();
+}
+
+/* Layout compacto de celular: vertical estreito OU horizontal com pouca altura */
+function isPhoneLayout(){
+  return window.innerWidth<=559 || (window.innerWidth>window.innerHeight && window.innerHeight<=520);
 }
 
 /* ═══════════════════════════════════════════
@@ -1350,21 +1452,70 @@ mq.addEventListener('change', ()=>{ if(currentTheme==='auto') applyTheme('auto')
 /* ═══════════════════════════════════════════
    LOCAL STORAGE
 ═══════════════════════════════════════════ */
-function buildStorageKey(){
+/* Chave do curso no localStorage.
+   Antes era recalculada a cada chamada a partir das 5 primeiras aulas NA ORDEM
+   ATUAL — reordenar módulos mudava a chave e o progresso "sumia". Agora a chave é
+   calculada UMA vez ao abrir o curso (ordem original) e congelada em _courseKey.
+   A fórmula é idêntica à antiga, então o progresso já salvo continua válido. */
+let _courseKey = null;
+function legacyStorageKey(){
   if(!lessons.length) return LS_KEY+'_default';
   const sig = lessons.slice(0,5).map(l=>l.name).join('|');
   try{ return LS_KEY+'_'+btoa(unescape(encodeURIComponent(sig))).slice(0,20); }
   catch(e){ return LS_KEY+'_default'; }
 }
+function buildStorageKey(){ return _courseKey || legacyStorageKey(); }
+function freezeCourseKey(){ _courseKey = legacyStorageKey(); }
+
+/* Identificador único de cada aula para salvar progresso.
+   Aulas com nome único usam só o nome (compatível com dados antigos).
+   Nomes repetidos (ex.: "Aula 01" em vários módulos) ganham o caminho do arquivo
+   (ou a ordem de ocorrência), senão o progresso de uma marcava todas. */
+function assignLessonKeys(){
+  const count = new Map();
+  lessons.forEach(l=>count.set(l.name,(count.get(l.name)||0)+1));
+  const seen = new Map();
+  lessons.forEach(l=>{
+    if(count.get(l.name)===1){ l.key = l.name; return; }
+    const n = (seen.get(l.name)||0)+1; seen.set(l.name,n);
+    const p = l.file && l.file._path;
+    l.key = l.name+' ⟨'+(p||('#'+n))+'⟩';
+  });
+  refreshDupNames();
+}
+/* Nomes de aula que aparecem mais de uma vez (para mostrar o módulo ao lado) */
+let _dupNames = new Set();
+function refreshDupNames(){
+  const c = new Map();
+  lessons.forEach(l=>c.set(l.name,(c.get(l.name)||0)+1));
+  _dupNames = new Set([...c].filter(([,n])=>n>1).map(([k])=>k));
+}
+function lessonKeyOf(l){ return l ? (l.key||l.name) : ''; }
+function currentLessonKey(){ return currentIdx>=0 ? lessonKeyOf(lessons[currentIdx]) : ''; }
+
+/* Notas, capítulos e histórico apontam para a aula pela CHAVE (nome, ou nome + caminho
+   quando há nomes repetidos). Itens antigos só têm o nome: caem no 1º nome igual. */
+function lessonIdxOfItem(item){
+  if(item.lessonKey){
+    const i = lessons.findIndex(l=>lessonKeyOf(l)===item.lessonKey);
+    if(i>=0) return i;
+  }
+  return lessons.findIndex(l=>l.name===item.lessonName);
+}
+function itemBelongsToCurrent(item){ return currentIdx>=0 && lessonIdxOfItem(item)===currentIdx; }
+/* Texto da etiqueta: nome da aula (+ módulo, só quando o nome se repete) */
+function lessonTagText(item){
+  return (item.module && _dupNames.has(item.lessonName)) ? item.lessonName+' · '+item.module : item.lessonName;
+}
 function saveToStorage(){
   try{
     const positions = {};
-    lessons.forEach(l=>{ const t=lessonTimes[l.idx]; if(t&&t>2) positions[l.name]=t; });
+    lessons.forEach(l=>{ const t=lessonTimes[l.idx]; if(t&&t>2) positions[l.key||l.name]=t; });
     const data = {
-      done:[...done].map(i=>lessons[i]?lessons[i].name:null).filter(Boolean),
-      favorites:[...favorites].map(i=>lessons[i]?.name).filter(Boolean),
+      done:[...done].map(i=>lessons[i]?(lessons[i].key||lessons[i].name):null).filter(Boolean),
+      favorites:[...favorites].map(i=>lessons[i]?(lessons[i].key||lessons[i].name):null).filter(Boolean),
       positions, speedIdx,
-      currentName: currentIdx>=0&&lessons[currentIdx] ? lessons[currentIdx].name : null,
+      currentName: currentIdx>=0&&lessons[currentIdx] ? (lessons[currentIdx].key||lessons[currentIdx].name) : null,
       savedAt: Date.now(), studyStats, notes, chapters,
       studyHistory
     };
@@ -1377,7 +1528,10 @@ function loadFromStorage(){
 }
 function applyStoredProgress(data){
   if(!data) return;
-  const nameToIdx = new Map(lessons.map(l=>[l.name, l.idx]));
+  const nameToIdx = new Map(lessons.map(l=>[l.key||l.name, l.idx]));
+  /* Dados antigos guardam só o nome: mapeia também o nome puro para a 1ª aula com
+     esse nome (cobre nomes que passaram a ter repetição ao acrescentar módulos). */
+  lessons.forEach(l=>{ if(!nameToIdx.has(l.name)) nameToIdx.set(l.name, l.idx); });
   done = new Set();
   (data.done||[]).forEach(name=>{ const i=nameToIdx.get(name); if(i!==undefined) done.add(i); });
   favorites = new Set();
@@ -1520,8 +1674,9 @@ function endDrag(){
       const insertAt = position==='before' ? newTgt : newTgt+1;
       moduleDragArr.splice(insertAt, 0, moved);
 
-      // Reconstrói índices de aulas e re-renderiza
-      rebuildLessonsFromModules();
+      // Reconstrói índices de aulas (mantendo concluídas/favoritas/posições nas MESMAS
+      // aulas) e re-renderiza. Antes só renumerava e o progresso ficava nos números antigos.
+      rebuildLessonsKeepingState();
       buildSortedLessons();
       renderModularPlaylist();
       updatePlaylistActive();
@@ -1598,6 +1753,9 @@ function exitFrameMode(){
   document.getElementById('frame-next-btn').classList.remove('active-ctrl-green');
 }
 
+video.addEventListener('loadedmetadata', ()=>{
+  if(_playT0){ Diag.mark('aula pronta para tocar (do toque ao vídeo)', performance.now()-_playT0); _playT0 = 0; }
+});
 video.addEventListener('play', ()=>{
   exitFrameMode();
   playIcon.innerHTML=`<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>`;
@@ -1620,20 +1778,19 @@ function buildReviewItems(){
   reviewItems = [];
   chapters.forEach(c=>{
     reviewItems.push({
-      id: c.id, type:'chapter', label:c.label, lessonName:c.lessonName,
+      id: c.id, type:'chapter', label:c.label, lessonName:c.lessonName, lessonKey:c.lessonKey, module:c.module,
       ts:c.ts, tsLabel:fmtTime(c.ts), createdAt:c.createdAt||0
     });
   });
   notes.forEach(n=>{
     reviewItems.push({
       id: n.id, type:'note', label:n.text.slice(0,60)+(n.text.length>60?'…':''),
-      lessonName:n.lessonName, ts:n.ts, tsLabel:n.tsLabel, createdAt:n.createdAt||0
+      lessonName:n.lessonName, lessonKey:n.lessonKey, module:n.module, ts:n.ts, tsLabel:n.tsLabel, createdAt:n.createdAt||0
     });
   });
+  reviewItems.forEach(it=>{ it.lessonIdx = lessonIdxOfItem(it); });   /* uma busca por item, não por comparação */
   reviewItems.sort((a,b)=>{
-    const ai = lessons.findIndex(l=>l.name===a.lessonName);
-    const bi = lessons.findIndex(l=>l.name===b.lessonName);
-    if(ai!==bi) return ai-bi;
+    if(a.lessonIdx!==b.lessonIdx) return a.lessonIdx-b.lessonIdx;
     return a.ts-b.ts;
   });
 }
@@ -1685,7 +1842,7 @@ function renderReviewBody(){
       <span class="review-item-ts">${escH(item.tsLabel)}</span>
       <div class="review-item-info">
         <div class="review-item-label">${escH(item.label)}</div>
-        <div class="review-item-lesson">${escH(item.lessonName)}</div>
+        <div class="review-item-lesson">${escH(lessonTagText(item))}</div>
       </div>
       <span class="review-item-type ${item.type}">${item.type==='chapter'?'capítulo':'nota'}</span>
     </div>
@@ -1709,7 +1866,7 @@ function jumpToReviewItem(idx){
   if(idx<0||idx>=list.length) return;
   reviewCurrentIdx = idx;
   const item = list[idx];
-  const tIdx = lessons.findIndex(l=>l.name===item.lessonName);
+  const tIdx = lessonIdxOfItem(item);
 
   const goToTime = () => {
     video.currentTime = item.ts;
@@ -1756,11 +1913,12 @@ function closeHistorySession(){
   if(watched < 2) return;
   const lesson = lessons[historySessionLesson];
   if(!lesson) return;
-  const date = new Date(historySessionStart).toISOString().slice(0,10);
+  const date = localDate(new Date(historySessionStart));
   const time = new Date(historySessionStart).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   studyHistory.push({
     id: uid(),
     lessonName: lesson.name,
+    lessonKey: lessonKeyOf(lesson),
     lessonIdx: historySessionLesson,
     date, time,
     startedAt: historySessionStart,
@@ -1812,8 +1970,8 @@ function renderHistoryPane(){
 }
 
 function formatDateLabel(dateStr){
-  const today = new Date().toISOString().slice(0,10);
-  const yesterday = new Date(Date.now()-86400000).toISOString().slice(0,10);
+  const today = localDate();
+  const yesterday = localDate(new Date(Date.now()-86400000));
   if(dateStr===today) return 'Hoje';
   if(dateStr===yesterday) return 'Ontem';
   const d = new Date(dateStr+'T12:00:00');
@@ -1822,7 +1980,7 @@ function formatDateLabel(dateStr){
 
 function jumpToHistoryEntry(id){
   const h = studyHistory.find(x=>x.id===id); if(!h) return;
-  const lIdx = lessons.findIndex(l=>l.name===h.lessonName);
+  const lIdx = lessonIdxOfItem(h);
   if(lIdx>=0){ playLesson(lIdx); document.getElementById('stats-modal').classList.remove('active'); }
 }
 
@@ -1834,7 +1992,7 @@ function startStatsTimer(){
   statsTimer = setInterval(()=>{
     if(!video.paused && !video.ended){
       studyStats.totalWatchedSec = (studyStats.totalWatchedSec||0)+1;
-      const today = new Date().toISOString().slice(0,10);
+      const today = localDate();
       studyStats.dailySec = studyStats.dailySec||{};
       studyStats.dailySec[today] = (studyStats.dailySec[today]||0)+1;
       studyStats.lastStudyDate = today;
@@ -1851,15 +2009,15 @@ function openStats(){
 
 function renderStatsModal(activeTab){
   const total    = studyStats.totalWatchedSec||0;
-  const today    = new Date().toISOString().slice(0,10);
+  const today    = localDate();
   const todaySec = (studyStats.dailySec||{})[today]||0;
   const pct      = lessons.length ? Math.round(done.size/lessons.length*100) : 0;
   let streak = 0;
   const daily = studyStats.dailySec||{};
   let d = new Date(); d.setHours(0,0,0,0);
-  while(true){ const k=d.toISOString().slice(0,10); if(daily[k]&&daily[k]>0){streak++;d.setDate(d.getDate()-1);}else break; if(streak>365)break; }
+  while(true){ const k=localDate(d); if(daily[k]&&daily[k]>0){streak++;d.setDate(d.getDate()-1);}else break; if(streak>365)break; }
   const days7=[]; const now=new Date(); now.setHours(0,0,0,0);
-  for(let i=6;i>=0;i--){ const dd=new Date(now); dd.setDate(dd.getDate()-i); const k=dd.toISOString().slice(0,10); days7.push({label:dd.toLocaleDateString('pt-BR',{weekday:'short'}),sec:daily[k]||0}); }
+  for(let i=6;i>=0;i--){ const dd=new Date(now); dd.setDate(dd.getDate()-i); const k=dlocalDate(d); days7.push({label:dd.toLocaleDateString('pt-BR',{weekday:'short'}),sec:daily[k]||0}); }
   const maxSec = Math.max(...days7.map(d=>d.sec),1);
 
   const statsHTML = `
@@ -1920,9 +2078,17 @@ let _audioOnly=false;
 
 /* Playlist nativa (ExoPlayer gerencia a fila sem precisar do WebView):
    _nativePlaylistMode    = true quando setPlaylist foi usado para carregar aulas
-   _nativePlaylistStartIdx= índice em lessons[] correspondente ao item 0 da fila do ExoPlayer */
+   _nativeQueue           = arquivos da fila do ExoPlayer (mesma ordem da fila nativa) */
 let _nativePlaylistMode    = false;
-let _nativePlaylistStartIdx = 0;
+let _nativeQueue = [];   /* arquivos da fila do ExoPlayer, na ordem em que foi criada */
+/* A fila nativa é guardada como lista de ARQUIVOS (não como deslocamento): se os
+   módulos forem reordenados com o app tocando, o índice da fila continua apontando
+   para a aula certa. */
+function queueIndexOfLesson(idx){ return lessons[idx] ? _nativeQueue.indexOf(lessons[idx].file) : -1; }
+function lessonIdxFromQueue(qi){
+  const f = _nativeQueue[qi];
+  return f ? lessons.findIndex(l=>l.file===f) : -1;
+}
 /**
  * Retorna true se o player nativo pode usar setPlaylist para todas as aulas
  * a partir de idx. Requer:
@@ -1947,6 +2113,7 @@ function toggleAudioOnly(){
     plug.hide().catch(()=>{});
     releaseWakeLock();
     toast('🎧 Modo áudio — vídeo oculto, tela pode ser desligada');
+    askBatteryExemptionOnce(plug);
   } else {
     plug.show().catch(()=>{});
     if(!video.paused) requestWakeLock();
@@ -1954,6 +2121,21 @@ function toggleAudioOnly(){
     toast('▶ Vídeo retomado');
   }
   document.getElementById('audio-only-btn')?.classList.toggle('active-ctrl',_audioOnly);
+}
+/* Pedido de isenção de bateria: só na primeira vez que o modo áudio é usado, com
+   explicação (antes o diálogo do sistema surgia sozinho ao abrir o app). */
+function askBatteryExemptionOnce(plug){
+  try{
+    if(localStorage.getItem('splay_bat_asked')) return;
+    if(typeof plug.requestBatteryExemption!=='function') return;
+    localStorage.setItem('splay_bat_asked','1');
+  }catch(e){ return; }
+  setTimeout(()=>{
+    showModal('Tocar com a tela desligada',
+      'Alguns celulares (Xiaomi, Samsung) interrompem o áudio quando a tela apaga para economizar bateria. Para evitar isso, permita que o StudyPlay ignore a economia de bateria. Você pode mudar isso depois nas configurações do Android.',
+      [{label:'Permitir', cls:'primary', action:()=>{ closeModal(); plug.requestBatteryExemption().catch(()=>{}); }},
+       {label:'Agora não', cls:'secondary', action:closeModal}]);
+  }, 600);
 }
 function syncRectNative(plug){
   /* Usa o doSyncRect interno se disponível (mais preciso, respeita fullscreen) */
@@ -2078,13 +2260,14 @@ function checkABLoop(){
    CAPÍTULOS
 ═══════════════════════════════════════════ */
 function currentLessonName(){ return currentIdx>=0&&lessons[currentIdx]?lessons[currentIdx].name:''; }
+function currentModuleName(){ return currentIdx>=0&&lessons[currentIdx]?(lessons[currentIdx].module||''):''; }
 function addChapterAtCurrent(){
   if(!video.src||!video.duration) return;
   const ts   = video.currentTime;
-  const name = `Capítulo ${chapters.filter(c=>c.lessonName===currentLessonName()).length+1}`;
+  const name = `Capítulo ${chapters.filter(itemBelongsToCurrent).length+1}`;
   const label = window.prompt('Nome do capítulo:', name);
   if(label===null) return;
-  chapters.push({id:uid(), lessonName:currentLessonName(), ts, label:label||name, createdAt:Date.now()});
+  chapters.push({id:uid(), lessonName:currentLessonName(), lessonKey:currentLessonKey(), module:currentModuleName(), ts, label:label||name, createdAt:Date.now()});
   chapters.sort((a,b)=>a.ts-b.ts);
   renderChapterMarkers();
   saveToStorage();
@@ -2098,8 +2281,7 @@ function renderChapterMarkers(){
   const container = document.getElementById('chapter-markers');
   container.innerHTML = '';
   if(!video.duration) return;
-  const cur = currentLessonName();
-  chapters.filter(c=>c.lessonName===cur).forEach(c=>{
+  chapters.filter(itemBelongsToCurrent).forEach(c=>{
     const pct = c.ts/video.duration*100;
     const m   = document.createElement('div');
     m.className = 'chapter-marker';
@@ -2114,8 +2296,7 @@ function seekbarHover(e){
   const rect = document.getElementById('seekbar').getBoundingClientRect();
   const pct  = (e.clientX-rect.left)/rect.width;
   const t    = Math.max(0,Math.min(1,pct))*video.duration;
-  const cur  = currentLessonName();
-  const nearby = chapters.filter(c=>c.lessonName===cur&&Math.abs(c.ts-t)<video.duration*0.03);
+  const nearby = chapters.filter(c=>itemBelongsToCurrent(c)&&Math.abs(c.ts-t)<video.duration*0.03);
   const tip  = document.getElementById('chapter-tooltip');
   if(nearby.length){
     tip.textContent = nearby[0].label+' · '+fmtTime(nearby[0].ts);
@@ -2132,7 +2313,7 @@ function seekbarLeave(){ document.getElementById('chapter-tooltip').style.displa
 ═══════════════════════════════════════════ */
 function toggleNotesPanel(){
   /* Em mobile (painel de notas oculto via CSS), abre o modal de notas em vez disso */
-  if(window.innerWidth <= 559){ openMobileNotes(); return; }
+  if(isPhoneLayout()){ openMobileNotes(); return; }
   notesPanelVisible = !notesPanelVisible;
   const panel = document.getElementById('notes-panel');
   panel.classList.toggle('hidden', !notesPanelVisible);
@@ -2190,7 +2371,7 @@ video.addEventListener('timeupdate',()=>{
   checkABLoop();
 
   /* Auto-completar: marca aula como concluída ao atingir 90% */
-  if(currentIdx>=0 && !done.has(currentIdx) && video.duration>10 && !isNaN(video.duration)){
+  if(_settings.auto90 && currentIdx>=0 && !done.has(currentIdx) && video.duration>10 && !isNaN(video.duration)){
     if(video.currentTime/video.duration>=0.9){
       done.add(currentIdx);
       updateDoneCount(); updatePlaylistActive();
@@ -2211,7 +2392,7 @@ function addNote(isMob){
   if(!text){ toast('Escreva algo antes de adicionar'); return; }
   const ts         = isMob?noteMobileTimestamp:noteTimestamp;
   const lessonName = currentIdx>=0&&lessons[currentIdx]?lessons[currentIdx].name:'—';
-  notes.push({id:uid(), lessonName, ts, tsLabel:fmtTime(ts), text, createdAt:Date.now()});
+  notes.push({id:uid(), lessonName, lessonKey:currentLessonKey(), module:currentModuleName(), ts, tsLabel:fmtTime(ts), text, createdAt:Date.now()});
   ta.value = '';
   renderNotes(); if(isMob) renderNotesMobile();
   saveToStorage(); toast('Nota adicionada ✓');
@@ -2225,7 +2406,7 @@ function renderNoteHTML(n){
     <div class="note-ts">
       <span style="cursor:pointer;" onclick="jumpToNote('${n.id}')">▶ ${escH(n.tsLabel)}</span>
       <div style="display:flex;align-items:center;gap:4px;">
-        <span class="note-lesson-tag" title="${escH(n.lessonName)}">${escH(n.lessonName)}</span>
+        <span class="note-lesson-tag" title="${escH(lessonTagText(n))}">${escH(lessonTagText(n))}</span>
         <button class="note-del" onclick="deleteNote('${n.id}')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
     </div>
@@ -2246,7 +2427,7 @@ function renderNotesMobile(){
 }
 function jumpToNote(id){
   const n = notes.find(x=>x.id===id); if(!n) return;
-  const tIdx = lessons.findIndex(l=>l.name===n.lessonName);
+  const tIdx = lessonIdxOfItem(n);
   if(tIdx>=0 && tIdx!==currentIdx){
     playLesson(tIdx);
     video.addEventListener('loadedmetadata', function once(){ video.removeEventListener('loadedmetadata',once); video.currentTime=n.ts; },{once:true});
@@ -2255,13 +2436,31 @@ function jumpToNote(id){
 function exportNotes(){
   if(!notes.length){ toast('Nenhuma nota para exportar'); return; }
   const byLesson = {};
-  [...notes].sort((a,b)=>a.ts-b.ts).forEach(n=>{ if(!byLesson[n.lessonName]) byLesson[n.lessonName]=[]; byLesson[n.lessonName].push(n); });
+  /* agrupa pela aula (chave), mostrando o módulo no título quando o nome se repete */
+  [...notes].sort((a,b)=>a.ts-b.ts).forEach(n=>{ const g = lessonTagText(n)+'\u0000'+(n.lessonKey||''); if(!byLesson[g]) byLesson[g]=[]; byLesson[g].push(n); });
   let md = `# Notas de Estudo\nExportado em ${new Date().toLocaleString('pt-BR')}\n\n`;
-  Object.entries(byLesson).forEach(([lesson,ns])=>{ md+=`## ${lesson}\n\n`; ns.forEach(n=>{md+=`**[${n.tsLabel}]** ${n.text}\n\n`;}); });
-  const blob = new Blob([md],{type:'text/markdown'});
+  Object.entries(byLesson).forEach(([g,ns])=>{ const lesson = g.split('\u0000')[0]; md+=`## ${lesson}\n\n`; ns.forEach(n=>{md+=`**[${n.tsLabel}]** ${n.text}\n\n`;}); });
+  saveTextFile('notas_videoaulas_'+localDate()+'.md','text/markdown',md)
+    .then(ok=>{ if(ok) toast('Notas exportadas ✓'); });
+}
+
+/* ═══════════════════════════════════════════
+   SALVAR ARQUIVO (APK: seletor nativo / web: download)
+═══════════════════════════════════════════ */
+async function saveTextFile(filename, mime, text){
+  if(Platform.isCapacitor){
+    const vf = window.Capacitor?.Plugins?.VideoFolder;
+    if(vf && typeof vf.saveTextFile==='function'){
+      try{ await vf.saveTextFile({filename, mime, content:text}); return true; }
+      catch(e){ if(String(e&&e.message||e).includes('cancelled')) return false; /* cai no fallback */ }
+    }
+  }
+  const blob = new Blob([text],{type:mime});
   const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a'); a.href=url; a.download='notas_videoaulas_'+new Date().toISOString().slice(0,10)+'.md'; a.click(); URL.revokeObjectURL(url);
-  toast('Notas exportadas ✓');
+  const a    = document.createElement('a'); a.href=url; a.download=filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 4000);
+  return true;
 }
 
 /* ═══════════════════════════════════════════
@@ -2273,10 +2472,9 @@ function exportProgress(){
   saveToStorage(); const data=loadFromStorage();
   if(!data){ toast('Nenhum progresso para exportar'); return; }
   data.lessonNames = lessons.map(l=>l.name); data.exportedAt = new Date().toISOString();
-  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  const url  = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url;
-  a.download = 'videoaulas_progresso_'+new Date().toISOString().slice(0,10)+'.json'; a.click(); URL.revokeObjectURL(url);
-  closeProgressModal(); toast('Progresso exportado ✓');
+  closeProgressModal();
+  saveTextFile('videoaulas_progresso_'+localDate()+'.json','application/json',JSON.stringify(data,null,2))
+    .then(ok=>{ if(ok) toast('Progresso exportado ✓'); });
 }
 function triggerImport(){ closeProgressModal(); document.getElementById('import-input').click(); }
 function importProgress(event){
@@ -2407,7 +2605,7 @@ function _wrapFile(f, displayName){
      URL.createObjectURL falharia com "Overload resolution failed" de novo.
      Solução: sempre subir até o File original antes de guardar em _webFile. */
   const realFile = f._webFile || f;
-  return {_webFile: realFile, name: realFile.name || '', size: realFile.size || 0, type: realFile.type || '', _displayName: displayName};
+  return {_webFile: realFile, name: realFile.name || '', size: realFile.size || 0, type: realFile.type || '', _displayName: displayName, _path: realFile._path};
 }
 
 function normalizeModules(mods){
@@ -2464,7 +2662,7 @@ async function openFolder(){
   }
   loadNewCourse();
 }
-async function loadNewCourse(){ closeModal(); _nativePlaylistMode=false; await pickAndLoadFolder(false); }
+async function loadNewCourse(){ closeModal(); _nativePlaylistMode=false; _courseKey=null; await pickAndLoadFolder(false); }
 async function addModules()   { closeModal(); _nativePlaylistMode=false; await pickAndLoadFolder(true);  }
 
 async function pickAndLoadFolder(merge){
@@ -2476,10 +2674,14 @@ async function pickAndLoadFolder(merge){
       /* Mostra loading ANTES de chamar o plugin: após o usuário confirmar a pasta,
          o plugin varre os arquivos em background — o loading é visível nesse período */
       showLoading('Lendo pasta…');
+      Diag.reset();
       const result = await VideoFolder.pickFolder();
       if(!result || !result.files){ hideLoading(); return; }
+      if(result.scanMs!=null) Diag.mark('varredura da pasta (nativo, '+result.files.length+' arquivos)', result.scanMs);
       showLoading(`Processando ${result.files.length} arquivo(s)…`);
+      const tProc = performance.now();
       await processNativeFiles(result.files, result.rootName, merge);
+      Diag.mark('montar o curso (app)', performance.now()-tProc);
       // Salva URI + cache para restauração instantânea na próxima sessão
       if(!merge) saveNativeSessionCache(result.treeUri, result.rootName);
       hideLoading();
@@ -2506,35 +2708,48 @@ async function pickAndLoadFolder(merge){
    para restauração instantânea sem re-escanear a pasta.
    Chamada após processNativeFiles() em carga nova (merge=false).
 ───────────────────────────────────────────────────────────── */
+function _serFile(f){
+  return {_uri:f._uri||'',_native:true,name:f.name||'',size:f.size||0,
+          _displayName:f._displayName||null,_path:f._path||null};
+}
 function saveNativeSessionCache(treeUri, rootName){
   try{
-    const entry={treeUri, rootName, savedAt:Date.now(), isModular};
+    const entry={treeUri, rootName, savedAt:Date.now(), isModular, courseKey:_courseKey||null};
+    const nativeOnly = f=>f && f._uri;
     if(isModular){
       function serMod(m){
         return {
           name:m.name,
-          lessons:(m.lessons||[]).map(f=>({
-            _uri:f._uri||'',_native:true,
-            name:f.name||'',size:f.size||0,
-            _displayName:f._displayName||null
-          })),
+          lessons:(m.lessons||[]).filter(nativeOnly).map(_serFile),
+          extras:(m.extras||[]).filter(e=>nativeOnly(e.file)).map(e=>({name:e.name,file:_serFile(e.file)})),
           subModules:(m.subModules||[]).map(serMod)
         };
       }
       entry.modulesCache=modules.map(serMod);
     } else {
-      entry.lessonsCache=lessons.map(l=>({
+      entry.lessonsCache=lessons.filter(l=>nativeOnly(l.file)).map(l=>({
         name:l.name,
         _uri:l.file._uri||'',
         fname:l.file.name||'',
-        size:l.file.size||0
+        size:l.file.size||0,
+        path:l.file._path||null
       }));
+      entry.extrasCache=extraFiles.filter(e=>nativeOnly(e.file)).map(e=>({name:e.name,file:_serFile(e.file)}));
     }
     localStorage.setItem('splay_native_session', JSON.stringify(entry));
   }catch(e){
     /* quota exceeded — salva ao menos treeUri para o fallback lento */
-    try{ localStorage.setItem('splay_native_session', JSON.stringify({treeUri,rootName,savedAt:Date.now()})); }catch(e2){}
+    try{ localStorage.setItem('splay_native_session', JSON.stringify({treeUri,rootName,savedAt:Date.now(),courseKey:_courseKey||null})); }catch(e2){}
   }
+}
+/* Atualiza o cache da sessão atual (ex.: depois de "Acrescentar módulos"),
+   mantendo a pasta raiz original. */
+function refreshNativeSessionCache(){
+  if(!Platform.isCapacitor) return;
+  try{
+    const sess=JSON.parse(localStorage.getItem('splay_native_session')||'null');
+    if(sess && sess.treeUri) saveNativeSessionCache(sess.treeUri, sess.rootName||'');
+  }catch(e){}
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -2544,46 +2759,73 @@ function saveNativeSessionCache(treeUri, rootName){
    para o caminho lento via listPersistedFolder).
 ───────────────────────────────────────────────────────────── */
 function quickRestore(sess){
+  const _tq = performance.now();
+  Diag.reset();
+  /* Cache salvo pela versão 2.0 (sem chave do curso nem caminhos de arquivo):
+     refaz UMA varredura da pasta para gravar o cache novo. Evita identificadores
+     diferentes para aulas com nome repetido. */
+  const legacy = !sess.courseKey;
+  if(legacy && _cacheHasDuplicateNames(sess)) return false;   /* só nesse caso precisa dos caminhos */
   const hasFlat   =!sess.isModular&&sess.lessonsCache&&sess.lessonsCache.length>0;
   const hasMod    = sess.isModular&&sess.modulesCache&&sess.modulesCache.length>0;
   if(!hasFlat&&!hasMod) return false;
 
   lessons=[]; modules=[]; done=new Set();
   isModular=!!sess.isModular;
+  _courseKey = sess.courseKey || null;
   document.body.classList.toggle('is-modular', isModular);
 
+  const deserFile = f=>({_uri:f._uri,_native:true,name:f.name,size:f.size||0,
+                         _displayName:f._displayName||null,_path:f._path||null});
   if(isModular){
     function deserMod(raw){
       return {
         name:raw.name,
-        lessons:(raw.lessons||[]).map(f=>({
-          _uri:f._uri,_native:true,
-          name:f.name,size:f.size||0,
-          _displayName:f._displayName||null
-        })),
-        extras:[],
+        lessons:(raw.lessons||[]).map(deserFile),
+        extras:(raw.extras||[]).map(e=>({name:e.name,file:deserFile(e.file)})),
         subModules:(raw.subModules||[]).map(deserMod)
       };
     }
     modules=sess.modulesCache.map(deserMod);
     rebuildLessonsFromModules();
+    if(!_courseKey) freezeCourseKey();
     applyModuleOrder(loadModuleOrder());
     rebuildLessonsFromModules();
   } else {
     lessons=sess.lessonsCache.map((l,i)=>({
-      file:{_uri:l._uri,_native:true,name:l.fname||'',size:l.size||0},
+      file:{_uri:l._uri,_native:true,name:l.fname||'',size:l.size||0,_path:l.path||null},
       url:l._uri,
       name:l.name,
       idx:i
     }));
+    extraFiles=(sess.extrasCache||[]).map(e=>{
+      const f=deserFile(e.file);
+      return {name:e.name,file:f,type:fileType(e.name),url:_fileUrl(f)};
+    });
+    assignLessonKeys();
+    if(!_courseKey) freezeCourseKey();
   }
 
   buildSortedLessons();
   const stored=loadFromStorage();
   if(stored) applyStoredProgress(stored);
+  /* Começa a tocar ANTES de montar a lista (a fila nativa sai primeiro) */
+  const _p = playLesson(getResumeIdx(stored));
   if(isModular) renderModularPlaylist(); else renderPlaylist(sortedLessons);
-  playLesson(getResumeIdx(stored));
+  _p.then(()=>{ updatePlaylistActive(); scrollToActive(); }).catch(()=>{});
+  if(legacy) saveNativeSessionCache(sess.treeUri, sess.rootName||'');   /* atualiza o cache para o formato novo */
+  Diag.mark('reabrir pelo cache (app)', performance.now()-_tq);
   return true;
+}
+/* Cache da versão 2.0 não guarda o caminho dos arquivos: com nomes repetidos entre
+   módulos as aulas não se distinguem, então nesse caso refaz a varredura uma vez. */
+function _cacheHasDuplicateNames(sess){
+  const names = [];
+  const base = f => f._displayName || (f.name||'').replace(/\.[^.]+$/,'');
+  const walk = m => { (m.lessons||[]).forEach(f=>names.push(base(f))); (m.subModules||[]).forEach(walk); };
+  if(sess.isModular) (sess.modulesCache||[]).forEach(walk);
+  else (sess.lessonsCache||[]).forEach(l=>names.push(l.name));
+  return new Set(names).size !== names.length;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -2619,7 +2861,7 @@ async function processNativeFiles(nativeFiles, rootName, merge){
         node=node.children[d];
       }
       const fname=parts[parts.length-1];
-      const nobj={name:fname, _uri:f.uri, _native:true, size:f.size||0};
+      const nobj={name:fname, _uri:f.uri, _native:true, size:f.size||0, _path:f.relativePath};
       const isVid=isVideo(fname)||(f.mimeType&&f.mimeType.startsWith('video/'));
       const isCnt=!isVid&&(isContent(fname)||f.mimeType==='application/pdf'||f.mimeType==='text/html');
       if(isVid)      { node.videos.push(nobj); count++; }
@@ -2659,6 +2901,7 @@ async function processNativeFiles(nativeFiles, rootName, merge){
     });
     if(!newMod){ toast('Nenhum vídeo encontrado na pasta selecionada'); return; }
 
+    if(!_courseKey) freezeCourseKey();
     const normalized=normalizeModules([newMod]);
 
     if(!isModular){
@@ -2689,6 +2932,7 @@ async function processNativeFiles(nativeFiles, rootName, merge){
       _nativePlaylistMode = false;
       playLesson(currentIdx);
     }
+    refreshNativeSessionCache();
     const newItems=normalized.reduce((s,m)=>s+countFilesInRawModule(m),0);
     toast(`"${newMod.name}" adicionado — ${newItems} item(s)`);
     return;
@@ -2714,12 +2958,16 @@ async function processNativeFiles(nativeFiles, rootName, merge){
   modules=normalizedModules; lessons=[]; done=new Set();
   isModular=true; document.body.classList.add('is-modular');
   rebuildLessonsFromModules();
+  freezeCourseKey();
   applyModuleOrder(loadModuleOrder());
   rebuildLessonsFromModules();
   buildSortedLessons();
   const stored=loadFromStorage(); if(stored) applyStoredProgress(stored);
+  /* Começa a tocar ANTES de montar a lista: a fila nativa sai primeiro e o vídeo
+     inicia enquanto as ~850 linhas da playlist ainda estão sendo desenhadas. */
+  const _p = playLesson(getResumeIdx(stored));
   renderModularPlaylist();
-  playLesson(getResumeIdx(stored));
+  _p.then(()=>{ updatePlaylistActive(); scrollToActive(); }).catch(()=>{});
   const totalItems=normalizedModules.reduce((s,m)=>s+countFilesInRawModule(m),0);
   toast(`${totalItems} item(s) em ${normalizedModules.length} módulo(s)`);
 }
@@ -2744,6 +2992,7 @@ async function processDirectory(dir, merge){
     try{
       const f = await entryGetFile(entry);
       if(!f) continue;
+      try{ f._path = f.name; }catch(_){}
       if(isVideo(f.name))        { topVideos.push(f); rootCount++; }
       else if(isContent(f.name)) { topExtras.push({file:f, name:f.name}); rootCount++; }
     }catch(e){}
@@ -2783,6 +3032,7 @@ async function processDirectory(dir, merge){
         extras:     modExtras,
         subModules: subMods
       };
+      if(!_courseKey) freezeCourseKey();
       const normalized = normalizeModules([newMod]);
       if(!isModular){
         if(lessons.length>0){
@@ -2823,6 +3073,7 @@ async function processDirectory(dir, merge){
       isModular = true;
       document.body.classList.add('is-modular');
       rebuildLessonsFromModules();
+      freezeCourseKey();
       applyModuleOrder(loadModuleOrder());
       rebuildLessonsFromModules();
       const stored = loadFromStorage();
@@ -2849,7 +3100,8 @@ function countLessonsDeep(mod){
   return mod.lessons.length + (mod.subModules||[]).reduce((s,m)=>s+countLessonsDeep(m),0);
 }
 
-async function readModuleDir(dirHandle, depth, onFile){
+async function readModuleDir(dirHandle, depth, onFile, prefix=''){
+  const here = (prefix ? prefix+'/' : '') + (dirHandle.name||'');
   const modLessons=[], modExtras=[], subModules=[];
   let entries = [];
   try{ entries = await readAllEntries(dirHandle); }catch(e){ return null; }
@@ -2864,6 +3116,7 @@ async function readModuleDir(dirHandle, depth, onFile){
     try{
       const f = await entryGetFile(entry);
       if(!f) continue;
+      try{ f._path = here+'/'+f.name; }catch(_){}      /* identifica a aula mesmo com nomes repetidos */
       if(isVideo(f.name))        { modLessons.push(f); onFile&&onFile(f); }
       else if(isContent(f.name)) modExtras.push({file:f, name:f.name});
     }catch(e){}
@@ -2871,7 +3124,7 @@ async function readModuleDir(dirHandle, depth, onFile){
   for(const entry of dirEntries){
     if(depth < MAX_DEPTH-1){
       try{
-        const sub = await readModuleDir(entry, depth+1, onFile);
+        const sub = await readModuleDir(entry, depth+1, onFile, here);
         if(sub) subModules.push(sub);
       }catch(e){}
     }
@@ -2905,6 +3158,9 @@ async function readDirFlat(dirHandle, outFiles, outExtras, depth, onFile){
 
 function _fileUrl(f){ return f._uri ? f._uri : URL.createObjectURL(f._webFile || f); }
 
+/* Mapa objeto-de-arquivo → aula. Casar aulas pelo NOME do arquivo misturava
+   aulas de módulos diferentes que têm o mesmo nome (ex.: "Aula 01.mp4"). */
+let _lessonByFile = new Map();
 function rebuildLessonsFromModules(){
   lessons = []; let idx=0;
   function add(mod){
@@ -2912,16 +3168,47 @@ function rebuildLessonsFromModules(){
       // _displayName: nome da pasta "Conteúdo X" (atribuído por normalizeModules)
       // Fallback: nome do arquivo sem extensão (comportamento original)
       const name = f._displayName || f.name.replace(/\.[^.]+$/,'');
-      lessons.push({file:f, url:_fileUrl(f), name:name, idx:idx++});
+      lessons.push({file:f, url:_fileUrl(f), name:name, idx:idx++, module:mod.name});
     }
     (mod.subModules||[]).forEach(add);
   }
   modules.forEach(add);
+  assignLessonKeys();
+  _lessonByFile = new Map(lessons.map(l=>[l.file,l]));
+}
+
+/* Reconstrói a lista de aulas (após reordenar módulos) e move o estado que está
+   guardado por NÚMERO de aula (concluídas, favoritas, posições, durações, aula atual)
+   para os novos números, usando o objeto do arquivo como identidade. */
+function rebuildLessonsKeepingState(){
+  const old = lessons.slice();
+  const fileOf = i => (old[i] ? old[i].file : null);
+  const doneF = new Set([...done].map(fileOf).filter(Boolean));
+  const favF  = new Set([...favorites].map(fileOf).filter(Boolean));
+  const timeF = new Map(), durF = new Map();
+  old.forEach(l=>{
+    if(lessonTimes[l.idx]!=null)     timeF.set(l.file, lessonTimes[l.idx]);
+    if(lessonDurations[l.idx]!=null) durF.set(l.file, lessonDurations[l.idx]);
+  });
+  const curF = currentIdx>=0 ? fileOf(currentIdx) : null;
+
+  rebuildLessonsFromModules();
+
+  Object.keys(lessonTimes).forEach(k=>delete lessonTimes[k]);
+  Object.keys(lessonDurations).forEach(k=>delete lessonDurations[k]);
+  done = new Set(); favorites = new Set();
+  lessons.forEach(l=>{
+    if(doneF.has(l.file)) done.add(l.idx);
+    if(favF.has(l.file))  favorites.add(l.idx);
+    if(timeF.has(l.file)) lessonTimes[l.idx] = timeF.get(l.file);
+    if(durF.has(l.file))  lessonDurations[l.idx] = durF.get(l.file);
+    if(curF && l.file===curF) currentIdx = l.idx;
+  });
 }
 
 function getResumeIdx(stored){
   if(!stored||!stored.currentName) return 0;
-  const i = lessons.findIndex(l=>l.name===stored.currentName);
+  const i = lessons.findIndex(l=>(l.key||l.name)===stored.currentName);
   return i>=0?i:0;
 }
 
@@ -2942,15 +3229,24 @@ function loadFiles(files, merge, extras=[]){
     lessons   = vids.map((f,i)=>({file:f, url:_fileUrl(f), name:f.name.replace(/\.[^.]+$/,''), idx:i}));
     extraFiles= extras.map(e=>({...e, type:fileType(e.name), url:_fileUrl(e.file)}));
     isModular=false; modules=[]; document.body.classList.remove('is-modular');
-    const stored=loadFromStorage(); if(stored) applyStoredProgress(stored);
+    assignLessonKeys();
+    freezeCourseKey();
+    const stored0=loadFromStorage(); if(stored0) applyStoredProgress(stored0);
   } else {
     const off = lessons.length;
     lessons    = [...lessons,...vids.map((f,i)=>({file:f, url:_fileUrl(f), name:f.name.replace(/\.[^.]+$/,''), idx:off+i}))];
     extraFiles = [...extraFiles,...extras.map(e=>({...e, type:fileType(e.name), url:_fileUrl(e.file)}))];
+    assignLessonKeys();
   }
   buildSortedLessons();
-  renderPlaylist(sortedLessons);
-  if(!merge||currentIdx<0){ const stored=loadFromStorage(); playLesson(getResumeIdx(stored)); }
+  if(!merge||currentIdx<0){
+    const stored=loadFromStorage();
+    const _p = playLesson(getResumeIdx(stored));       /* toca antes de desenhar a lista */
+    renderPlaylist(sortedLessons);
+    _p.then(()=>{ updatePlaylistActive(); scrollToActive(); }).catch(()=>{});
+  } else {
+    renderPlaylist(sortedLessons);
+  }
   toast(`${vids.length} vídeo(s) carregado(s)`);
 }
 
@@ -2958,6 +3254,7 @@ function loadFiles(files, merge, extras=[]){
    RENDERIZAR PLAYLIST
 ═══════════════════════════════════════════ */
 function renderPlaylist(list){
+  ensureDurationCache();
   totalCount.textContent = lessons.length; updateDoneCount();
   if(!list.length && !extraFiles.length){ playlistEl.innerHTML='<div style="padding:32px 16px;font-size:12px;color:var(--text3);text-align:center;">Nenhum vídeo encontrado</div>'; return; }
   playlistEl.innerHTML = '';
@@ -2969,6 +3266,7 @@ function renderPlaylist(list){
     const lbl=document.createElement('div'); lbl.className='section-label'; lbl.textContent=`${list.length} ${list.length===1?'aula':'aulas'}`; playlistEl.appendChild(lbl);
   }
   renderBatch(list, 0, playlistEl);
+  _scheduleWarmup(5000);
 }
 
 function renderBatch(list, start, container, indent=0){
@@ -2978,6 +3276,8 @@ function renderBatch(list, start, container, indent=0){
 }
 
 function renderModularPlaylist(){
+  ensureDurationCache();
+  _scheduleWarmup(5000);                 /* lê o restante das durações depois que a aula já está tocando */
   totalCount.textContent = lessons.length; updateDoneCount();
   playlistEl.innerHTML   = '';
   renderFavoritesModule(playlistEl);
@@ -2987,7 +3287,6 @@ function renderModularPlaylist(){
     const idxs   = collectModuleLessonIdxs(mod);
     if(!(key in collapsedModules)) collapsedModules[key] = !idxs.includes(currentIdx);
     const modDone= idxs.filter(i=>done.has(i)).length;
-    const totalItems = idxs.length + ((mod.extras||[]).length);
 
     // Wrap div para drag (apenas módulos de nível 0)
     const wrap = document.createElement('div');
@@ -3010,7 +3309,7 @@ function renderModularPlaylist(){
       header.appendChild(handle);
     }
 
-    const arrow = document.createElement('svg');
+    const arrow = document.createElementNS('http://www.w3.org/2000/svg','svg');
     arrow.setAttribute('viewBox','0 0 24 24');
     arrow.classList.add('module-arrow');
     arrow.innerHTML = `<polyline points="6 9 12 15 18 9"/>`;
@@ -3022,16 +3321,10 @@ function renderModularPlaylist(){
     header.appendChild(title);
 
     const countBadge = document.createElement('span');
-    countBadge.className = 'module-count';
-    countBadge.textContent = `${totalItems} item${totalItems!==1?'s':''}`;
+    countBadge.className = 'module-count'+(idxs.length>0 && modDone===idxs.length ? ' complete' : '');
+    countBadge.textContent = `${modDone}/${idxs.length}`;
+    countBadge.title = `${modDone} de ${idxs.length} aulas concluídas`+((mod.extras||[]).length?` · ${(mod.extras||[]).length} arquivo(s)`:'');
     header.appendChild(countBadge);
-
-    if(modDone > 0){
-      const doneBadge = document.createElement('span');
-      doneBadge.className = 'module-done-badge';
-      doneBadge.textContent = `${modDone}✓`;
-      header.appendChild(doneBadge);
-    }
 
     const body = document.createElement('div');
     body.className = 'module-body'+(collapsedModules[key]?' collapsed':'');
@@ -3059,9 +3352,8 @@ function renderModularPlaylist(){
       renderExtraItems(body, eu, (depth+1)*12);
     }
 
-    const byFile = new Map(lessons.map(l=>[l.file.name, l]));
     for(const f of mod.lessons){
-      const l=byFile.get(f.name); if(l) body.appendChild(buildLessonItem(l, (depth+1)*12));
+      const l=_lessonByFile.get(f); if(l) body.appendChild(buildLessonItem(l, (depth+1)*12));
     }
 
     (mod.subModules||[]).forEach(sub=>renderMod(sub, body, depth+1, mod.subModules));
@@ -3072,13 +3364,14 @@ function renderModularPlaylist(){
     if(depth === 0) attachModuleDrag(wrap, mod, parentModArray);
   }
 
+  const _tr = performance.now();
   modules.forEach(mod=>renderMod(mod, playlistEl, 0, modules));
   updateCollapseAllBtn();
+  Diag.mark('desenhar a lista ('+lessons.length+' aulas)', performance.now()-_tr);
 }
 
 function collectModuleLessonIdxs(mod){
-  const byFile = new Map(lessons.map(l=>[l.file.name, l]));
-  const idxs   = mod.lessons.map(f=>byFile.get(f.name)).filter(Boolean).map(l=>l.idx);
+  const idxs   = mod.lessons.map(f=>_lessonByFile.get(f)).filter(Boolean).map(l=>l.idx);
   (mod.subModules||[]).forEach(sub=>idxs.push(...collectModuleLessonIdxs(sub)));
   return idxs;
 }
@@ -3107,7 +3400,7 @@ function renderFavoritesModule(container){
   starEl.innerHTML=`<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:var(--amber);fill:var(--amber);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
   header.appendChild(starEl);
 
-  const arrow=document.createElement('svg');
+  const arrow=document.createElementNS('http://www.w3.org/2000/svg','svg');
   arrow.setAttribute('viewBox','0 0 24 24'); arrow.classList.add('module-arrow');
   arrow.innerHTML=`<polyline points="6 9 12 15 18 9"/>`;
   header.appendChild(arrow);
@@ -3134,6 +3427,15 @@ function toggleModule(key, header, body){
   header.classList.toggle('collapsed', collapsedModules[key]);
   body.classList.toggle('collapsed', collapsedModules[key]);
   updateCollapseAllBtn();
+}
+
+/* Alça de arrastar módulos só aparece no "modo organizar" (evita toques acidentais) */
+function toggleOrganizeMode(){
+  const on = document.body.classList.toggle('organize-mode');
+  const lbl = document.getElementById('organize-label');
+  if(lbl) lbl.textContent = on ? 'Concluir' : 'Organizar';
+  document.getElementById('btn-organize')?.classList.toggle('on', on);
+  if(on) toast('Arraste pela alça ≡ para reordenar os módulos');
 }
 
 function toggleCollapseAll(){
@@ -3167,6 +3469,125 @@ function updateCollapseAllBtn(){
   label.textContent = anyExpanded ? 'Recolher' : 'Expandir';
 }
 
+/* ── Duração das aulas ────────────────────────────────────────────────
+   1) Cache salvo no aparelho (por curso): na 2ª abertura todas as durações já
+      aparecem na hora, sem ler nenhum arquivo.
+   2) As aulas visíveis (e as próximas) são lidas primeiro, 4 por vez.
+   3) Com a lista parada e o app em primeiro plano, o restante é lido aos poucos
+      em segundo plano (1 por vez), para a rolagem nunca mostrar "…". */
+let _durKey = null, _durSaveTimer = null;
+function _durStoreKey(){ return 'splay_dur_'+(_courseKey||'default'); }
+function loadDurationCache(){
+  try{
+    const raw = localStorage.getItem(_durStoreKey());
+    if(!raw) return 0;
+    const map = JSON.parse(raw); let n=0;
+    lessons.forEach(l=>{ const d = map[l.key||l.name]; if(d>0){ lessonDurations[l.idx]=d; n++; } });
+    return n;
+  }catch(e){ return 0; }
+}
+function ensureDurationCache(){
+  const k = _durStoreKey();
+  if(_durKey === k) return;
+  if(_durKey !== null) Object.keys(lessonDurations).forEach(i=>delete lessonDurations[i]);   /* outro curso */
+  _durKey = k;
+  loadDurationCache();
+}
+function saveDurationCacheSoon(){
+  clearTimeout(_durSaveTimer);
+  _durSaveTimer = setTimeout(()=>{
+    try{
+      const map = {};
+      lessons.forEach(l=>{ const d = lessonDurations[l.idx]; if(d>0) map[l.key||l.name] = Math.round(d*10)/10; });
+      localStorage.setItem(_durStoreKey(), JSON.stringify(map));
+    }catch(e){}
+  }, 2500);
+}
+function applyDuration(l, dur){
+  if(!(dur>0 && isFinite(dur))) return;
+  lessonDurations[l.idx] = dur;
+  const m = document.getElementById('meta-'+l.idx);
+  if(m) m.textContent = fmtTime(dur);
+  const pbar = document.getElementById('prog-'+l.idx);
+  const savedT = lessonTimes[l.idx];
+  if(pbar && savedT) pbar.style.width = Math.min(100,savedT/dur*100)+'%';
+  saveDurationCacheSoon();
+}
+
+let _metaObs = null;
+let _metaActive = 0;
+const _metaQueue = [];            /* leituras prioritárias (aulas visíveis) */
+const META_CONCURRENCY = 4;
+function _metaObserver(){
+  if(_metaObs) return _metaObs;
+  _metaObs = new IntersectionObserver(entries=>{
+    entries.forEach(en=>{
+      if(!en.isIntersecting) return;
+      _metaObs.unobserve(en.target);
+      const job = en.target._lazy; en.target._lazy = null;
+      if(job && !(lessonDurations[job.l.idx]>0)) _metaQueue.push(job);
+    });
+    _drainMetaQueue();
+  }, {root:null, rootMargin:'700px'});
+  return _metaObs;
+}
+function _drainMetaQueue(){
+  while(_metaActive < META_CONCURRENCY && _metaQueue.length){
+    const job = _metaQueue.shift();
+    if(lessonDurations[job.l.idx]>0) continue;           /* já lida */
+    _metaActive++;
+    _readLessonMeta(job.l, job.thumb, job.meta, ()=>{ _metaActive--; _drainMetaQueue(); _scheduleWarmup(); });
+  }
+}
+function _readLessonMeta(l, thumb, meta, done){
+  const showThumb = !!(thumb && thumb.offsetParent !== null);   /* miniatura oculta no celular */
+  const tvid = document.createElement('video');
+  tvid.preload = 'metadata'; tvid.muted = true;
+  let finished = false;
+  const finish = ()=>{
+    if(finished) return; finished = true;
+    clearTimeout(timer);
+    if(!showThumb){ tvid.removeAttribute('src'); tvid.load(); }   /* libera o arquivo */
+    done();
+  };
+  const timer = setTimeout(finish, 8000);
+  tvid.addEventListener('loadedmetadata',()=>{ applyDuration(l, tvid.duration); finish(); },{once:true});
+  tvid.addEventListener('error',()=>{ if(meta && meta.isConnected && !(lessonDurations[l.idx]>0)) meta.textContent='—'; finish(); },{once:true});
+  if(showThumb){
+    tvid.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+    tvid.id = 'thumb-vid-'+l.idx;
+    thumb.appendChild(tvid);
+  }
+  tvid.src = l.url;
+}
+
+/* Leitura em segundo plano das durações que faltam (mais próximas da aula atual primeiro) */
+let _warmupTimer = null, _warmupRunning = false;
+function _scheduleWarmup(delay){
+  if(_warmupRunning) return;
+  clearTimeout(_warmupTimer);
+  _warmupTimer = setTimeout(_warmupStep, delay==null ? 600 : delay);
+}
+function _warmupStep(){
+  if(_warmupRunning) return;
+  if(document.hidden || _metaActive>0 || _metaQueue.length){ return _scheduleWarmup(3000); }
+  const base = Math.max(0,currentIdx);
+  let best=null, bestDist=Infinity;
+  for(const l of lessons){
+    if(lessonDurations[l.idx]>0 || l._noDur) continue;
+    const d = Math.abs(l.idx-base) + (l.idx<base ? 0.5 : 0);
+    if(d<bestDist){ best=l; bestDist=d; }
+  }
+  if(!best) return;                                       /* tudo lido */
+  _warmupRunning = true; _metaActive++;
+  const el = document.getElementById('meta-'+best.idx);
+  _readLessonMeta(best, null, el, ()=>{
+    _warmupRunning = false; _metaActive--;
+    if(!(lessonDurations[best.idx]>0)) best._noDur = true;  /* não tenta de novo */
+    _scheduleWarmup(150);
+  });
+}
+
 function buildLessonItem(l, indent=0, _favMode=false){
   const item = document.createElement('div');
   item.className = 'lesson-item'+(l.idx===currentIdx?' active':'');
@@ -3183,29 +3604,15 @@ function buildLessonItem(l, indent=0, _favMode=false){
   const info   = document.createElement('div'); info.className='lesson-info';
   const nm     = document.createElement('div'); nm.className='lesson-name'; nm.textContent=l.name;
   const meta   = document.createElement('div'); meta.className='lesson-meta';
-  if(l._idb && !l.url){
-    /* placeholder IDB: mostra ícone até carregar */
-    thumb.classList.add('file-icon');
-    thumb.innerHTML=`<svg viewBox="0 0 24 24" style="stroke:var(--text3);"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>`;
-    meta.textContent='—';
-  } else {
-    const tvid = document.createElement('video');
-    tvid.src     = l.url;
-    tvid.preload = 'metadata';
-    tvid.muted   = true;
-    tvid.style.cssText = 'width:100%;height:100%;object-fit:cover;';
-    tvid.id = 'thumb-vid-'+l.idx;
-    thumb.appendChild(tvid);
-    meta.textContent='…';
-    tvid.addEventListener('loadedmetadata',()=>{
-      const dur=tvid.duration;
-      meta.textContent=fmtTime(dur);
-      lessonDurations[l.idx]=dur;
-      /* Atualiza barra de progresso assim que a duração é conhecida */
-      const pbar=document.getElementById('prog-'+l.idx);
-      const savedT=lessonTimes[l.idx];
-      if(pbar&&savedT&&dur>0) pbar.style.width=Math.min(100,savedT/dur*100)+'%';
-    },{once:true});
+  {
+    /* A duração (e a miniatura, no desktop) só é lida quando o item aparece na
+       tela. Antes cada aula criava um <video> na hora: 847 leituras simultâneas
+       de arquivo ao abrir, buscar ou reordenar. */
+    meta.textContent = lessonDurations[l.idx]>0 ? fmtTime(lessonDurations[l.idx]) : '…';
+    if(!(lessonDurations[l.idx]>0)){
+      item._lazy = {l, thumb, meta};
+      _metaObserver().observe(item);
+    }
   }
   if(!_favMode) meta.id='meta-'+l.idx;
 
@@ -3282,7 +3689,24 @@ function openExtraFile(ex){
 /* ═══════════════════════════════════════════
    XLSX VIEWER
 ═══════════════════════════════════════════ */
+/* A biblioteca de planilhas (~900 KB) só é carregada quando você abre uma planilha. */
+let _xlsxLibPromise = null;
+function loadXlsxLib(){
+  if(window.XLSX) return Promise.resolve();
+  if(_xlsxLibPromise) return _xlsxLibPromise;
+  _xlsxLibPromise = new Promise((res,rej)=>{
+    const sc=document.createElement('script');
+    sc.src='lib/xlsx.full.min.js';
+    sc.onload=()=>res();
+    sc.onerror=()=>{ _xlsxLibPromise=null; rej(new Error('biblioteca de planilhas indisponível')); };
+    document.head.appendChild(sc);
+  });
+  return _xlsxLibPromise;
+}
 function openXlsx(ex){
+  loadXlsxLib().then(()=>_openXlsx(ex)).catch(e=>toast('Erro ao abrir planilha: '+e.message));
+}
+function _openXlsx(ex){
   function processBuffer(buf){
     try{
       const wb=XLSX.read(new Uint8Array(buf),{type:'array'});
@@ -3335,44 +3759,37 @@ function renderXlsxTable(sheet){
 function closeXlsx(){ document.getElementById('xlsx-modal').classList.remove('active'); }
 
 /* ═══════════════════════════════════════════
+   FILA NATIVA EM PARTES
+═══════════════════════════════════════════ */
+const QUEUE_FIRST_CHUNK = 30;     /* aulas enviadas antes de tocar */
+const QUEUE_CHUNK       = 150;    /* aulas por bloco no restante */
+let _queueGen = 0;                /* invalida blocos pendentes quando a fila é refeita */
+async function _appendRestOfQueue(gen, all, items, from){
+  const plug = window.Capacitor?.Plugins?.VideoPlayer;
+  if(!plug || typeof plug.appendPlaylist!=='function') return;
+  for(let i=from; i<items.length; i+=QUEUE_CHUNK){
+    await new Promise(r=>setTimeout(r, i===from ? 500 : 120));   /* deixa o vídeo iniciar primeiro */
+    if(gen!==_queueGen || !_nativePlaylistMode) return;
+    try{ await plug.appendPlaylist({items: items.slice(i,i+QUEUE_CHUNK)}); }catch(e){ return; }
+    if(gen!==_queueGen || !_nativePlaylistMode) return;
+    /* só registra na fila JS depois que o nativo confirmou (senão um toque numa aula
+       ainda não carregada tentaria pular para um item que não existe) */
+    all.slice(i,i+QUEUE_CHUNK).forEach(lo=>_nativeQueue.push(lo.file));
+  }
+}
+
+/* ═══════════════════════════════════════════
    PLAYER
 ═══════════════════════════════════════════ */
 async function playLesson(idx){
   if(idx<0||idx>=lessons.length) return;
-
-  /* ── IDB lazy load: carrega blob sob demanda (APK) ── */
-  const l0=lessons[idx];
-  if(l0._idb && !l0.url){
-    showLoading('Carregando vídeo…');
-    const file=await _idbGet(l0._fname||l0.name);
-    if(!file){
-      hideLoading();
-      showModal('Vídeo não encontrado',
-        'O arquivo não está mais disponível offline. Abra os vídeos novamente.',
-        [{label:'Abrir Vídeos',cls:'primary',action:()=>{closeModal();openFolder();}},
-         {label:'Cancelar',cls:'secondary',action:closeModal}]);
-      return;
-    }
-    l0.file=file; l0.url=URL.createObjectURL(file); l0._idb=false;
-    /* Atualiza thumbnail na playlist */
-    const thumbEl=document.getElementById('lesson-'+idx)?.querySelector('.lesson-thumb');
-    if(thumbEl){
-      thumbEl.classList.remove('file-icon'); thumbEl.innerHTML='';
-      const tv=document.createElement('video'); tv.src=l0.url; tv.preload='metadata'; tv.muted=true;
-      tv.style.cssText='width:100%;height:100%;object-fit:cover;';
-      tv.id='thumb-vid-'+idx;
-      const metaEl=document.getElementById('meta-'+idx);
-      tv.addEventListener('loadedmetadata',()=>{ if(metaEl) metaEl.textContent=fmtTime(tv.duration); },{once:true});
-      thumbEl.appendChild(tv);
-    }
-    hideLoading();
-  }
 
   if(currentIdx>=0 && video.currentTime>2){ lessonTimes[currentIdx]=video.currentTime; updateResumeIndicator(currentIdx); }
   closeHistorySession();
   if(abState>0) clearAB();
   exitFrameMode();
   currentIdx=idx; const l=lessons[idx];
+  _playT0 = performance.now();
   video.style.display='block'; emptyState.style.display='none';
 
   /* ── Playlist nativa (background-safe): ExoPlayer gerencia toda a fila ──────────
@@ -3384,23 +3801,32 @@ async function playLesson(idx){
 
      seekToItem: se já estamos em modo playlist e o destino está dentro da fila atual,
      usa seekToItem() para evitar recriar a playlist e o race condition do trackChanged
-     (trackChanged dispara antes do await resolver, usando o _nativePlaylistStartIdx antigo). */
+     (trackChanged dispara antes do await resolver, usando a fila antiga). */
   const plug = Platform.isCapacitor ? window.Capacitor?.Plugins?.VideoPlayer : null;
-  if(_nativePlaylistMode && idx >= _nativePlaylistStartIdx && plug && typeof plug.seekToItem==='function'){
+  const _qi = (_nativePlaylistMode && plug && typeof plug.seekToItem==='function') ? queueIndexOfLesson(idx) : -1;
+  if(_qi >= 0){
     /* Navega dentro da playlist existente — sem recriar a fila */
-    const playlistIdx = idx - _nativePlaylistStartIdx;
-    plug.seekToItem({index: playlistIdx}).catch(()=>{});
+    plug.seekToItem({index: _qi}).catch(()=>{});
     if(_audioOnly) plug.hide().catch(()=>{}); // preserva modo áudio entre trocas
     window._nativePlayerSkipSrc && window._nativePlayerSkipSrc();
     video.src=l.url; // atualiza vs.src sem acionar loadVideo
   } else if(canNativePlaylist(idx)){
-    const items=lessons.slice(idx).map(lo=>({uri:lo.file._uri, title:lo.name, artist:'StudyPlay'}));
+    const all   = lessons.slice(idx);
+    const items = all.map(lo=>({uri:lo.file._uri, title:lo.name, artist:lo.module||'StudyPlay'}));
+    /* A fila sai em partes: as primeiras aulas já iniciam o vídeo e o resto do curso
+       entra em segundo plano. Montar ~850 itens (cada um com a imagem de capa) antes
+       de tocar era a maior espera do "abrir e seguir o curso". */
+    const split = (typeof plug.appendPlaylist==='function') ? QUEUE_FIRST_CHUNK : items.length;
+    const gen = ++_queueGen;
     try{
-      /* ⚠ Defina _nativePlaylistStartIdx ANTES do await para que o evento trackChanged
-         (disparado pelo Java durante setMediaItems, antes do resolve) use o índice correto */
+      /* ⚠ Defina _nativeQueue ANTES do await para que o evento trackChanged
+         (disparado pelo Java durante setMediaItems, antes do resolve) use a fila correta */
       _nativePlaylistMode=true;
-      _nativePlaylistStartIdx=idx;
-      await plug.setPlaylist({items});
+      _nativeQueue=all.slice(0,split).map(lo=>lo.file);
+      const tq = performance.now();
+      await plug.setPlaylist({items: items.slice(0,split)});
+      Diag.mark('fila nativa (primeiras '+Math.min(split,items.length)+' aulas)', performance.now()-tq);
+      if(split<items.length) _appendRestOfQueue(gen, all, items, split);
       if(_audioOnly) plug.hide().catch(()=>{}); // preserva modo áudio ao criar nova playlist
       /* Atualiza vs.src sem acionar loadVideo novamente (flag interna) */
       window._nativePlayerSkipSrc && window._nativePlayerSkipSrc();
@@ -3435,12 +3861,23 @@ async function playLesson(idx){
   seekFill.style.width='0%';
   timeCur.textContent='0:00'; timeDur.textContent='0:00';
 
+  /* Android 13+: a notificação de mídia precisa de permissão. Pedida aqui, na
+     primeira reprodução, e não ao abrir o app (antes aparecia sem contexto). */
+  if(Platform.isCapacitor && plug && typeof plug.requestNotificationPermission==='function'){
+    try{
+      if(!localStorage.getItem('splay_notif_asked')){
+        localStorage.setItem('splay_notif_asked','1');
+        plug.requestNotificationPermission().catch(()=>{});
+      }
+    }catch(e){}
+  }
+
   /* Metadados nativos para MediaSession/ExoPlayer → Ilha Dinâmica HyperOS */
   if(Platform.isCapacitor && typeof window._setNativeVideoMeta==='function'){
     const moduleName = isModular&&modules.length
       ? (modules.find(m=>m.lessons&&m.lessons.find(f=>f.name===l.file.name))||{name:'VideoAulas'}).name
       : 'VideoAulas';
-    window._setNativeVideoMeta(l.name, 'StudyPlay', moduleName);
+    window._setNativeVideoMeta(l.name, moduleName!=='VideoAulas' ? moduleName : 'StudyPlay', moduleName);
   }
 
   const savedTime=lessonTimes[idx];
@@ -3464,7 +3901,7 @@ async function playLesson(idx){
   updatePlaylistActive(); scrollToActive();
   startStatsTimer();
   startHistorySession(idx);
-  const today=new Date().toISOString().slice(0,10);
+  const today=localDate();
   if(studyStats.lastStudyDate!==today) studyStats.sessionsCount=(studyStats.sessionsCount||0)+1;
 }
 
@@ -3496,9 +3933,11 @@ function refreshModuleCounters(){
     const t=header.querySelector('.module-title'); if(!t) return;
     const mod=findModuleByName(modules, t.textContent); if(!mod) return;
     const idxs=collectModuleLessonIdxs(mod); const md=idxs.filter(i=>done.has(i)).length;
-    let badge=header.querySelector('.module-done-badge');
-    if(md>0){ if(!badge){ badge=document.createElement('span'); badge.className='module-done-badge'; header.appendChild(badge); } badge.textContent=md+'✓'; }
-    else if(badge) badge.remove();
+    const cnt=header.querySelector('.module-count');
+    if(cnt){
+      cnt.textContent = md+'/'+idxs.length;
+      cnt.classList.toggle('complete', idxs.length>0 && md===idxs.length);
+    }
     // Atualiza barra de progresso do módulo dinamicamente
     const progWrap = header.nextElementSibling;
     if(progWrap && progWrap.classList.contains('module-prog-wrap') && idxs.length>0){
@@ -3513,9 +3952,17 @@ function findModuleByName(mods, name){
   return null;
 }
 
+/* Rola SÓ a lista de aulas até a aula atual. scrollIntoView() também rola
+   contêineres "overflow:hidden" acima (cortando partes da tela). */
 function scrollToActive(){
   const el=document.getElementById('lesson-'+currentIdx);
-  if(el) el.scrollIntoView({behavior:'smooth', block:'nearest'});
+  const pl=playlistEl;
+  if(!el||!pl) return;
+  const r=el.getBoundingClientRect(), pr=pl.getBoundingClientRect();
+  if(r.height===0) return;                       /* módulo recolhido */
+  if(r.top<pr.top || r.bottom>pr.bottom){
+    pl.scrollTo({top: pl.scrollTop + (r.top-pr.top) - pr.height/3, behavior:'smooth'});
+  }
 }
 
 function togglePlay(){
@@ -3526,13 +3973,19 @@ function togglePlay(){
 video.addEventListener('ended', ()=>{
   /* Em modo playlist nativa o ExoPlayer avança automaticamente;
      trackChanged cuida da UI e do loop — não interferir aqui */
-  if(_nativePlaylistMode) return;
+  if(_nativePlaylistMode){
+    /* Última aula da fila terminou: marca como concluída (sem inverter) */
+    if(currentIdx>=0){ lessonTimes[currentIdx]=0; closeHistorySession(); setDone(currentIdx,true); }
+    return;
+  }
   /* Loop da aula atual — 3 estados: 0=off 1=repetir 1× 2=infinito */
   if(_loopLesson===2){ video.currentTime=0; video.play().catch(()=>{}); return; }
   if(_loopLesson===1){ _loopLesson=0; updateLoopUI(); video.currentTime=0; video.play().catch(()=>{}); return; }
   if(currentIdx>=0) lessonTimes[currentIdx]=0;
   closeHistorySession();
-  markDone();
+  /* Ao terminar, a aula SEMPRE fica concluída. markDone() alterna o estado e
+     desmarcava a aula já marcada automaticamente aos 90%. */
+  setDone(currentIdx,true);
   setTimeout(()=>nextLesson(), 800);
 });
 
@@ -3548,13 +4001,31 @@ function seekClick(e){
   video.currentTime=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*video.duration;
 }
 
-document.getElementById('seekbar').addEventListener('touchstart', handleSeekTouch, {passive:true});
-document.getElementById('seekbar').addEventListener('touchmove',  handleSeekTouch, {passive:true});
+/* Arrastar o dedo na barra enviava uma busca ao ExoPlayer a cada pixel. Agora a
+   barra e o tempo acompanham o dedo na hora, e a busca real é limitada a ~6/s
+   mais uma busca final ao soltar. */
+let _seekLast = 0, _seekPending = null;
 function handleSeekTouch(e){
   if(!video.duration) return;
   const r=document.getElementById('seekbar').getBoundingClientRect();
-  const t=e.touches[0]; video.currentTime=Math.max(0,Math.min(1,(t.clientX-r.left)/r.width))*video.duration;
+  const t=e.touches[0];
+  const pct=Math.max(0,Math.min(1,(t.clientX-r.left)/r.width));
+  _seekPending = pct*video.duration;
+  seekFill.style.width=(pct*100)+'%';
+  timeCur.textContent=fmtTime(_seekPending);
+  const now=Date.now();
+  if(now-_seekLast>160){ _seekLast=now; video.currentTime=_seekPending; _seekPending=null; }
 }
+function endSeekTouch(){
+  if(_seekPending!=null){ video.currentTime=_seekPending; _seekPending=null; }
+}
+(function(){
+  const sb=document.getElementById('seekbar');
+  sb.addEventListener('touchstart', handleSeekTouch, {passive:true});
+  sb.addEventListener('touchmove',  handleSeekTouch, {passive:true});
+  sb.addEventListener('touchend',   endSeekTouch);
+  sb.addEventListener('touchcancel',endSeekTouch);
+})();
 
 function skipTime(s){ video.currentTime=Math.max(0,video.currentTime+s); }
 function prevLesson(){ if(currentIdx>0) playLesson(currentIdx-1); }
@@ -3569,16 +4040,26 @@ function cycleSpeed(){
 
 function setVol(v){ video.volume=parseFloat(v); }
 
+/* setDone: define o estado de conclusão de forma explícita (sem alternar) */
+function setDone(idx, value, silent){
+  if(idx<0||idx>=lessons.length) return;
+  const had = done.has(idx);
+  if(value) done.add(idx); else done.delete(idx);
+  if(had===!!value) return;
+  if(!silent) toast(value ? 'Aula concluída! ✓' : 'Marcação removida');
+  updateDoneCount(); updatePlaylistActive();
+  const thumb=document.querySelector('#lesson-'+idx+' .lesson-thumb');
+  if(thumb) thumb.className='lesson-thumb'+(value?' done':'');
+  if(idx===currentIdx){
+    const ml=document.getElementById('mark-btn').querySelector('.mark-label');
+    if(ml) ml.textContent=value?'✓ Concluída':'Marcar concluída';
+  }
+  saveToStorage();
+}
+/* markDone: botão "Marcar concluída" / atalho M (alterna) */
 function markDone(){
   if(currentIdx<0) return;
-  done.has(currentIdx) ? done.delete(currentIdx) : done.add(currentIdx);
-  if(done.has(currentIdx)) toast('Aula concluída! ✓'); else toast('Marcação removida');
-  updateDoneCount(); updatePlaylistActive();
-  const thumb=document.querySelector('#lesson-'+currentIdx+' .lesson-thumb');
-  if(thumb) thumb.className='lesson-thumb'+(done.has(currentIdx)?' done':'');
-  const ml=document.getElementById('mark-btn').querySelector('.mark-label');
-  if(ml) ml.textContent=done.has(currentIdx)?'✓ Concluída':'Marcar concluída';
-  saveToStorage();
+  setDone(currentIdx, !done.has(currentIdx));
 }
 
 function updateDoneCount(){ doneCount.textContent=done.size; }
@@ -3605,6 +4086,20 @@ function updateFavBtn(){
 /* ═══════════════════════════════════════════
    BUSCA E SIDEBAR
 ═══════════════════════════════════════════ */
+(function(){
+  const inp = document.getElementById('search-input');
+  if(!inp) return;
+  let t = null;
+  inp.addEventListener('focus', ()=>{ clearTimeout(t); document.body.classList.add('search-open'); });
+  /* atraso: o toque num resultado precisa chegar antes de o layout voltar ao normal */
+  inp.addEventListener('blur',  ()=>{ t = setTimeout(()=>document.body.classList.remove('search-open'), 300); });
+})();
+
+let _filterTimer = null;
+function filterLessonsDebounced(){
+  clearTimeout(_filterTimer);
+  _filterTimer = setTimeout(filterLessons, 180);
+}
 function filterLessons(){
   const q=document.getElementById('search-input').value.toLowerCase();
   if(!lessons.length) return;
@@ -3656,6 +4151,7 @@ window.addEventListener('resize', ()=>{
 ═══════════════════════════════════════════ */
 function showModal(title, desc, actions){
   window._nativeHidePlayer?.();
+  document.getElementById('modal-desc').style.whiteSpace='';
   document.getElementById('modal-title').textContent = title;
   document.getElementById('modal-desc').textContent  = desc;
   const acts=document.getElementById('modal-actions'); acts.innerHTML='';
@@ -4217,7 +4713,7 @@ function installNativePlayer(plugin){
     if(_audioOnly) return;
     /* Mini player quando teclado de notas está aberto */
     if(document.body.classList.contains('keyboard-notes-open')){
-      const hdr = document.querySelector('header')?.offsetHeight || 54;
+      const hdr = document.querySelector('header')?.offsetHeight || 0;   /* 0 quando o cabeçalho está oculto (horizontal) */
       const w   = window.innerWidth;
       const h   = Math.min(180, Math.round(w * 0.45));
       plugin.updateRect({x:0, y:hdr, w:w, h:h}).catch(()=>{});
@@ -4323,7 +4819,7 @@ function installNativePlayer(plugin){
   def('currentTime', {
     get: ()=> vs.currentTime,
     /* frameMode=true → passa exact:true para ExoPlayer usar SeekParameters.EXACT (frame-accurate) */
-    set: (v)=>{ vs.currentTime=v; plugin.seekTo({position:v, exact: !!frameMode}).catch(()=>{}); }
+    set: (v)=>{ vs.currentTime=v; plugin.seekTo({position:v, exact: !!frameMode}).catch(()=>{}); video.dispatchEvent(new Event('timeupdate')); }
   });
   def('duration',     { get:()=> vs.duration });
   def('paused',       { get:()=> vs.paused   });
@@ -4411,7 +4907,7 @@ function installNativePlayer(plugin){
       const isLandscape = window.innerWidth > window.innerHeight;
       const inFS = document.body.classList.contains('native-fullscreen');
 
-      if(isLandscape && !inFS && vs.src){
+      if(isLandscape && !inFS && vs.src && _settings.autofs){
         /* Landscape + vídeo ativo + não está em fullscreen → entra automaticamente */
         _autoFS = true;
         plugin.enterFullscreen().catch(()=>{ _autoFS = false; });
@@ -4456,13 +4952,21 @@ function installNativePlayer(plugin){
     if(_nativePlaylistMode && typeof plugin.getCurrentIndex==='function'){
       try{
         const {index, position} = await plugin.getCurrentIndex();
-        const absIdx = _nativePlaylistStartIdx + index;
-        if(absIdx !== currentIdx && absIdx >= 0 && absIdx < lessons.length){
-          currentIdx = absIdx;
+        const absIdx = lessonIdxFromQueue(index);
+        if(absIdx >= 0 && absIdx < lessons.length){
+          if(absIdx !== currentIdx){
+            /* O índice avançou sem que o JS soubesse (não marca nada como concluído:
+               pode ter sido "próxima" pela notificação) */
+            currentIdx = absIdx;
+            startHistorySession(absIdx);
+          }
           const nl = lessons[absIdx];
           vs.src = nl.file._uri || nl.url || '';
           vs.currentTime = position || 0;
+          /* Sempre redesenha: o trackChanged recebido em segundo plano atualiza o
+             índice mas não a tela. */
           updateNowTitle(nl.name);
+          updateDoneCount();
           updatePlaylistActive();
           scrollToActive();
           saveToStorage();
@@ -4523,16 +5027,26 @@ function installNativePlayer(plugin){
      o WebView volta ao foco. Atualiza currentIdx, título e UI da playlist.           */
   plugin.addListener('trackChanged', (e)=>{
     if(!_nativePlaylistMode) return;
-    const absIdx = _nativePlaylistStartIdx + (e.index||0);
+    const absIdx = lessonIdxFromQueue(e.index||0);
     if(absIdx < 0 || absIdx >= lessons.length) return;
     /* Loop: ExoPlayer avançou para próxima faixa, mas loop está ativo → volta à atual */
     if(_loopLesson > 0 && absIdx !== currentIdx){
-      const selfPlaylistIdx = currentIdx - _nativePlaylistStartIdx;
+      const selfPlaylistIdx = queueIndexOfLesson(currentIdx);
       if(selfPlaylistIdx >= 0) plugin.seekToItem({index: selfPlaylistIdx}).catch(()=>{});
       if(_loopLesson===1){ _loopLesson=0; updateLoopUI(); }
       if(_audioOnly) plugin.hide().catch(()=>{});
       return;
     }
+    /* Avanço automático (a aula anterior terminou): registra conclusão, zera a
+       posição e fecha a sessão de histórico — mesmo com o app em segundo plano. */
+    const prevIdx = currentIdx;
+    if(e.auto && prevIdx>=0 && prevIdx!==absIdx){
+      lessonTimes[prevIdx] = 0;
+      closeHistorySession();
+      done.add(prevIdx);
+      if(document.visibilityState==='visible'){ updateDoneCount(); }
+    }
+    if(prevIdx!==absIdx) startHistorySession(absIdx);
     currentIdx = absIdx;
     const nl = lessons[absIdx];
     /* Re-aplica modo áudio se ativo (ExoPlayer pode reexibir o PlayerView ao trocar faixa) */
@@ -4553,7 +5067,7 @@ function installNativePlayer(plugin){
         const mod = isModular&&modules.length
           ? (modules.find(m=>m.lessons&&m.lessons.find(f=>f.name===nl.file.name))||{name:'VideoAulas'}).name
           : 'VideoAulas';
-        window._setNativeVideoMeta(nl.name,'StudyPlay',mod);
+        window._setNativeVideoMeta(nl.name, mod!=='VideoAulas' ? mod : 'StudyPlay', mod);
       }
     }
     saveToStorage();
@@ -4577,12 +5091,13 @@ function installNativePlayer(plugin){
      Reseta o modo playlist para que a próxima reprodução use loadVideo single. */
   plugin.addListener('playerDestroyed', ()=>{
     _nativePlaylistMode    = false;
-    _nativePlaylistStartIdx = 0;
+    _nativeQueue = [];
   });
 
   /* ── Botões Anterior / Próximo da notificação de mídia ────────────────────
      O PlaybackService dispara esses eventos via BroadcastReceiver quando o
      usuário toca nos botões da notificação na barra de status.               */
+  plugin.addListener('sleepTimerFired', ()=>{ _onSleepFired(_sleepMinutes); });
   plugin.addListener('prevTrack', ()=>{ prevLesson(); });
   plugin.addListener('nextTrack', ()=>{ nextLesson(); });
 
@@ -4701,8 +5216,17 @@ window.addEventListener('pipModeChanged', (e)=>{
         if(document.getElementById('review-overlay').classList.contains('active')){ closeReviewMode(); return; }
         if(document.getElementById('settings-modal').classList.contains('active')){ document.getElementById('settings-modal').classList.remove('active'); return; }
         if(document.getElementById('unified-more-menu').classList.contains('open')){ closeMoreMenu(); return; }
-        if(document.querySelector('.modal-overlay.active')){ closeModal(); return; }
+        /* Qualquer modal genérico aberto (Estatísticas, Progresso, Tema, Atalhos,
+           Configurações, diálogos): fecha o que estiver visível. Antes só o diálogo
+           genérico era fechado e os demais ficavam presos. */
+        const _openModal = document.querySelector('.modal-overlay.active');
+        if(_openModal){
+          _openModal.classList.remove('active');
+          window._nativeShowPlayer?.();
+          return;
+        }
         if(document.querySelector('.xlsx-modal.active')){ closeXlsx(); return; }
+        if(document.querySelector('.sidebar.mobile-open')){ closeMobileSidebar(); return; }
         if(document.querySelector('.notes-mobile-modal.active')){ document.getElementById('notes-mobile-modal').classList.remove('active'); return; }
         if(document.getElementById('drive-modal').classList.contains('active')){ closeDriveModal(); return; }
         /* 3. Nada aberto → duplo toque para sair */
@@ -4767,34 +5291,6 @@ window.addEventListener('pipModeChanged', (e)=>{
     );
   }catch(e){}
 })();
-
-/* Restaura playlist completa a partir dos blobs no IDB */
-async function _restoreFromIDB(names, session){
-  showLoading('Restaurando curso…','Carregando lista de aulas…');
-  lessons=[]; isModular=false; modules=[]; done=new Set();
-  document.body.classList.remove('is-modular');
-
-  /* Cria placeholders — URL será carregada sob demanda */
-  names.forEach((fname,i)=>{
-    lessons.push({
-      file:{name:fname}, url:null,
-      name:fname.replace(/\.[^.]+$/,''),
-      idx:i,
-      _idb:true, _fname:fname
-    });
-  });
-
-  buildSortedLessons();
-  const stored=loadFromStorage();
-  if(stored) applyStoredProgress(stored);
-  renderPlaylist(sortedLessons);
-  hideLoading();
-
-  /* Reproduz a última aula vista (carrega do IDB) */
-  const startIdx=stored?getResumeIdx(stored):0;
-  await playLesson(startIdx);
-  toast(`${names.length} aula(s) restaurada(s) ✓`);
-}
 
 /* ── MediaSession: atualiza estado play/pause ── */
 video.addEventListener('play',  ()=>{ try{ if('mediaSession' in navigator) navigator.mediaSession.playbackState='playing'; }catch(e){} });
@@ -4863,26 +5359,41 @@ function openSleepTimer(){
   ]);
 }
 
+/* No APK o timer roda no PlaybackService (serviço nativo): o setTimeout do
+   JavaScript é congelado pelo Android com a tela desligada. Na web, usa setTimeout. */
+function _nativeSleep(){
+  return Platform.isCapacitor ? window.Capacitor?.Plugins?.VideoPlayer : null;
+}
+function _onSleepFired(min){
+  if(_sleepTimer){ clearTimeout(_sleepTimer); }
+  _sleepTimer = null; _sleepMinutes = 0; _sleepEndTime = 0;
+  document.getElementById('sleep-btn')?.classList.remove('active-ctrl');
+  showModal('⏱ Timer de sono',
+    `Reprodução pausada após ${min||'alguns'} minuto(s). Boa noite! 🌙`,
+    [{label:'Continuar', cls:'primary', action:()=>{ closeModal(); video.play().catch(()=>{}); }},
+     {label:'OK', cls:'secondary', action:closeModal}]
+  );
+}
 function setSleepTimer(min){
   clearSleepTimer();
   _sleepMinutes = min;
   _sleepEndTime = Date.now() + min * 60000;
-  _sleepTimer = setTimeout(()=>{
-    video.pause();
-    _sleepTimer = null; _sleepMinutes = 0; _sleepEndTime = 0;
-    document.getElementById('sleep-btn')?.classList.remove('active-ctrl');
-    showModal('⏱ Timer de sono',
-      `Reprodução pausada após ${min} minuto(s). Boa noite! 🌙`,
-      [{label:'Continuar', cls:'primary', action:()=>{ closeModal(); video.play().catch(()=>{}); }},
-       {label:'OK', cls:'secondary', action:closeModal}]
-    );
-  }, min * 60000);
+  const np = _nativeSleep();
+  if(np && typeof np.setSleepTimer==='function'){
+    np.setSleepTimer({minutes:min}).catch(()=>{});
+    _sleepTimer = -1; /* marcador: timer ativo no lado nativo */
+  } else {
+    _sleepTimer = setTimeout(()=>{ video.pause(); _onSleepFired(min); }, min * 60000);
+  }
   document.getElementById('sleep-btn')?.classList.add('active-ctrl');
   toast(`⏱ Pausa em ${min} min`);
 }
 
 function clearSleepTimer(){
-  if(_sleepTimer){ clearTimeout(_sleepTimer); _sleepTimer = null; }
+  if(_sleepTimer && _sleepTimer!==-1){ clearTimeout(_sleepTimer); }
+  const np = _nativeSleep();
+  if(_sleepTimer===-1 && np && typeof np.setSleepTimer==='function') np.setSleepTimer({minutes:0}).catch(()=>{});
+  _sleepTimer = null;
   _sleepMinutes = 0; _sleepEndTime = 0;
   document.getElementById('sleep-btn')?.classList.remove('active-ctrl');
 }
@@ -4892,6 +5403,7 @@ function clearSleepTimer(){
 ═══════════════════════════════════════════ */
 function openSettings(){
   window._nativeHidePlayer?.();
+  renderSettingsSwitches();
   // Atualiza contagem de erros no crash log
   try{
     const saved = JSON.parse(localStorage.getItem('splay_crash_log')||'[]');
@@ -4909,27 +5421,24 @@ function clearCrashLog(){
   toast('Log de erros limpo ✓');
 }
 
-function rateApp(e){
-  e.preventDefault();
-  if(Platform.isCapacitor){
-    const pkg = 'com.jcorelabs.studyplay';
-    try{
-      window.Capacitor?.Plugins?.App?.openUrl?.({url:'market://details?id='+pkg});
-    }catch(_){
-      window.open('https://play.google.com/store/apps/details?id='+pkg,'_blank');
-    }
-  } else {
-    toast('Disponível apenas no app Android');
+async function openLink(url){
+  const vf = Platform.isCapacitor ? window.Capacitor?.Plugins?.VideoFolder : null;
+  if(vf && typeof vf.openUrl==='function'){
+    try{ await vf.openUrl({url}); return true; }catch(_){}
   }
+  window.open(url,'_blank');
+  return false;
 }
-
+async function rateApp(e){
+  e.preventDefault();
+  if(!Platform.isCapacitor){ toast('Disponível apenas no app Android'); return; }
+  const pkg = 'com.jcorelabs.studyplay';
+  const ok = await openLink('market://details?id='+pkg);
+  if(!ok) openLink('https://play.google.com/store/apps/details?id='+pkg);
+}
 function openExternalLink(e, url){
   e.preventDefault();
-  if(Platform.isCapacitor){
-    try{ window.Capacitor?.Plugins?.Browser?.open({url}); }catch(_){}
-  } else {
-    window.open(url,'_blank');
-  }
+  openLink(url);
 }
 
 /* ═══════════════════════════════════════════
@@ -4996,7 +5505,6 @@ function openExternalLink(e, url){
 window.addEventListener('beforeunload', ()=>{
   if(currentIdx>=0 && video.currentTime>2) lessonTimes[currentIdx]=video.currentTime;
   closeHistorySession();
-  if(isTranscribing) stopTranscription(true);
   saveToStorage();
   // Sync síncrono no Drive ao fechar (best-effort via sendBeacon)
   if(driveToken && lessons.length){

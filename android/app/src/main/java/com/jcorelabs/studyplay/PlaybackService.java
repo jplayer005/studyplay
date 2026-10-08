@@ -11,7 +11,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -26,6 +25,7 @@ import androidx.media3.common.MediaItem;
 import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.Player;
 import androidx.media3.exoplayer.DefaultLoadControl;
+import androidx.media3.exoplayer.DefaultRenderersFactory;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.session.MediaSession;
 import androidx.media3.session.MediaSessionService;
@@ -64,13 +64,52 @@ public class PlaybackService extends MediaSessionService {
     public static final String ACTION_NOTIF_PLAY_PAUSE = "com.jcorelabs.studyplay.NOTIF_PLAY_PAUSE";
     public static final String ACTION_NOTIF_DISMISS    = "com.jcorelabs.studyplay.NOTIF_DISMISS";
 
+    // ── Timer de sono nativo ──────────────────────────────────────────────
+    // O setTimeout do JavaScript é congelado pelo Android com a tela desligada,
+    // justamente quando o timer de sono é usado. Aqui ele roda no serviço.
+    private final Handler sleepHandler = new Handler(Looper.getMainLooper());
+    private Runnable sleepRunnable = null;
+    private long     sleepEndAt    = 0;
+
+    public static void setSleepTimer(int minutes) {
+        PlaybackService s = instance;
+        if (s != null) s.startSleep(minutes);
+    }
+
+    /** Milissegundos restantes do timer (0 = sem timer ativo). */
+    public static long getSleepRemainingMs() {
+        PlaybackService s = instance;
+        if (s == null || s.sleepRunnable == null) return 0;
+        return Math.max(0, s.sleepEndAt - System.currentTimeMillis());
+    }
+
+    private void startSleep(int minutes) {
+        cancelSleep();
+        if (minutes <= 0) return;
+        final long ms = minutes * 60_000L;
+        sleepEndAt = System.currentTimeMillis() + ms;
+        sleepRunnable = () -> {
+            sleepRunnable = null;
+            sleepEndAt = 0;
+            if (player != null) player.pause();
+            VideoPlayerPlugin vp = VideoPlayerPlugin.instance;
+            if (vp != null) vp.firePluginEvent("sleepTimerFired", new JSObject());
+        };
+        sleepHandler.postDelayed(sleepRunnable, ms);
+    }
+
+    private void cancelSleep() {
+        if (sleepRunnable != null) sleepHandler.removeCallbacks(sleepRunnable);
+        sleepRunnable = null;
+        sleepEndAt = 0;
+    }
+
     /** Acesso direto do plugin (mesmo processo, mesma thread). */
     public static volatile PlaybackService instance;
 
     private MediaSession             mediaSession;
     private ExoPlayer                player;
     private NextPrevInterceptPlayer  interceptPlayer;
-    private WifiManager.WifiLock     wifiLock;
     private BroadcastReceiver        notifActionReceiver;
 
     /**
@@ -126,7 +165,12 @@ public class PlaybackService extends MediaSessionService {
             .setBufferDurationsMs(15_000, 50_000, 2_500, 5_000)
             .build();
 
-        player = new ExoPlayer.Builder(this)
+        // Se o decodificador de hardware falhar ao iniciar (comum em alguns Xiaomi),
+        // o ExoPlayer tenta o próximo decodificador disponível (software) sozinho.
+        DefaultRenderersFactory renderers = new DefaultRenderersFactory(this)
+            .setEnableDecoderFallback(true);
+
+        player = new ExoPlayer.Builder(this, renderers)
             .setLoadControl(loadControl)
             .setAudioAttributes(
                 new AudioAttributes.Builder()
@@ -189,17 +233,6 @@ public class PlaybackService extends MediaSessionService {
         // ── 4. Receptor de ações dos botões da notificação ───────────────────
         registerNotifActionReceiver();
 
-        // ── 5. WifiLock ───────────────────────────────────────────────────────
-        try {
-            WifiManager wm = (WifiManager) getApplicationContext()
-                .getSystemService(Context.WIFI_SERVICE);
-            if (wm != null) {
-                wifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF,
-                    "studyplay:wifi");
-                wifiLock.setReferenceCounted(false);
-                wifiLock.acquire();
-            }
-        } catch (Exception ignored) {}
     }
 
     /**
@@ -312,11 +345,11 @@ public class PlaybackService extends MediaSessionService {
     @androidx.annotation.OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)
     @Override
     public void onDestroy() {
+        cancelSleep();
         if (notifActionReceiver != null) {
             try { unregisterReceiver(notifActionReceiver); } catch (Exception ignored) {}
             notifActionReceiver = null;
         }
-        if (wifiLock     != null && wifiLock.isHeld()) { wifiLock.release(); wifiLock = null; }
         if (player       != null) { player.release();       player       = null; }
         if (mediaSession != null) {
             try { removeSession(mediaSession); } catch (Exception ignored) {}
@@ -486,7 +519,7 @@ public class PlaybackService extends MediaSessionService {
         // é um controle de transporte de mídia. SEM esta categoria, o HyperOS não promove
         // a notificação para a cápsula dinâmica (Media Capsule / Dynamic Island).
         Notification.Builder builder = new Notification.Builder(this, MEDIA_CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setContentText(artist)
             .setContentIntent(openApp)

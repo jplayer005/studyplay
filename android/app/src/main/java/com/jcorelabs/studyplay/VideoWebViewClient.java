@@ -51,6 +51,7 @@ public class VideoWebViewClient extends BridgeWebViewClient {
     private WebResourceResponse serveSafContent(Context ctx,
                                                  Map<String, String> reqHeaders,
                                                  String contentUriStr) {
+        AssetFileDescriptor afd = null;
         try {
             Uri contentUri = Uri.parse(contentUriStr);
             ContentResolver cr = ctx.getContentResolver();
@@ -59,11 +60,11 @@ public class VideoWebViewClient extends BridgeWebViewClient {
             if (mimeType == null) mimeType = guessMime(contentUriStr);
             if (mimeType == null) mimeType = "application/octet-stream";
 
-            // Get file size
-            long fileSize = AssetFileDescriptor.UNKNOWN_LENGTH;
-            try (AssetFileDescriptor probe = cr.openAssetFileDescriptor(contentUri, "r")) {
-                if (probe != null) fileSize = probe.getLength();
-            }
+            // Abre o arquivo UMA vez (antes eram duas aberturas por pedido: uma só
+            // para ler o tamanho e outra para os bytes).
+            afd = cr.openAssetFileDescriptor(contentUri, "r");
+            if (afd == null) return null;
+            long fileSize = afd.getLength();
 
             Map<String, String> respHeaders = new HashMap<>();
             respHeaders.put("Access-Control-Allow-Origin", "*");
@@ -78,26 +79,35 @@ public class VideoWebViewClient extends BridgeWebViewClient {
                     && rangeHeader != null
                     && rangeHeader.startsWith("bytes=")) {
 
-                String spec = rangeHeader.substring(6); // e.g. "0-1023" or "1024-"
+                // Formatos aceitos: "a-b", "a-" e o sufixo "-n" (últimos n bytes,
+                // usado por alguns MP4/MKV ao ler o índice no fim do arquivo).
+                String spec = rangeHeader.substring(6);
                 String[] parts = spec.split("-", 2);
-                long start = parts[0].isEmpty() ? 0L : Long.parseLong(parts[0]);
-                long end;
-                if (parts.length < 2 || parts[1].isEmpty()) {
-                    end = fileSize - 1;
-                } else {
-                    end = Math.min(Long.parseLong(parts[1]), fileSize - 1);
+                long start, end;
+                try {
+                    if (parts[0].isEmpty()) {
+                        long suffix = Long.parseLong(parts[1]);
+                        start = Math.max(0L, fileSize - suffix);
+                        end   = fileSize - 1;
+                    } else {
+                        start = Long.parseLong(parts[0]);
+                        end   = (parts.length < 2 || parts[1].isEmpty())
+                                ? fileSize - 1
+                                : Math.min(Long.parseLong(parts[1]), fileSize - 1);
+                    }
+                } catch (NumberFormatException nfe) {
+                    // Range inválido ou múltiplo ("0-1,5-9"): serve o arquivo inteiro
+                    return serveFull(afd, mimeType, respHeaders, fileSize);
                 }
 
                 if (start > end || start >= fileSize) {
                     respHeaders.put("Content-Range", "bytes */" + fileSize);
+                    closeQuietly(afd);
                     return new WebResourceResponse(mimeType, null,
                             416, "Range Not Satisfiable", respHeaders, null);
                 }
 
                 long length = end - start + 1;
-                AssetFileDescriptor afd = cr.openAssetFileDescriptor(contentUri, "r");
-                if (afd == null) return null;
-
                 FileInputStream fis = afd.createInputStream();
                 skipFully(fis, start);
                 InputStream limited = new LimitedInputStream(fis, length);
@@ -111,20 +121,29 @@ public class VideoWebViewClient extends BridgeWebViewClient {
             }
 
             // ── Full file ─────────────────────────────────────────────────────
-            AssetFileDescriptor afd = cr.openAssetFileDescriptor(contentUri, "r");
-            if (afd == null) return null;
-            InputStream is = afd.createInputStream();
-
-            if (fileSize != AssetFileDescriptor.UNKNOWN_LENGTH) {
-                respHeaders.put("Content-Length", String.valueOf(fileSize));
-                respHeaders.put("Accept-Ranges", "bytes");
-            }
-            return new WebResourceResponse(mimeType, null, 200, "OK", respHeaders, is);
+            return serveFull(afd, mimeType, respHeaders, fileSize);
 
         } catch (Exception e) {
             Log.e(TAG, "Failed to proxy SAF URI: " + contentUriStr, e);
+            closeQuietly(afd);
             return null;
         }
+    }
+
+    private WebResourceResponse serveFull(AssetFileDescriptor afd, String mimeType,
+                                          Map<String, String> respHeaders, long fileSize)
+            throws IOException {
+        InputStream is = afd.createInputStream();
+        if (fileSize != AssetFileDescriptor.UNKNOWN_LENGTH) {
+            respHeaders.put("Content-Length", String.valueOf(fileSize));
+            respHeaders.put("Accept-Ranges", "bytes");
+        }
+        return new WebResourceResponse(mimeType, null, 200, "OK", respHeaders, is);
+    }
+
+    private static void closeQuietly(AssetFileDescriptor afd) {
+        if (afd == null) return;
+        try { afd.close(); } catch (IOException ignored) {}
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
