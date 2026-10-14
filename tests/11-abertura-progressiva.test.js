@@ -13,14 +13,14 @@ const MOCK = () => {
   player.addListener = (ev, fn) => { window.__listeners[ev] = fn; return Promise.resolve({ remove() {} }); };
   const folder = {
     saveTextFile: rec('saveTextFile'), openUrl: rec('openUrl'), pickFolder: rec('pickFolder'), listPersistedFolder: rec('listPersistedFolder'),
-    pickFolderOnly: () => Promise.resolve({ treeUri: 'content://curso', rootName: 'Curso Teste' }),
+    pickFolderOnly: () => Promise.resolve({ treeUri: window.__plan.treeUri || 'content://curso', rootName: window.__plan.rootName || 'Curso Teste' }),
     cancelScan: rec('cancelScan'), checkFolder: rec('checkFolder', { ok: true }), releaseFolder: rec('releaseFolder'),
     addListener: (ev, fn) => { window.__scanEv[ev] = fn; return Promise.resolve({ remove() {} }); },
     // plano de varredura definido pelo teste: { flat, rootFiles, modules:[{name, files, delay}] }
     scanFolder: (a) => {
       window.__calls.push({ name: 'scanFolder', args: a, t: performance.now() - window.__t0 });
       const plan = window.__plan; let acc = 0;
-      setTimeout(() => window.__scanEv.scanRoot({ scanId: a.scanId, rootName: 'Curso Teste', rootFiles: plan.rootFiles || [], modules: plan.modules.map(m => m.name), flat: !!plan.flat }), 5);
+      setTimeout(() => window.__scanEv.scanRoot({ scanId: a.scanId, rootName: plan.rootName || 'Curso Teste', rootFiles: plan.rootFiles || [], modules: plan.modules.map(m => m.name), flat: !!plan.flat }), 5);
       plan.modules.forEach((m, i) => {
         acc += m.delay || 0;
         setTimeout(() => { window.__calls.push({ name: 'EV_scanModule', args: { i }, t: performance.now() - window.__t0 }); window.__scanEv.scanModule({ scanId: a.scanId, index: i, name: m.name, files: m.files }); }, 10 + acc);
@@ -127,6 +127,30 @@ const mod = (nome, n, delay) => ({
   const flat = await page.evaluate(() => ({ n: lessons.length, modular: isModular, banner: document.getElementById('scan-banner').hidden }));
   check('8 aulas (5 da raiz + 3 da subpasta)', flat.n === 8, JSON.stringify(flat));
   check('aviso escondido', flat.banner);
+
+  console.log('# identidade do curso');
+  const h = await page.evaluate(() => ({ a: fnv1a36('Curso A'), b: fnv1a36('Curso B'), a2: fnv1a36('Curso A') }));
+  check('hash estavel e diferente por pasta', h.a === h.a2 && h.a !== h.b && /^[0-9a-z]+$/.test(h.a), JSON.stringify(h));
+  await page.evaluate(() => localStorage.clear());
+  const mA = [mod('Modulo 1', 6, 0)];
+  await run({ treeUri: 'content://A', rootName: 'Curso A', modules: mA }, 500);
+  const DH = await page.evaluate(() => fnv1a36('Curso D'));
+  const kA = await page.evaluate(() => _courseKey);
+  await run({ treeUri: 'content://B', rootName: 'Curso B', modules: mA }, 500);
+  const kB = await page.evaluate(() => _courseKey);
+  check('mesmos nomes de aula em pastas diferentes: chaves diferentes', kA !== kB && kA.endsWith('_' + h.a) && kB.endsWith('_' + h.b), kA + ' | ' + kB);
+  await run({ treeUri: 'content://A', rootName: 'Curso A', modules: mA }, 500);
+  check('reabrir a mesma pasta mantem a chave', await page.evaluate(() => _courseKey) === kA);
+
+  await page.evaluate(() => localStorage.clear());
+  const antigo = await page.evaluate(() => { const names = Array.from({ length: 5 }, (_, i) => 'Aula 1.0' + (i + 1)); return LS_KEY + '_' + btoa(unescape(encodeURIComponent(names.join('|')))).slice(0, 20); });
+  await page.evaluate(k => localStorage.setItem(k, JSON.stringify({ done: ['Aula 1.02'], currentName: 'Aula 1.03' })), antigo);
+  await run({ treeUri: 'content://C', rootName: 'Curso C', modules: mA }, 500);
+  const adot = await page.evaluate(() => ({ key: _courseKey, done: [...done].map(i => lessons[i].name), cur: currentIdx }));
+  check('progresso de antes desta versao e adotado', adot.key === antigo && adot.done.join() === 'Aula 1.02' && adot.cur === 2, JSON.stringify(adot));
+  await run({ treeUri: 'content://D', rootName: 'Curso D', modules: mA }, 500);
+  const outro = await page.evaluate(() => _courseKey);
+  check('outra pasta com os mesmos nomes NAO herda esse progresso', outro !== antigo && outro.endsWith('_' + (DH)), outro);
 
   console.log('# erro de varredura');
   await page.evaluate(() => { window.__plan = { modules: [] }; });

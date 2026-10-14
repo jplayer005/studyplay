@@ -1469,7 +1469,32 @@ function legacyStorageKey(){
   catch(e){ return LS_KEY+'_default'; }
 }
 function buildStorageKey(){ return _courseKey || legacyStorageKey(); }
-function freezeCourseKey(){ _courseKey = legacyStorageKey(); }
+/* Identidade de curso NOVO aberto pela varredura progressiva: {treeUri, rootName}.
+   Dois cursos que começam com "Aula 01...05" não podem dividir o mesmo progresso, então a
+   chave ganha um sufixo com o hash do nome da pasta. O progresso de antes desta versão é
+   adotado quando é seguro (nenhum outro curso usa a chave antiga). */
+let _courseIdentity = null;
+function fnv1a36(str){
+  let h = 0x811c9dc5;
+  for(let i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  return h.toString(36);
+}
+function _sessionCourse(){
+  try{ return JSON.parse(localStorage.getItem('splay_native_session')||'null'); }catch(e){ return null; }
+}
+function resolveCourseKey(oldKey, id){
+  const sess = _sessionCourse();
+  if(sess && sess.treeUri===id.treeUri && sess.courseKey) return sess.courseKey;   /* pasta já conhecida */
+  const nova = oldKey+'_'+fnv1a36(id.rootName||'');
+  const has = k=>{ try{ return localStorage.getItem(k)!==null; }catch(e){ return false; } };
+  if(has(nova)) return nova;
+  if(has(oldKey) && !(sess && sess.courseKey===oldKey)) return oldKey;             /* progresso de antes desta versão */
+  return nova;
+}
+function freezeCourseKey(){
+  const old = legacyStorageKey();
+  _courseKey = _courseIdentity ? resolveCourseKey(old, _courseIdentity) : old;
+}
 
 /* Identificador único de cada aula para salvar progresso.
    Aulas com nome único usam só o nome (compatível com dados antigos).
@@ -3044,6 +3069,7 @@ async function startProgressiveScan(VF, treeUri, rootName, t0){
   cancelProgressiveScan();
   _ensureScanListeners(VF);
   _resetForNewCourse();
+  _courseIdentity={treeUri, rootName};
   const id='scan_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
   _scan={ id, VF, treeUri, rootName, t0, active:true, finished:false, flat:false, total:0, got:0,
           flatFiles:[], keyed:false, started:false, stored:null, startP:null, rendered:0, waiters:[], dirty:false };
@@ -3056,7 +3082,7 @@ async function startProgressiveScan(VF, treeUri, rootName, t0){
 /* Interrompe a varredura (trocar de curso, novo Abrir Pasta). Eventos atrasados são ignorados. */
 function cancelProgressiveScan(){
   if(!_scanActive()) return;
-  _scan.active=false;
+  _scan.active=false; _courseIdentity=null;
   try{ _scan.VF.cancelScan({scanId:_scan.id}); }catch(e){}
   _scanWake();
   hideScanBanner();
@@ -3064,6 +3090,7 @@ function cancelProgressiveScan(){
 
 function _scanFail(msg){
   if(_scan) _scan.active=false;
+  _courseIdentity=null;
   _scanWake(); hideScanBanner(); hideLoading();
   toast('Erro ao ler a pasta: '+(msg||'desconhecido'));
 }
@@ -3168,13 +3195,14 @@ async function onScanDone(ev){
   if(sc.flat){
     /* Lista plana: junta tudo e usa o caminho de sempre */
     sc.active=false; hideScanBanner(); _scanWake();
-    await processNativeFiles(sc.flatFiles, sc.rootName, false);
+    try{ await processNativeFiles(sc.flatFiles, sc.rootName, false); }
+    finally{ _courseIdentity=null; }
     saveNativeSessionCache(sc.treeUri, sc.rootName);
     Diag.mark('varredura completa (nativo)', ev.scanMs||0);
     return;
   }
   if(!modules.length){
-    sc.active=false; hideScanBanner(); _scanWake();
+    sc.active=false; _courseIdentity=null; hideScanBanner(); _scanWake();
     toast('Nenhum vídeo encontrado na pasta selecionada'); return;
   }
   /* Cursos com menos de 5 aulas ainda não tinham chave nem partida */
@@ -3197,7 +3225,7 @@ async function onScanDone(ev){
       }
     }
   }
-  sc.active=false; hideScanBanner(); _scanWake();
+  sc.active=false; _courseIdentity=null; hideScanBanner(); _scanWake();
   saveNativeSessionCache(sc.treeUri, sc.rootName);
   saveToStorage();                       /* grava com as chaves finais (o que ficou retido durante a varredura) */
   Diag.mark('varredura completa (nativo, '+(ev.totalFiles||0)+' arquivos)', ev.scanMs||0);
