@@ -161,10 +161,9 @@ const files = (rel) => rel.map(r => ({ name: r.split('/').pop(), relativePath: r
   check('cache guarda a chave do curso', !!sess.courseKey);
   check('cache guarda o PDF (extras do modulo)', JSON.stringify(sess).includes('Material.pdf'));
   await page.reload(); await page.waitForTimeout(500);
-  const askOpen = await page.evaluate(() => document.getElementById('modal-overlay').classList.contains('active') && /Curso anterior/.test(document.getElementById('modal-title').textContent));
-  check('ao reabrir, oferece continuar o curso', askOpen);
-  await page.evaluate(() => document.querySelector('#modal-actions .modal-btn.primary').click());
-  await page.waitForTimeout(400);
+  await page.waitForTimeout(600);
+  const askOpen = await page.evaluate(() => document.getElementById('modal-overlay').classList.contains('active'));
+  check('ao reabrir, abre o ultimo curso sozinho (sem perguntar)', !askOpen);
   const rs = await page.evaluate(() => ({ n: lessons.length, order: modules.map(m => m.name), doneNames: [...done].map(i => lessons[i].key), pdf: modules.some(m => (m.extras || []).some(e => e.name === 'Material.pdf')) }));
   check('4 aulas restauradas', rs.n === 4, JSON.stringify(rs));
   check('ordem reordenada preservada (Mod B primeiro)', rs.order[0] === 'Mod B', JSON.stringify(rs.order));

@@ -67,6 +67,35 @@ function sessao(total, mods) {
     variacaoSegundos: +((sorted('syncMs').slice(-1)[0] - sorted('syncMs')[0]) / 1000).toFixed(3),
     execucoes: runs.map(r => +(r.syncMs / 1000).toFixed(3))
   };
+  // 5 cursos guardados: trocar de curso (ler do banco + gravar o atual + reabrir) e abrir o Meus cursos
+  const bib = await p.evaluate(async (s) => {
+    localStorage.clear();
+    await CourseLibrary._run(['courses', 'summaries'], 'readwrite', tx => { tx.objectStore('courses').clear(); return tx.objectStore('summaries').clear(); });
+    const ids = [];
+    for (let i = 0; i < 5; i++) {
+      resetCourseState();
+      const cp = JSON.parse(JSON.stringify(s));
+      modules = cp.modulesCache.map(m => ({ name: m.name, lessons: m.lessons.map(f => ({ ...f })), extras: [], subModules: [] }));
+      isModular = true; rebuildLessonsFromModules(); _courseIdentity = { treeUri: 'content://c' + i, rootName: 'Curso ' + i }; freezeCourseKey(); _courseIdentity = null; buildSortedLessons();
+      saveNativeSessionCache('content://c' + i, 'Curso ' + i);
+      ids.push(_courseKey);
+    }
+    await new Promise(r => setTimeout(r, 1500));
+    const trocas = [];
+    for (let i = 0; i < 6; i++) {
+      const alvo = ids[i % 4];
+      const t0 = performance.now();
+      await openCourseById(alvo);
+      trocas.push(performance.now() - t0);
+    }
+    const t1 = performance.now();
+    const lista = await CourseLibrary.listSummaries();
+    return { trocas, listaMs: performance.now() - t1, n: lista.length };
+  }, sess);
+  const tr = bib.trocas.slice(2).sort((a, c) => a - c);
+  res.trocarCursoSegundos = +(tr[Math.floor(tr.length / 2)] / 1000).toFixed(3);
+  res.listarMeusCursosSegundos = +(bib.listaMs / 1000).toFixed(3);
+  res.cursosGuardados = bib.n;
   console.log(JSON.stringify(res, null, 2));
   fs.mkdirSync(path.dirname(saida), { recursive: true });
   fs.writeFileSync(saida, JSON.stringify(res, null, 2));

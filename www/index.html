@@ -1484,11 +1484,13 @@ function _sessionCourse(){
 }
 function resolveCourseKey(oldKey, id){
   const sess = _sessionCourse();
+  const known = CourseLibrary.uriToId.get(id.treeUri);
+  if(known) return known;                                                          /* pasta já na biblioteca */
   if(sess && sess.treeUri===id.treeUri && sess.courseKey) return sess.courseKey;   /* pasta já conhecida */
   const nova = oldKey+'_'+fnv1a36(id.rootName||'');
   const has = k=>{ try{ return localStorage.getItem(k)!==null; }catch(e){ return false; } };
   if(has(nova)) return nova;
-  if(has(oldKey) && !(sess && sess.courseKey===oldKey)) return oldKey;             /* progresso de antes desta versão */
+  if(has(oldKey) && !CourseLibrary.ids.has(oldKey) && !(sess && sess.courseKey===oldKey)) return oldKey;             /* progresso de antes desta versão */
   return nova;
 }
 function freezeCourseKey(){
@@ -2683,6 +2685,15 @@ function hideLoading(){ document.getElementById('loading-overlay').classList.rem
 function updateLoadingCount(n){ document.getElementById('loading-sub').textContent=`${n} arquivo(s) encontrado(s)…`; }
 
 async function openFolder(){
+  if(lessons.length>0 && Platform.isCapacitor){
+    const nome = _courseRootName || 'curso atual';
+    showModal('Abrir pasta','Você já está estudando "'+nome+'". O que deseja fazer?',[
+      {label:'Adicionar como novo curso',           cls:'primary',   action:loadNewCourse},
+      {label:'Acrescentar módulos a "'+nome+'"',     cls:'secondary', action:addModules},
+      {label:'Cancelar',                             cls:'secondary', action:closeModal}
+    ]);
+    return;
+  }
   if(lessons.length>0){
     showModal('Já existe um curso carregado','O que você deseja fazer?',[
       {label:'Acrescentar módulos', cls:'primary',   action:addModules},
@@ -2693,7 +2704,11 @@ async function openFolder(){
   }
   loadNewCourse();
 }
-async function loadNewCourse(){ closeModal(); _nativePlaylistMode=false; _courseKey=null; await pickAndLoadFolder(false); }
+async function loadNewCourse(){
+  closeModal();
+  if(!Platform.isCapacitor){ _nativePlaylistMode=false; _courseKey=null; }   /* APK: o curso atual só sai de cena depois que a nova pasta for escolhida */
+  await pickAndLoadFolder(false);
+}
 async function addModules()   { closeModal(); _nativePlaylistMode=false; await pickAndLoadFolder(true);  }
 
 async function pickAndLoadFolder(merge){
@@ -2711,6 +2726,14 @@ async function pickAndLoadFolder(merge){
       if(!merge && typeof VideoFolder.pickFolderOnly==='function' && typeof VideoFolder.scanFolder==='function'){
         const picked = await VideoFolder.pickFolderOnly();
         if(!picked || !picked.treeUri){ hideLoading(); return; }
+        const known = CourseLibrary.uriToId.get(picked.treeUri);
+        if(known){                               /* mesma pasta: abre o curso guardado, sem duplicar */
+          hideLoading();
+          if(known===_courseKey) toast('Esse curso já está aberto');
+          else { toast('Esse curso já está em Meus cursos'); await openCourseById(known); }
+          return;
+        }
+        await persistCurrentCourse();
         await startProgressiveScan(VideoFolder, picked.treeUri, picked.rootName||'', performance.now());
         return;
       }
@@ -2758,6 +2781,8 @@ async function pickAndLoadFolder(merge){
 const CourseLibrary = {
   broken: false,
   _p: null,
+  uriToId: new Map(),     /* pasta -> id do curso (consulta síncrona) */
+  ids: new Set(),
   open(){
     if(this._p) return this._p;
     this._p = new Promise(res=>{
@@ -2799,6 +2824,7 @@ const CourseLibrary = {
   getSummary(id){ return this._run('summaries', 'readonly', tx=>tx.objectStore('summaries').get(id)); },
   async listSummaries(){
     const all = await this._run('summaries', 'readonly', tx=>tx.objectStore('summaries').getAll());
+    if(all){ this.uriToId = new Map(all.map(x=>[x.treeUri, x.id])); this.ids = new Set(all.map(x=>x.id)); }
     return (all||[]).sort((a,b)=>(b.lastOpenedAt||0)-(a.lastOpenedAt||0));
   },
   async findByTreeUri(uri){ return (await this.listSummaries()).find(x=>x.treeUri===uri) || null; },
@@ -2816,16 +2842,21 @@ const CourseLibrary = {
       tx.objectStore('courses').put(rec);
       return tx.objectStore('summaries').put(sum);
     });
+    if(ok!==null){ this.uriToId.set(entry.treeUri, id); this.ids.add(id); }
     return ok!==null;
   },
   /* Remove da lista; progresso, notas e capítulos (localStorage) ficam guardados */
-  remove(id){
-    return this._run(['courses','summaries'], 'readwrite', tx=>{
+  async remove(id){
+    const r = await this._run(['courses','summaries'], 'readwrite', tx=>{
       tx.objectStore('courses').delete(id);
       return tx.objectStore('summaries').delete(id);
     });
+    this.ids.delete(id);
+    for(const [u,i] of [...this.uriToId]) if(i===id) this.uriToId.delete(u);
+    return r;
   }
 };
+try{ if(Platform.isCapacitor) CourseLibrary.open(); }catch(e){}
 /* Resumo leve do curso aberto agora */
 function _summaryNow(){
   const cur = currentIdx>=0 ? lessons[currentIdx] : null;
@@ -2872,7 +2903,9 @@ function _buildSessionEntry(treeUri, rootName){
     }
     return entry;
 }
+let _courseTreeUri = '', _courseRootName = '';      /* pasta e nome do curso aberto agora */
 function saveNativeSessionCache(treeUri, rootName){
+  _courseTreeUri = treeUri; _courseRootName = rootName||'';
   try{
     const entry=_buildSessionEntry(treeUri, rootName);
     localStorage.setItem('splay_native_session', JSON.stringify(entry));
@@ -2891,6 +2924,7 @@ function saveNativeSessionCache(treeUri, rootName){
 function refreshNativeSessionCache(){
   if(!Platform.isCapacitor) return;
   try{
+    if(_courseTreeUri){ saveNativeSessionCache(_courseTreeUri, _courseRootName); return; }
     const sess=JSON.parse(localStorage.getItem('splay_native_session')||'null');
     if(sess && sess.treeUri) saveNativeSessionCache(sess.treeUri, sess.rootName||'');
   }catch(e){}
@@ -3125,6 +3159,81 @@ async function processNativeFiles(nativeFiles, rootName, merge){
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   VÁRIOS CURSOS — abrir, trocar e remover (APK)
+═══════════════════════════════════════════════════════════════ */
+/* Grava o progresso do curso aberto e atualiza o resumo antes de sair dele */
+async function persistCurrentCourse(){
+  if(!_courseKey || !lessons.length || _scanActive()) return;
+  if(currentIdx>=0 && video.currentTime>2) lessonTimes[currentIdx]=video.currentTime;
+  closeHistorySession();
+  saveToStorage();
+  if(Platform.isCapacitor){
+    const sum = await CourseLibrary.getSummary(_courseKey);
+    if(sum) await CourseLibrary.putSummary(Object.assign(sum, {lastOpenedAt:Date.now()}, _summaryNow()));
+  }
+}
+
+/* Depois de abrir um curso da biblioteca: ponteiro, último uso e reserva da sessão */
+function afterCourseOpened(rec){
+  _courseTreeUri = rec.treeUri; _courseRootName = rec.rootName||'';
+  try{ localStorage.setItem('splay_last_course', rec.id); }catch(e){}
+  CourseLibrary.getSummary(rec.id).then(sum=>{
+    if(sum) CourseLibrary.putSummary(Object.assign(sum, {lastOpenedAt:Date.now()}, _summaryNow()));
+  });
+  /* reserva para quando o banco falhar (adiado para não pesar na abertura) */
+  setTimeout(()=>{
+    if(_courseKey!==rec.id) return;
+    try{
+      localStorage.setItem('splay_native_session', JSON.stringify({treeUri:rec.treeUri, rootName:rec.rootName, savedAt:rec.savedAt||Date.now(),
+        isModular:rec.isModular, courseKey:rec.id, modulesCache:rec.modulesCache, lessonsCache:rec.lessonsCache, extrasCache:rec.extrasCache}));
+    }catch(e){}
+  }, 1500);
+}
+
+/* Abre um curso guardado na biblioteca (troca de curso). Devolve true se abriu. */
+async function openCourseById(id){
+  if(!Platform.isCapacitor) return false;
+  if(id===_courseKey && lessons.length) return true;
+  const rec = await CourseLibrary.getCourse(id);
+  if(!rec){ toast('Não encontrei este curso na lista.'); return false; }
+  if(_scanActive()) cancelProgressiveScan(); else await persistCurrentCourse();
+  resetCourseState();
+  const sess = Object.assign({}, rec, {courseKey:rec.id});
+  if(!quickRestore(sess)){
+    /* cache ilegível: varre a pasta de novo (a chave do curso é mantida pela pasta) */
+    const VF = window.Capacitor?.Plugins?.VideoFolder;
+    if(VF && typeof VF.scanFolder==='function'){ await startProgressiveScan(VF, rec.treeUri, rec.rootName||'', performance.now()); return true; }
+    toast('Não foi possível abrir este curso.'); return false;
+  }
+  afterCourseOpened(rec);
+  return true;
+}
+
+/* Tira da lista; progresso, notas e capítulos continuam guardados no aparelho */
+async function removeCourse(id){
+  const sum = await CourseLibrary.getSummary(id);
+  const wasOpen = (id===_courseKey);
+  await CourseLibrary.remove(id);
+  const rest = await CourseLibrary.listSummaries();
+  const VF = window.Capacitor?.Plugins?.VideoFolder;
+  if(sum && VF && typeof VF.releaseFolder==='function' && !rest.some(x=>x.treeUri===sum.treeUri)){
+    try{ VF.releaseFolder({treeUri:sum.treeUri}); }catch(e){}
+  }
+  try{
+    if(localStorage.getItem('splay_last_course')===id){
+      if(rest[0]) localStorage.setItem('splay_last_course', rest[0].id); else localStorage.removeItem('splay_last_course');
+    }
+    const ss=_sessionCourse(); if(ss && ss.courseKey===id) localStorage.removeItem('splay_native_session');
+  }catch(e){}
+  if(wasOpen){
+    if(_scanActive()) cancelProgressiveScan();
+    _courseKey = null;                                  /* não grava de volta o curso removido */
+    if(rest[0]) await openCourseById(rest[0].id); else showEmptyCourseState();
+  }
+  return true;
+}
+
+/* ═══════════════════════════════════════════════════════════════
    VARREDURA PROGRESSIVA (APK, curso novo)
    O Java manda a pasta aos poucos: scanRoot (raiz + lista de módulos), scanModule
    (um módulo por vez, SEMPRE em ordem) e scanDone. O app acrescenta cada módulo ao
@@ -3158,23 +3267,45 @@ function _ensureScanListeners(VF){
   VF.addListener('scanError',  ev=>{ if(_scanOwns(ev)) _scanFail(ev.message); });
 }
 
-/* Limpa tudo do curso anterior antes de montar o novo */
-function _resetForNewCourse(){
+/* Limpa tudo do curso anterior (memória e player) antes de abrir outro.
+   O progresso já foi gravado em localStorage pela chave do curso; nada disso é apagado de lá.
+   O timer de sono NÃO é tocado: continua valendo entre cursos. */
+const _EMPTY_PLAYLIST_HTML = playlistEl.innerHTML;
+function resetCourseState(){
+  try{ closeHistorySession(); }catch(e){}
+  try{ if(abState>0) clearAB(); exitFrameMode(); }catch(e){}
   _queueGen++; _nativePlaylistMode=false; _nativeQueue=[];
-  _courseKey=null; modules=[]; lessons=[]; sortedLessons=[]; extraFiles=[]; _lessonByFile=new Map();
+  const plug = Platform.isCapacitor ? window.Capacitor?.Plugins?.VideoPlayer : null;
+  if(plug && typeof plug.stop==='function'){ try{ plug.stop().catch(()=>{}); }catch(e){} }
+  try{ video.pause(); }catch(e){}
+  _courseKey=null; _courseTreeUri=''; _courseRootName='';
+  modules=[]; lessons=[]; sortedLessons=[]; extraFiles=[]; _lessonByFile=new Map();
   done=new Set(); favorites=new Set(); currentIdx=-1;
   Object.keys(lessonTimes).forEach(k=>delete lessonTimes[k]);
   Object.keys(lessonDurations).forEach(k=>delete lessonDurations[k]);
+  _metaQueue.length=0; _durKey=null;
+  collapsedModules={};
   notes=[]; chapters=[]; studyHistory=[];
+  studyStats={totalWatchedSec:0,sessionsCount:0,lastStudyDate:null,dailySec:{}};
   try{ renderNotes(); }catch(e){}
   isModular=true; document.body.classList.add('is-modular');
   playlistEl.innerHTML='';
+}
+/* Sem nenhum curso: volta à tela inicial */
+function showEmptyCourseState(){
+  resetCourseState();
+  isModular=false; document.body.classList.remove('is-modular');
+  playlistEl.innerHTML=_EMPTY_PLAYLIST_HTML;
+  video.style.display='none'; emptyState.style.display='';
+  totalCount.textContent='0'; doneCount.textContent='0';
+  try{ updateNowTitle(''); }catch(e){}
 }
 
 async function startProgressiveScan(VF, treeUri, rootName, t0){
   cancelProgressiveScan();
   _ensureScanListeners(VF);
-  _resetForNewCourse();
+  resetCourseState();
+  _courseTreeUri=treeUri; _courseRootName=rootName||'';
   _courseIdentity={treeUri, rootName};
   const id='scan_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
   _scan={ id, VF, treeUri, rootName, t0, active:true, finished:false, flat:false, total:0, got:0,
@@ -5624,44 +5755,47 @@ window.addEventListener('pipModeChanged', (e)=>{
     navigator.mediaSession.setActionHandler('previoustrack', prevLesson);
   }
 
-  /* ── Restauração automática via SAF (treeUri persistida) ── */
+  /* ── Reabre o último curso sozinho (biblioteca de cursos; sem perguntar) ── */
   try{
-    const sess=JSON.parse(localStorage.getItem('splay_native_session')||'null');
-    if(!sess||!sess.treeUri) return;
     const VideoFolder=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.VideoFolder;
     if(!VideoFolder) return;
-
-    const ago=Math.round((Date.now()-(sess.savedAt||0))/60000);
-    const agoTxt=ago<2?'agora mesmo':ago<60?`${ago} min atrás`:`${Math.round(ago/60)}h atrás`;
-
-    showModal(
-      `📚 Curso anterior encontrado`,
-      `Pasta "${sess.rootName||'?'}" (aberta ${agoTxt}). Deseja reabrir sem precisar selecionar novamente?`,
-      [
-        {label:'▶ Reabrir',        cls:'primary',  action:async()=>{
-          closeModal();
-          /* ── Caminho rápido: restaura do cache salvo (sem re-escanear) ── */
-          if(quickRestore(sess)) return;
-          /* ── Fallback lento: re-escaneia a pasta via Java ── */
-          showLoading('Restaurando curso…');
-          try{
-            const r=await VideoFolder.listPersistedFolder({treeUri:sess.treeUri});
-            if(r&&r.files&&r.files.length){
-              await processNativeFiles(r.files, r.rootName||sess.rootName, false);
-              saveNativeSessionCache(sess.treeUri, sess.rootName||r.rootName||'');
-            } else {
-              toast('Pasta não acessível. Abra novamente.');
-              localStorage.removeItem('splay_native_session');
-            }
-          }catch(e){
-            toast('Erro ao restaurar: '+e.message);
-            localStorage.removeItem('splay_native_session');
-          }
-          hideLoading();
-        }},
-        {label:'Abrir outra pasta', cls:'secondary', action:()=>closeModal()}
-      ]
-    );
+    (async()=>{
+      CourseLibrary.listSummaries();                       /* preenche os mapas pasta→curso */
+      const ptr = localStorage.getItem('splay_last_course');
+      /* 1) biblioteca: o último curso usado */
+      if(ptr){
+        const rec = await CourseLibrary.getCourse(ptr);
+        if(rec && quickRestore(Object.assign({}, rec, {courseKey:rec.id}))){ afterCourseOpened(rec); return; }
+      }
+      /* 2) migração / reserva: sessão antiga (splay_native_session) */
+      const sess = _sessionCourse();
+      if(!sess || !sess.treeUri) return;
+      if(quickRestore(sess)){
+        /* entra na biblioteca sem pesar na abertura */
+        setTimeout(async()=>{
+          const key = _courseKey; if(!key) return;
+          if(!(await CourseLibrary.getSummary(key)) && _courseKey===key) saveNativeSessionCache(sess.treeUri, sess.rootName||'');
+        }, 1500);
+        _courseTreeUri = sess.treeUri; _courseRootName = sess.rootName||'';
+        return;
+      }
+      /* 3) cache ilegível: re-escaneia a pasta */
+      showLoading('Restaurando curso…');
+      try{
+        const r=await VideoFolder.listPersistedFolder({treeUri:sess.treeUri});
+        if(r&&r.files&&r.files.length){
+          await processNativeFiles(r.files, r.rootName||sess.rootName, false);
+          saveNativeSessionCache(sess.treeUri, sess.rootName||r.rootName||'');
+        } else {
+          toast('Pasta não acessível. Abra novamente.');
+          localStorage.removeItem('splay_native_session');
+        }
+      }catch(e){
+        toast('Erro ao restaurar: '+e.message);
+        localStorage.removeItem('splay_native_session');
+      }
+      hideLoading();
+    })();
   }catch(e){}
 })();
 
