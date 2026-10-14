@@ -33,7 +33,7 @@ Objetivo: ter números para comparar e provar que nada ficou mais lento.
   - Imprime os tempos e grava em `tests/out/bench-base.json`.
 - Registrar os números no fim deste plano (seção *Medições*).
 
-Aceite: o script roda 5 vezes e a variação fica abaixo de 0,05 s.
+Aceite: 3 execuções de aquecimento e 7 medidas por rodada; compara-se a **mediana** (valores atípicos de uma execução isolada são normais no simulador). Comando: `cd tests && node bench-abertura.js`.
 
 ---
 
@@ -238,7 +238,7 @@ simulada mostra o aviso uma vez.
 
 | Medição (simulador, CPU 4x) | Etapa 0 | Final |
 |---|---|---|
-| Reabrir último curso (1 curso) | a medir | |
+| Reabrir último curso (1 curso) | 0,20 s (mediana de 7, duas rodadas: 0,18 e 0,21) | |
 | Reabrir último curso (5 cursos) | n/a | |
 | Pasta nova até `playLesson` | n/a | |
 | Abrir Meus cursos | n/a | |
