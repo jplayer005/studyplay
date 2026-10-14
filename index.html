@@ -1432,9 +1432,21 @@ const Diag = {
   }
 };
 let _playT0 = 0;
+function _localStorageKB(){
+  let n=0; try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); n+=(k.length+(localStorage.getItem(k)||'').length)*2; } }catch(e){}
+  return Math.round(n/1024);
+}
 function openDiag(){
-  showModal('Tempos de abertura', Diag.text(), [{label:'Fechar', cls:'secondary', action:closeModal}]);
-  document.getElementById('modal-desc').style.whiteSpace='pre-line';
+  const base = Diag.text()+'\n\nArmazenamento do app (progresso, notas): '+_localStorageKB()+' KB';
+  showModal('Tempos de abertura', base, [{label:'Fechar', cls:'secondary', action:closeModal}]);
+  const desc = document.getElementById('modal-desc');
+  desc.style.whiteSpace='pre-line';
+  if(navigator.storage && navigator.storage.estimate){
+    navigator.storage.estimate().then(es=>{
+      if(es && es.usage!=null && document.getElementById('modal-overlay').classList.contains('active'))
+        desc.textContent = base+'\nBiblioteca de cursos e arquivos: '+Math.round(es.usage/1024)+' KB'+(es.quota?' de '+Math.round(es.quota/1048576)+' MB':'');
+    }).catch(()=>{});
+  }
 }
 
 /* ═══════════════════════════════════════════
@@ -1526,6 +1538,7 @@ function _sessionCourse(){
   try{ return JSON.parse(localStorage.getItem('splay_native_session')||'null'); }catch(e){ return null; }
 }
 function resolveCourseKey(oldKey, id){
+  if(id.forceKey) return id.forceKey;                                              /* "Escolher a pasta de novo": mantém o curso */
   const sess = _sessionCourse();
   const known = CourseLibrary.uriToId.get(id.treeUri);
   if(known) return known;                                                          /* pasta já na biblioteca */
@@ -1596,7 +1609,16 @@ function saveToStorage(){
     };
     localStorage.setItem(buildStorageKey(), JSON.stringify(data));
     libraryTouchSoon();
-  }catch(e){}
+  }catch(e){ warnStorageFull(e); }
+}
+/* Sem espaço para gravar: avisa uma vez, em vez de perder o progresso em silêncio */
+let _storageWarned = false;
+function warnStorageFull(e){
+  if(_storageWarned || !e) return;
+  if(e.name==='QuotaExceededError' || e.code===22 || e.code===1014 || /quota/i.test(String(e.message||''))){
+    _storageWarned = true;
+    toast('O app está sem espaço para salvar o progresso. Libere espaço no aparelho.');
+  }
 }
 function loadFromStorage(){
   try{ const r=localStorage.getItem(buildStorageKey()); return r?JSON.parse(r):null; }
@@ -2826,12 +2848,20 @@ const CourseLibrary = {
   _p: null,
   uriToId: new Map(),     /* pasta -> id do curso (consulta síncrona) */
   ids: new Set(),
+  _warned: false,
+  _fail(){
+    this.broken = true;
+    if(!this._warned && Platform.isCapacitor){
+      this._warned = true;
+      try{ toast('Não consegui guardar a lista de cursos neste aparelho. O curso atual continua funcionando.'); }catch(e){}
+    }
+  },
   open(){
     if(this._p) return this._p;
     this._p = new Promise(res=>{
       let settled = false;
       const fin = v=>{ if(!settled){ settled = true; res(v); } };
-      const fail = ()=>{ this.broken = true; this._p = null; fin(null); };
+      const fail = ()=>{ this._fail(); this._p = null; fin(null); };
       try{
         const rq = indexedDB.open('studyplay_library', 1);
         rq.onupgradeneeded = ()=>{
@@ -2853,13 +2883,13 @@ const CourseLibrary = {
       return new Promise(res=>{
         let settled = false, out;
         const fin = v=>{ if(!settled){ settled = true; clearTimeout(timer); res(v); } };
-        const timer = setTimeout(()=>{ this.broken = true; fin(null); }, 3000);
+        const timer = setTimeout(()=>{ this._fail(); fin(null); }, 3000);
         try{
           const tx = db.transaction(stores, mode);
           out = fn(tx);
           tx.oncomplete = ()=>fin(out && 'result' in out ? out.result : true);
-          tx.onerror = tx.onabort = ()=>{ this.broken = true; fin(null); };
-        }catch(e){ this.broken = true; fin(null); }
+          tx.onerror = tx.onabort = ()=>{ this._fail(); fin(null); };
+        }catch(e){ this._fail(); fin(null); }
       });
     }).catch(()=>null);
   },
@@ -2887,7 +2917,10 @@ const CourseLibrary = {
       tx.objectStore('courses').put(rec);
       return tx.objectStore('summaries').put(sum);
     });
-    if(ok!==null){ this.uriToId.set(entry.treeUri, id); this.ids.add(id); }
+    if(ok!==null){
+      for(const [u,i] of [...this.uriToId]) if(i===id) this.uriToId.delete(u);      /* pasta antiga (escolhida de novo) */
+      this.uriToId.set(entry.treeUri, id); this.ids.add(id);
+    }
     return ok!==null;
   },
   /* Remove da lista; progresso, notas e capítulos (localStorage) ficam guardados */
@@ -3308,6 +3341,7 @@ function afterCourseOpened(rec){
   CourseLibrary.getSummary(rec.id).then(sum=>{
     if(sum) CourseLibrary.putSummary(Object.assign(sum, {lastOpenedAt:Date.now()}, _summaryNow()));
   });
+  verifyCourseFolder();                                  /* em paralelo; não atrasa a aula */
   /* reserva para quando o banco falhar (adiado para não pesar na abertura) */
   setTimeout(()=>{
     if(_courseKey!==rec.id) return;
@@ -3359,6 +3393,46 @@ async function removeCourse(id){
     if(rest[0]) await openCourseById(rest[0].id); else showEmptyCourseState();
   }
   return true;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PASTA DO CURSO NÃO ENCONTRADA (movida, apagada, cartão SD removido, permissão perdida)
+═══════════════════════════════════════════════════════════════ */
+let _missingShownFor = null;
+function showCourseMissing(){
+  const id = _courseKey; if(!id || _missingShownFor===id) return;
+  _missingShownFor = id;
+  showModal('Não encontrei os arquivos deste curso', 'A pasta pode ter sido movida ou apagada. Escolha a pasta de novo: o progresso, as notas e os capítulos são mantidos.', [
+    {label:'Escolher a pasta de novo', cls:'primary', action:()=>{ closeModal(); reselectCourseFolder(id); }},
+    {label:'Remover da lista',         cls:'danger',  action:async()=>{ closeModal(); await removeCourse(id); }},
+    {label:'Agora não',                cls:'secondary', action:closeModal}
+  ]);
+}
+/* Confere a pasta sem atrasar a abertura: roda em paralelo com a reprodução */
+function verifyCourseFolder(){
+  const VF = window.Capacitor?.Plugins?.VideoFolder;
+  const uri = _courseTreeUri, id = _courseKey;
+  if(!VF || typeof VF.checkFolder!=='function' || !uri || !id) return Promise.resolve(true);
+  return VF.checkFolder({treeUri:uri}).then(r=>{
+    const ok = !r || r.ok!==false;
+    if(!ok && _courseKey===id) showCourseMissing();
+    return ok;
+  }).catch(()=>true);
+}
+/* Varre a pasta de novo mantendo a chave (e por isso o progresso) do curso */
+async function reselectCourseFolder(id){
+  const VF = window.Capacitor?.Plugins?.VideoFolder;
+  if(!VF || typeof VF.pickFolderOnly!=='function') return;
+  try{
+    showLoading('Lendo pasta…');
+    const picked = await VF.pickFolderOnly();
+    if(!picked || !picked.treeUri){ hideLoading(); return; }
+    _missingShownFor = null;
+    await startProgressiveScan(VF, picked.treeUri, picked.rootName||'', performance.now(), id);
+  }catch(e){
+    hideLoading();
+    if(e && e.message!=='cancelled') toast('Erro ao abrir pasta: '+(e.message||e));
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -3429,12 +3503,12 @@ function showEmptyCourseState(){
   try{ updateNowTitle(''); }catch(e){}
 }
 
-async function startProgressiveScan(VF, treeUri, rootName, t0){
+async function startProgressiveScan(VF, treeUri, rootName, t0, forceKey){
   cancelProgressiveScan();
   _ensureScanListeners(VF);
   resetCourseState();
   _courseTreeUri=treeUri; _courseRootName=rootName||''; updateCourseChip();
-  _courseIdentity={treeUri, rootName};
+  _courseIdentity={treeUri, rootName, forceKey:forceKey||null};
   const id='scan_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
   _scan={ id, VF, treeUri, rootName, t0, active:true, finished:false, flat:false, total:0, got:0,
           flatFiles:[], keyed:false, started:false, stored:null, startP:null, rendered:0, waiters:[], dirty:false };
@@ -4623,7 +4697,11 @@ video.addEventListener('ended', ()=>{
 
 video.addEventListener('error', ()=>{
   if(video.src && video.src !== window.location.href){
-    toast('Erro ao carregar vídeo. Tente reabrir a pasta.');
+    if(Platform.isCapacitor && _courseTreeUri){
+      verifyCourseFolder().then(ok=>{ if(ok) toast('Erro ao carregar vídeo. Tente reabrir a pasta.'); });
+    } else {
+      toast('Erro ao carregar vídeo. Tente reabrir a pasta.');
+    }
   }
 });
 
@@ -5906,6 +5984,7 @@ window.addEventListener('pipModeChanged', (e)=>{
           if(!(await CourseLibrary.getSummary(key)) && _courseKey===key) saveNativeSessionCache(sess.treeUri, sess.rootName||'');
         }, 1500);
         _courseTreeUri = sess.treeUri; _courseRootName = sess.rootName||''; updateCourseChip();
+        verifyCourseFolder();
         return;
       }
       /* 3) cache ilegível: re-escaneia a pasta */
