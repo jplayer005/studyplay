@@ -20,7 +20,7 @@ APK output: `android/app/build/outputs/apk/debug/app-debug.apk`
 
 ## Architecture
 
-Capacitor 8 Android app. Toda a lógica e o CSS do app estão em `www/index.html` (~5200 linhas). Sem bundler, sem framework — vanilla JS + CSS inline. Fontes e biblioteca de planilhas ficam embutidas em `www/fonts/` e `www/lib/` (o app funciona sem internet; a biblioteca XLSX só é carregada ao abrir uma planilha).
+Capacitor 8 Android app. Toda a lógica e o CSS do app estão em `www/index.html` (~6000 linhas). Sem bundler, sem framework — vanilla JS + CSS inline. Fontes e biblioteca de planilhas ficam embutidas em `www/fonts/` e `www/lib/` (o app funciona sem internet; a biblioteca XLSX só é carregada ao abrir uma planilha).
 
 ### File map
 
@@ -52,7 +52,7 @@ Capacitor 8 Android app. Toda a lógica e o CSS do app estão em `www/index.html
 - Cada aula tem `l.key`: o nome, ou nome + caminho quando há nomes repetidos (`assignLessonKeys()`). Progresso, favoritos e posições usam `l.key`.
 - Aulas são ligadas aos módulos pelo **objeto do arquivo** (`_lessonByFile`), nunca pelo nome.
 - `setDone(idx, valor)` define a conclusão; `markDone()` só alterna (botão/atalho M). O fim do vídeo usa `setDone(...,true)`.
-- Sessão do APK (`splay_native_session`) guarda pasta, módulos, PDFs/planilhas e a chave do curso para reabrir sem re-escanear.
+- Cada curso do APK fica na **biblioteca** (IndexedDB `studyplay_library`, ver *Vários cursos*). `splay_native_session` continua sendo gravado para o curso aberto: é a reserva de quando o IndexedDB falha e a origem da migração.
 - Preferências: `splay_set_auto90`, `splay_set_autofs`.
 
 ### Velocidade de abertura (não regredir)
@@ -62,7 +62,8 @@ O diferencial do app é abrir e já seguir o curso. Regras que garantem isso:
 - **Tocar antes de desenhar:** ao abrir/reabrir, `playLesson()` é chamado ANTES de `renderModularPlaylist()`, para a fila nativa sair primeiro.
 - **Fila nativa em partes:** `setPlaylist` recebe só as primeiras `QUEUE_FIRST_CHUNK` (30) aulas; o resto entra por `appendPlaylist` em blocos de 150 (`_appendRestOfQueue`). Montar ~850 itens com capa antes de tocar era a maior espera. `_nativeQueue` só ganha os arquivos depois que o nativo confirma o bloco; aula fora da fila refaz a fila a partir dela.
 - **Durações:** nunca criar um `<video>` por aula na abertura. Ordem: cache salvo por curso (`splay_dur_<chave>`) → aulas visíveis (4 por vez, via `IntersectionObserver`) → leitura em segundo plano das que faltam (`_warmupStep`, 1 por vez, só com o app visível).
-- **Sessão do APK:** reabre pelo cache (`quickRestore`), sem varrer a pasta. Só refaz a varredura se o cache for da versão 2.0 E houver nomes de aula repetidos.
+- **Reabrir/trocar de curso:** lê o curso da biblioteca e usa o `quickRestore`, sem varrer a pasta. O ponteiro do último curso fica em `localStorage['splay_last_course']` e o banco é aberto logo no início do script. Só refaz a varredura se o cache for da versão 2.0 E houver nomes de aula repetidos.
+- **Pasta nova:** varredura progressiva (ver abaixo). A aula começa quando chega o 1º módulo (ou o módulo onde o curso parou), sem esperar a pasta inteira. Meta: 1 a 2 s da escolha da pasta até a aula tocar.
 - **Medir:** Configurações > Tempos de abertura (`Diag`) mostra cada etapa no aparelho (varredura nativa, montar o curso, desenhar a lista, fila nativa, aula pronta).
 
 ### Testes automáticos

@@ -1,6 +1,6 @@
 # Vários cursos pré-carregados e primeira abertura rápida
 
-Data: 2026-10-14 · Status: aguardando revisão do usuário · Branch: `claude/varios-cursos`
+Data: 2026-10-14 · Status: implementado (aguardando teste no celular) · Branch: `claude/varios-cursos`
 
 ## 1. Objetivo
 
@@ -77,7 +77,7 @@ O curso migrado (seção 3.4) mantém a chave que já tem.
 Na primeira abertura desta versão, se a biblioteca estiver vazia e existir
 `splay_native_session`, o curso é aberto como hoje (`quickRestore`, inclusive o caminho
 de sessões da 2.0) e em seguida gravado na biblioteca com a chave atual e o resumo.
-`splay_native_session` deixa de ser escrito, mas é mantido como reserva por uma versão.
+`splay_native_session` **continua sendo gravado** para o curso aberto (mesmo custo de hoje): é a reserva usada quando o IndexedDB falha.
 
 ### 3.5 Remover curso
 Apaga os registros de `courses` e `summaries`. Não apaga nada do `localStorage`.

@@ -236,9 +236,15 @@ simulada mostra o aviso uma vez.
 
 ## Medições
 
-| Medição (simulador, CPU 4x) | Etapa 0 | Final |
+Simulador (Chromium, CPU 4x mais lenta, curso de 850 aulas em 12 módulos). Medianas de 3 rodadas.
+
+| Medição | Etapa 0 (antes) | Final |
 |---|---|---|
-| Reabrir último curso (1 curso) | 0,20 s (mediana de 7, duas rodadas: 0,18 e 0,21) | |
-| Reabrir último curso (5 cursos) | n/a | |
-| Pasta nova até `playLesson` | n/a | |
-| Abrir Meus cursos | n/a | |
+| Reabrir último curso | 0,18 a 0,21 s | 0,12 a 0,14 s (dentro da tolerância; variação do simulador maior que a diferença) |
+| Trocar de curso (5 guardados) | n/a | 0,22 a 0,25 s (reabrir + ler o curso do banco + gravar o progresso do atual) |
+| Abrir Meus cursos (5 guardados) | n/a | 0,04 a 0,06 s (meta: menos de 0,1 s) |
+| Pasta nova até `playLesson` | n/a | depende só do 1º módulo (teste 11 confere que toca antes de `scanDone`); medir no celular |
+
+Observação: trocar de curso ficou cerca de 0,1 s acima de reabrir no simulador, por ler o registro do
+IndexedDB. No celular, conferir pelo painel *Tempos de abertura*. Se passar de ~0,3 s, otimizar a leitura
+(guardar só os módulos em formato mais enxuto).

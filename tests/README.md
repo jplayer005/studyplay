@@ -24,6 +24,12 @@ node run-all.js layout            # só os arquivos que têm "layout" no nome
 | `06-pasta-web` | abrir pasta no navegador, módulos, reordenar, reabrir, acrescentar módulo |
 | `07-migracao` | sessões e dados salvos por versões antigas continuam funcionando |
 | `08-notas-capitulos` | notas, capítulos, revisão e histórico ligados à aula certa com nomes repetidos |
+| `10-biblioteca` | biblioteca de cursos: guardar, listar por uso, trocar mantendo o progresso de cada um, remover e readicionar, pasta repetida, abrir no último curso, migração da sessão antiga, falha do banco |
+| `11-abertura-progressiva` | curso novo toca antes de a pasta terminar, módulos aparecendo aos poucos, retomar módulo posterior, lista plana, cancelar, identidade do curso |
+| `12-meus-cursos` | selo, painel, ordem, progresso, trocar, remover com confirmação, botão Voltar, horizontal |
+| `13-erros-curso` | pasta movida/apagada, escolher a pasta de novo mantendo o progresso, armazenamento cheio, falha do banco |
+
+Também há `bench-abertura.js` (fora do `run-all`): `node bench-abertura.js` mede, com CPU 4x mais lenta e 850 aulas, reabrir um curso, trocar entre 5 cursos e abrir a lista. Compare **medianas**.
 
 ## Quando um teste falha
 
