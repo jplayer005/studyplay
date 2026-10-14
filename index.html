@@ -1550,6 +1550,7 @@ function saveToStorage(){
       studyHistory
     };
     localStorage.setItem(buildStorageKey(), JSON.stringify(data));
+    libraryTouchSoon();
   }catch(e){}
 }
 function loadFromStorage(){
@@ -2746,12 +2747,107 @@ async function pickAndLoadFolder(merge){
    para restauração instantânea sem re-escanear a pasta.
    Chamada após processNativeFiles() em carga nova (merge=false).
 ───────────────────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   BIBLIOTECA DE CURSOS (APK) — IndexedDB `studyplay_library`
+   courses   (pesado, lido só ao abrir aquele curso): o mesmo formato do cache de sessão
+   summaries (leve, lido pela tela Meus cursos): nome, progresso, aula atual, último uso
+   Progresso, notas, capítulos e durações NÃO ficam aqui: continuam no localStorage,
+   separados por chave de curso. Ponteiro do último curso: localStorage splay_last_course.
+   Qualquer falha do banco vira `null` (broken=true) e o app segue com o curso em memória.
+═══════════════════════════════════════════════════════════════ */
+const CourseLibrary = {
+  broken: false,
+  _p: null,
+  open(){
+    if(this._p) return this._p;
+    this._p = new Promise(res=>{
+      let settled = false;
+      const fin = v=>{ if(!settled){ settled = true; res(v); } };
+      const fail = ()=>{ this.broken = true; this._p = null; fin(null); };
+      try{
+        const rq = indexedDB.open('studyplay_library', 1);
+        rq.onupgradeneeded = ()=>{
+          const d = rq.result;
+          d.createObjectStore('courses',   {keyPath:'id'});
+          d.createObjectStore('summaries', {keyPath:'id'});
+        };
+        rq.onsuccess = ()=>fin(rq.result);
+        rq.onerror = rq.onblocked = fail;
+        setTimeout(fail, 3000);
+      }catch(e){ fail(); }
+    });
+    return this._p;
+  },
+  /* Executa `fn(tx)` (que devolve um IDBRequest ou nada) e resolve com o resultado, ou null em falha */
+  _run(stores, mode, fn){
+    return this.open().then(db=>{
+      if(!db) return null;
+      return new Promise(res=>{
+        let settled = false, out;
+        const fin = v=>{ if(!settled){ settled = true; clearTimeout(timer); res(v); } };
+        const timer = setTimeout(()=>{ this.broken = true; fin(null); }, 3000);
+        try{
+          const tx = db.transaction(stores, mode);
+          out = fn(tx);
+          tx.oncomplete = ()=>fin(out && 'result' in out ? out.result : true);
+          tx.onerror = tx.onabort = ()=>{ this.broken = true; fin(null); };
+        }catch(e){ this.broken = true; fin(null); }
+      });
+    }).catch(()=>null);
+  },
+  getCourse(id){  return this._run('courses',   'readonly', tx=>tx.objectStore('courses').get(id)); },
+  getSummary(id){ return this._run('summaries', 'readonly', tx=>tx.objectStore('summaries').get(id)); },
+  async listSummaries(){
+    const all = await this._run('summaries', 'readonly', tx=>tx.objectStore('summaries').getAll());
+    return (all||[]).sort((a,b)=>(b.lastOpenedAt||0)-(a.lastOpenedAt||0));
+  },
+  async findByTreeUri(uri){ return (await this.listSummaries()).find(x=>x.treeUri===uri) || null; },
+  putSummary(sum){ return this._run('summaries', 'readwrite', tx=>tx.objectStore('summaries').put(sum)); },
+  /* Grava o curso inteiro + resumo na mesma transação */
+  async saveCourse(entry){
+    const id = entry.courseKey; if(!id) return false;
+    const old = await this.getSummary(id);
+    const rec = {id, treeUri:entry.treeUri, rootName:entry.rootName, isModular:entry.isModular,
+                 modulesCache:entry.modulesCache, lessonsCache:entry.lessonsCache, extrasCache:entry.extrasCache,
+                 savedAt:entry.savedAt};
+    const sum = Object.assign({id, name:entry.rootName||'Curso', treeUri:entry.treeUri,
+                               addedAt: old ? old.addedAt : Date.now(), lastOpenedAt: Date.now()}, _summaryNow());
+    const ok = await this._run(['courses','summaries'], 'readwrite', tx=>{
+      tx.objectStore('courses').put(rec);
+      return tx.objectStore('summaries').put(sum);
+    });
+    return ok!==null;
+  },
+  /* Remove da lista; progresso, notas e capítulos (localStorage) ficam guardados */
+  remove(id){
+    return this._run(['courses','summaries'], 'readwrite', tx=>{
+      tx.objectStore('courses').delete(id);
+      return tx.objectStore('summaries').delete(id);
+    });
+  }
+};
+/* Resumo leve do curso aberto agora */
+function _summaryNow(){
+  const cur = currentIdx>=0 ? lessons[currentIdx] : null;
+  return {total:lessons.length, done:done.size, currentName:cur?cur.name:'', currentModule:cur?(cur.module||''):''};
+}
+/* Atualiza o resumo (progresso e último uso) no máximo a cada 3 s, só o registro leve */
+let _libTouchTimer = null;
+function libraryTouchSoon(){
+  if(!Platform.isCapacitor || !_courseKey || _scanActive() || _libTouchTimer) return;
+  _libTouchTimer = setTimeout(async ()=>{
+    _libTouchTimer = null;
+    const id = _courseKey; if(!id) return;
+    const sum = await CourseLibrary.getSummary(id);
+    if(sum) CourseLibrary.putSummary(Object.assign(sum, {lastOpenedAt:Date.now()}, _summaryNow()));
+  }, 3000);
+}
+
 function _serFile(f){
   return {_uri:f._uri||'',_native:true,name:f.name||'',size:f.size||0,
           _displayName:f._displayName||null,_path:f._path||null};
 }
-function saveNativeSessionCache(treeUri, rootName){
-  try{
+function _buildSessionEntry(treeUri, rootName){
     const entry={treeUri, rootName, savedAt:Date.now(), isModular, courseKey:_courseKey||null};
     const nativeOnly = f=>f && f._uri;
     if(isModular){
@@ -2774,7 +2870,17 @@ function saveNativeSessionCache(treeUri, rootName){
       }));
       entry.extrasCache=extraFiles.filter(e=>nativeOnly(e.file)).map(e=>({name:e.name,file:_serFile(e.file)}));
     }
+    return entry;
+}
+function saveNativeSessionCache(treeUri, rootName){
+  try{
+    const entry=_buildSessionEntry(treeUri, rootName);
     localStorage.setItem('splay_native_session', JSON.stringify(entry));
+    /* Biblioteca de cursos (IndexedDB): guarda o curso inteiro e o resumo leve */
+    if(Platform.isCapacitor && entry.courseKey){
+      try{ localStorage.setItem('splay_last_course', entry.courseKey); }catch(e){}
+      CourseLibrary.saveCourse(entry);
+    }
   }catch(e){
     /* quota exceeded — salva ao menos treeUri para o fallback lento */
     try{ localStorage.setItem('splay_native_session', JSON.stringify({treeUri,rootName,savedAt:Date.now(),courseKey:_courseKey||null})); }catch(e2){}
