@@ -92,6 +92,33 @@ body.is-modular .btn-collapse-all{display:flex;}
 .scan-banner{display:flex;align-items:center;gap:8px;padding:7px 14px;font-size:12px;color:var(--text2);background:var(--bg3);border-bottom:1px solid var(--border);flex-shrink:0;}
 .scan-banner[hidden]{display:none;}
 .scan-dot{width:8px;height:8px;border-radius:50%;background:var(--accent2);animation:pulse 1s ease-in-out infinite;flex-shrink:0;}
+.progress-badge.is-button{cursor:pointer;display:flex;align-items:center;gap:6px;border-color:var(--border2);max-width:52vw;}
+.progress-badge.is-button:active{background:var(--bg4);}
+.cc-name{max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)!important;font-family:'Sora',sans-serif;font-weight:500!important;}
+.cc-name::after{content:'·';margin-left:6px;color:var(--text3);}
+body:not(.is-apk) .apk-only{display:none!important;}
+.courses-box{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;width:100%;max-width:460px;padding:18px;display:flex;flex-direction:column;gap:12px;max-height:86vh;}
+.courses-head{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.courses-head .modal-btn{flex:0;min-width:84px;padding:8px 14px;}
+.courses-list{display:flex;flex-direction:column;gap:8px;overflow-y:auto;min-height:60px;}
+.courses-empty{font-size:13px;color:var(--text3);text-align:center;padding:22px 8px;}
+.course-item{display:flex;align-items:stretch;background:var(--bg3);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.course-item.current{border-color:var(--accent);}
+.course-main{flex:1;min-width:0;padding:11px 13px;cursor:pointer;display:flex;flex-direction:column;gap:5px;}
+.course-main:active{background:var(--bg4);}
+.course-name{font-size:13px;font-weight:600;color:var(--text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word;}
+.course-tag{font-size:10px;font-weight:600;color:var(--accent2);margin-left:6px;}
+.course-sub{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.course-bar{height:4px;border-radius:2px;background:var(--bg4);overflow:hidden;}
+.course-bar-fill{height:100%;background:var(--green);border-radius:2px;}
+.course-meta{display:flex;justify-content:space-between;gap:8px;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--text3);}
+.course-more{width:44px;flex-shrink:0;background:none;border:none;border-left:1px solid var(--border);color:var(--text3);font-size:18px;cursor:pointer;}
+.course-more:active{background:var(--bg4);}
+@media (max-width:559px){
+  #courses-modal{align-items:flex-end;padding:0;}
+  #courses-modal .courses-box{max-width:none;border-radius:16px 16px 0 0;border-bottom:none;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px));}
+  .cc-name{max-width:84px;}
+}
 .module-count{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3);background:var(--bg4);border-radius:4px;padding:2px 6px;white-space:nowrap;flex-shrink:0;}
 .module-done-badge{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--green);background:rgba(52,211,153,.12);border-radius:4px;padding:2px 5px;white-space:nowrap;flex-shrink:0;}
 .module-body.collapsed{display:none;}
@@ -717,6 +744,18 @@ body.is-modular .btn-organize{display:flex;}
   </div>
 </div>
 
+<!-- Meus cursos (APK) -->
+<div class="modal-overlay" id="courses-modal">
+  <div class="courses-box">
+    <div class="courses-head">
+      <div class="progress-modal-title">Meus cursos</div>
+      <button class="modal-btn primary" onclick="coursesAddNew()">+ Novo</button>
+    </div>
+    <div class="courses-list" id="courses-list"></div>
+    <div class="progress-close-row"><button class="modal-btn secondary" style="flex:0;min-width:80px;" onclick="closeMyCourses()">Fechar</button></div>
+  </div>
+</div>
+
 <!-- Modal progresso -->
 <div class="modal-overlay" id="progress-modal">
   <div class="progress-modal-box">
@@ -932,7 +971,7 @@ body.is-modular .btn-organize{display:flex;}
     <span class="logo-text">StudyPlay</span>
   </div>
   <div class="header-spacer"></div>
-  <div class="progress-badge" title="Aulas concluídas"><span class="pb-label">Concluídas: </span><span id="done-count">0</span> / <span id="total-count">0</span></div>
+  <div class="progress-badge" id="progress-badge" title="Aulas concluídas"><span class="cc-name" id="cc-name" hidden></span><span class="pb-label">Concluídas: </span><span id="done-count">0</span> / <span id="total-count">0</span></div>
 
   <!-- Botões secundários: visíveis no desktop, acessíveis via ⋮ no mobile -->
   <button class="btn-icon overflow-item" id="review-btn" onclick="openReviewMode()" title="Modo revisão (R)">
@@ -1177,6 +1216,10 @@ body.is-modular .btn-organize{display:flex;}
               Google Drive
             </button>
             <!-- Itens do cabeçalho: no celular na horizontal o cabeçalho é ocultado para dar altura ao vídeo -->
+            <button class="unified-menu-btn menu-land-only apk-only" id="menu-courses-btn" onclick="closeMoreMenu();openMyCourses()">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+              Meus cursos
+            </button>
             <button class="unified-menu-btn menu-land-only" onclick="closeMoreMenu();openFolder()">
               <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
               Abrir pasta
@@ -2824,6 +2867,7 @@ const CourseLibrary = {
   getSummary(id){ return this._run('summaries', 'readonly', tx=>tx.objectStore('summaries').get(id)); },
   async listSummaries(){
     const all = await this._run('summaries', 'readonly', tx=>tx.objectStore('summaries').getAll());
+    if(all) this.lastList = all.slice().sort((a,b)=>(b.lastOpenedAt||0)-(a.lastOpenedAt||0));
     if(all){ this.uriToId = new Map(all.map(x=>[x.treeUri, x.id])); this.ids = new Set(all.map(x=>x.id)); }
     return (all||[]).sort((a,b)=>(b.lastOpenedAt||0)-(a.lastOpenedAt||0));
   },
@@ -2832,12 +2876,13 @@ const CourseLibrary = {
   /* Grava o curso inteiro + resumo na mesma transação */
   async saveCourse(entry){
     const id = entry.courseKey; if(!id) return false;
+    const agora = _summaryNow();                 /* antes de qualquer await: o estado pode mudar para outro curso */
     const old = await this.getSummary(id);
     const rec = {id, treeUri:entry.treeUri, rootName:entry.rootName, isModular:entry.isModular,
                  modulesCache:entry.modulesCache, lessonsCache:entry.lessonsCache, extrasCache:entry.extrasCache,
                  savedAt:entry.savedAt};
     const sum = Object.assign({id, name:entry.rootName||'Curso', treeUri:entry.treeUri,
-                               addedAt: old ? old.addedAt : Date.now(), lastOpenedAt: Date.now()}, _summaryNow());
+                               addedAt: old ? old.addedAt : Date.now(), lastOpenedAt: Date.now()}, agora);
     const ok = await this._run(['courses','summaries'], 'readwrite', tx=>{
       tx.objectStore('courses').put(rec);
       return tx.objectStore('summaries').put(sum);
@@ -2906,6 +2951,7 @@ function _buildSessionEntry(treeUri, rootName){
 let _courseTreeUri = '', _courseRootName = '';      /* pasta e nome do curso aberto agora */
 function saveNativeSessionCache(treeUri, rootName){
   _courseTreeUri = treeUri; _courseRootName = rootName||'';
+  updateCourseChip();
   try{
     const entry=_buildSessionEntry(treeUri, rootName);
     localStorage.setItem('splay_native_session', JSON.stringify(entry));
@@ -3159,6 +3205,88 @@ async function processNativeFiles(nativeFiles, rootName, merge){
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   MEUS CURSOS (APK): selo do cabeçalho + painel com a lista da biblioteca
+═══════════════════════════════════════════════════════════════ */
+function updateCourseChip(){
+  const el=document.getElementById('cc-name'); if(!el) return;
+  const nome = Platform.isCapacitor ? (_courseRootName||'') : '';
+  el.textContent = nome; el.hidden = !nome;
+}
+function _courseDateLabel(ts){
+  if(!ts) return '';
+  const d=new Date(ts), hoje=new Date();
+  const dia = x=>new Date(x.getFullYear(),x.getMonth(),x.getDate()).getTime();
+  const diff = Math.round((dia(hoje)-dia(d))/86400000);
+  if(diff<=0) return 'Hoje';
+  if(diff===1) return 'Ontem';
+  return d.toLocaleDateString('pt-BR');
+}
+function renderMyCourses(list){
+  const box=document.getElementById('courses-list'); if(!box) return;
+  box.innerHTML='';
+  if(!list.length){
+    const e=document.createElement('div'); e.className='courses-empty';
+    e.textContent='Nenhum curso na lista ainda. Toque em + Novo e escolha a pasta do curso.';
+    box.appendChild(e); return;
+  }
+  list.forEach(c=>{
+    const atual = (c.id===_courseKey);
+    const sum = atual ? Object.assign({}, c, _summaryNow()) : c;      /* o curso aberto mostra os números ao vivo */
+    const pct = sum.total>0 ? Math.round(sum.done/sum.total*100) : 0;
+    const item=document.createElement('div'); item.className='course-item'+(atual?' current':'');
+    const main=document.createElement('div'); main.className='course-main';
+    main.onclick=()=>coursesOpen(c.id);
+    const nome=document.createElement('div'); nome.className='course-name'; nome.textContent=c.name||'Curso';
+    if(atual){ const t=document.createElement('span'); t.className='course-tag'; t.textContent='Estudando'; nome.appendChild(t); }
+    const sub=document.createElement('div'); sub.className='course-sub';
+    sub.textContent = sum.currentName ? ((sum.currentModule?sum.currentModule+' · ':'')+sum.currentName) : 'Ainda não começou';
+    const bar=document.createElement('div'); bar.className='course-bar';
+    const fill=document.createElement('div'); fill.className='course-bar-fill'; fill.style.width=pct+'%'; bar.appendChild(fill);
+    const meta=document.createElement('div'); meta.className='course-meta';
+    const m1=document.createElement('span'); m1.textContent=`${sum.done}/${sum.total} · ${pct}%`;
+    const m2=document.createElement('span'); m2.textContent=_courseDateLabel(c.lastOpenedAt);
+    meta.append(m1,m2);
+    main.append(nome,sub,bar,meta);
+    const more=document.createElement('button'); more.className='course-more'; more.textContent='⋮';
+    more.title='Remover da lista'; more.setAttribute('aria-label','Remover da lista');
+    more.onclick=e=>{ e.stopPropagation(); coursesAskRemove(c.id, c.name); };
+    item.append(main,more); box.appendChild(item);
+  });
+}
+async function openMyCourses(){
+  if(!Platform.isCapacitor) return;
+  window._nativeHidePlayer?.();
+  document.getElementById('courses-modal').classList.add('active');
+  if(CourseLibrary.lastList) renderMyCourses(CourseLibrary.lastList);     /* aparece na hora; atualiza em seguida */
+  const list = await CourseLibrary.listSummaries();
+  renderMyCourses(list);
+}
+function closeMyCourses(){
+  document.getElementById('courses-modal').classList.remove('active');
+  window._nativeShowPlayer?.();
+}
+async function coursesOpen(id){
+  closeMyCourses();
+  if(id===_courseKey) return;
+  await openCourseById(id);
+}
+function coursesAddNew(){ closeMyCourses(); loadNewCourse(); }
+function coursesAskRemove(id, nome){
+  closeMyCourses();
+  showModal('Remover da lista', '"'+(nome||'Curso')+'" sai de Meus cursos. O progresso, as notas e os capítulos ficam guardados. Se abrir a mesma pasta de novo, tudo volta.', [
+    {label:'Remover da lista', cls:'danger', action:async()=>{ closeModal(); await removeCourse(id); openMyCourses(); }},
+    {label:'Cancelar', cls:'secondary', action:()=>{ closeModal(); openMyCourses(); }}
+  ]);
+}
+(function initCourseChip(){
+  document.body.classList.toggle('is-apk', !!Platform.isCapacitor);
+  if(!Platform.isCapacitor) return;
+  const b=document.getElementById('progress-badge');
+  b.classList.add('is-button'); b.title='Meus cursos'; b.onclick=openMyCourses;
+  updateCourseChip();
+})();
+
+/* ═══════════════════════════════════════════════════════════════
    VÁRIOS CURSOS — abrir, trocar e remover (APK)
 ═══════════════════════════════════════════════════════════════ */
 /* Grava o progresso do curso aberto e atualiza o resumo antes de sair dele */
@@ -3175,7 +3303,7 @@ async function persistCurrentCourse(){
 
 /* Depois de abrir um curso da biblioteca: ponteiro, último uso e reserva da sessão */
 function afterCourseOpened(rec){
-  _courseTreeUri = rec.treeUri; _courseRootName = rec.rootName||'';
+  _courseTreeUri = rec.treeUri; _courseRootName = rec.rootName||''; updateCourseChip();
   try{ localStorage.setItem('splay_last_course', rec.id); }catch(e){}
   CourseLibrary.getSummary(rec.id).then(sum=>{
     if(sum) CourseLibrary.putSummary(Object.assign(sum, {lastOpenedAt:Date.now()}, _summaryNow()));
@@ -3295,7 +3423,7 @@ function resetCourseState(){
 function showEmptyCourseState(){
   resetCourseState();
   isModular=false; document.body.classList.remove('is-modular');
-  playlistEl.innerHTML=_EMPTY_PLAYLIST_HTML;
+  playlistEl.innerHTML=_EMPTY_PLAYLIST_HTML; updateCourseChip();
   video.style.display='none'; emptyState.style.display='';
   totalCount.textContent='0'; doneCount.textContent='0';
   try{ updateNowTitle(''); }catch(e){}
@@ -3305,7 +3433,7 @@ async function startProgressiveScan(VF, treeUri, rootName, t0){
   cancelProgressiveScan();
   _ensureScanListeners(VF);
   resetCourseState();
-  _courseTreeUri=treeUri; _courseRootName=rootName||'';
+  _courseTreeUri=treeUri; _courseRootName=rootName||''; updateCourseChip();
   _courseIdentity={treeUri, rootName};
   const id='scan_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
   _scan={ id, VF, treeUri, rootName, t0, active:true, finished:false, flat:false, total:0, got:0,
@@ -4667,12 +4795,13 @@ function showModal(title, desc, actions){
 }
 function closeModal(){ document.getElementById('modal-overlay').classList.remove('active'); }
 
-['modal-overlay','progress-modal','stats-modal','shortcuts-modal','theme-modal','xlsx-modal','settings-modal'].forEach(id=>{
+['modal-overlay','progress-modal','courses-modal','stats-modal','shortcuts-modal','theme-modal','xlsx-modal','settings-modal'].forEach(id=>{
   const el=document.getElementById(id); if(!el) return;
   el.addEventListener('click', e=>{
     if(e.target===el){
       if(id==='modal-overlay')       closeModal();
       else if(id==='progress-modal') closeProgressModal();
+      else if(id==='courses-modal')  closeMyCourses();
       else el.classList.remove('active');
     }
   });
@@ -5776,7 +5905,7 @@ window.addEventListener('pipModeChanged', (e)=>{
           const key = _courseKey; if(!key) return;
           if(!(await CourseLibrary.getSummary(key)) && _courseKey===key) saveNativeSessionCache(sess.treeUri, sess.rootName||'');
         }, 1500);
-        _courseTreeUri = sess.treeUri; _courseRootName = sess.rootName||'';
+        _courseTreeUri = sess.treeUri; _courseRootName = sess.rootName||''; updateCourseChip();
         return;
       }
       /* 3) cache ilegível: re-escaneia a pasta */
