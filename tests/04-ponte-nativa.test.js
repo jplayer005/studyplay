@@ -171,6 +171,12 @@ const files = (rel) => rel.map(r => ({ name: r.split('/').pop(), relativePath: r
   check('progresso preservado apos reordenar + reabrir', rs.doneNames.length === 1, JSON.stringify(rs.doneNames));
   check('PDF restaurado', rs.pdf);
 
+  console.log('# plugin Java expoe a varredura progressiva (o Java nao roda aqui: confere o codigo)');
+  const javaSrc = require('fs').readFileSync(require('path').resolve(__dirname, '..', 'android/app/src/main/java/com/jcorelabs/studyplay/VideoFolderPlugin.java'), 'utf8');
+  ['pickFolder', 'listPersistedFolder', 'pickFolderOnly', 'scanFolder', 'cancelScan', 'checkFolder', 'releaseFolder'].forEach(m =>
+    check('metodo ' + m + ' declarado', new RegExp('@PluginMethod\\s+public void ' + m + '\\(').test(javaSrc)));
+  ['scanRoot', 'scanModule', 'scanDone', 'scanError'].forEach(ev => check('evento ' + ev + ' emitido', javaSrc.includes('"' + ev + '"')));
+
   check('sem erros JS nao tratados', errors.length === 0, errors.join(' | '));
   await browser.close();
   console.log(fails ? `\n${fails} FALHA(S)` : '\nTODOS OS TESTES PASSARAM');
