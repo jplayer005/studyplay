@@ -1,10 +1,10 @@
 name: Gerar APK (debug)
 
-# Roda a cada envio para a main e para a branch de otimização, e também sob demanda
+# Roda a cada envio para a main e para as branches de trabalho, e também sob demanda
 # (aba Actions > Gerar APK (debug) > Run workflow).
 on:
   push:
-    branches: [main, claude/otimizacao-android]
+    branches: [main, claude/otimizacao-android, claude/varios-cursos]
   workflow_dispatch:
 
 jobs:
