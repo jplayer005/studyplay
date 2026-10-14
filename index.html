@@ -89,6 +89,9 @@ body.is-modular .btn-collapse-all{display:flex;}
 .module-arrow{width:13px;height:13px;stroke:var(--text3);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s;flex-shrink:0;}
 .module-header.collapsed .module-arrow{transform:rotate(-90deg);}
 .module-title{flex:1;font-size:12px;font-weight:600;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.scan-banner{display:flex;align-items:center;gap:8px;padding:7px 14px;font-size:12px;color:var(--text2);background:var(--bg3);border-bottom:1px solid var(--border);flex-shrink:0;}
+.scan-banner[hidden]{display:none;}
+.scan-dot{width:8px;height:8px;border-radius:50%;background:var(--accent2);animation:pulse 1s ease-in-out infinite;flex-shrink:0;}
 .module-count{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3);background:var(--bg4);border-radius:4px;padding:2px 6px;white-space:nowrap;flex-shrink:0;}
 .module-done-badge{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--green);background:rgba(52,211,153,.12);border-radius:4px;padding:2px 5px;white-space:nowrap;flex-shrink:0;}
 .module-body.collapsed{display:none;}
@@ -996,6 +999,7 @@ body.is-modular .btn-organize{display:flex;}
         <input type="text" placeholder="Buscar aula…" id="search-input" oninput="filterLessonsDebounced()">
       </div>
     </div>
+    <div class="scan-banner" id="scan-banner" hidden><span class="scan-dot"></span><span id="scan-banner-text">Carregando curso…</span></div>
     <div class="playlist" id="playlist">
       <div class="empty-state" style="padding:32px 16px;">
         <div class="empty-icon" style="width:48px;height:48px;">
@@ -1508,6 +1512,7 @@ function lessonTagText(item){
   return (item.module && _dupNames.has(item.lessonName)) ? item.lessonName+' · '+item.module : item.lessonName;
 }
 function saveToStorage(){
+  if(_scanActive()){ _scan.dirty = true; return; }   /* as chaves das aulas ainda podem mudar; grava ao terminar a varredura */
   try{
     const positions = {};
     lessons.forEach(l=>{ const t=lessonTimes[l.idx]; if(t&&t>2) positions[l.key||l.name]=t; });
@@ -2675,6 +2680,14 @@ async function pickAndLoadFolder(merge){
          o plugin varre os arquivos em background — o loading é visível nesse período */
       showLoading('Lendo pasta…');
       Diag.reset();
+      /* Curso novo: escolhe a pasta sem varrer e monta o curso módulo a módulo,
+         começando a aula assim que o primeiro módulo chega. */
+      if(!merge && typeof VideoFolder.pickFolderOnly==='function' && typeof VideoFolder.scanFolder==='function'){
+        const picked = await VideoFolder.pickFolderOnly();
+        if(!picked || !picked.treeUri){ hideLoading(); return; }
+        await startProgressiveScan(VideoFolder, picked.treeUri, picked.rootName||'', performance.now());
+        return;
+      }
       const result = await VideoFolder.pickFolder();
       if(!result || !result.files){ hideLoading(); return; }
       if(result.scanMs!=null) Diag.mark('varredura da pasta (nativo, '+result.files.length+' arquivos)', result.scanMs);
@@ -2699,7 +2712,7 @@ async function pickAndLoadFolder(merge){
     await processDirectory(dir, merge);
   }catch(e){
     hideLoading();
-    if(e.name!=='AbortError') toast('Erro ao abrir pasta: '+e.message);
+    if(e.name!=='AbortError' && e.message!=='cancelled') toast('Erro ao abrir pasta: '+e.message);
   }
 }
 
@@ -2828,6 +2841,35 @@ function _cacheHasDuplicateNames(sess){
   return new Set(names).size !== names.length;
 }
 
+/* Insere um arquivo nativo ({name, relativePath, uri, mimeType, size}) na árvore de pastas.
+   Devolve true quando é um vídeo. Compartilhado pela carga completa e pela varredura
+   progressiva (um módulo por vez). */
+function _insertNativeFile(root, f){
+  const parts=f.relativePath.split('/');
+  let node=root;
+  for(let k=0;k<parts.length-1;k++){
+    const d=parts[k];
+    if(!node.children[d]) node.children[d]={name:d,videos:[],extras:[],children:{}};
+    node=node.children[d];
+  }
+  const fname=parts[parts.length-1];
+  const nobj={name:fname, _uri:f.uri, _native:true, size:f.size||0, _path:f.relativePath};
+  const isVid=isVideo(fname)||(f.mimeType&&f.mimeType.startsWith('video/'));
+  const isCnt=!isVid&&(isContent(fname)||f.mimeType==='application/pdf'||f.mimeType==='text/html');
+  if(isVid)      { node.videos.push(nobj); return true; }
+  if(isCnt)      { node.extras.push({file:nobj, name:fname}); }
+  return false;
+}
+/* Converte um nó da árvore em objeto de módulo */
+function _nodeToMod(node){
+  const subs=Object.values(node.children)
+    .sort((a,b)=>naturalSort(a.name,b.name))
+    .map(_nodeToMod).filter(Boolean);
+  const vids=node.videos.slice().sort((a,b)=>naturalSort(a.name,b.name));
+  if(!vids.length&&!subs.length&&!(node.extras&&node.extras.length)) return null;
+  return {name:node.name, lessons:vids, extras:node.extras||[], subModules:subs};
+}
+
 /* ═══════════════════════════════════════════════════════════════
    processNativeFiles — processa a lista retornada pelo plugin
    VideoFolder (ACTION_OPEN_DOCUMENT_TREE). Cada entry tem:
@@ -2852,34 +2894,13 @@ async function processNativeFiles(nativeFiles, rootName, merge){
   for(let i=0;i<nativeFiles.length;i+=BATCH){
     const end=Math.min(i+BATCH, nativeFiles.length);
     for(let j=i;j<end;j++){
-      const f=nativeFiles[j];
-      const parts=f.relativePath.split('/');
-      let node=root;
-      for(let k=0;k<parts.length-1;k++){
-        const d=parts[k];
-        if(!node.children[d]) node.children[d]={name:d,videos:[],extras:[],children:{}};
-        node=node.children[d];
-      }
-      const fname=parts[parts.length-1];
-      const nobj={name:fname, _uri:f.uri, _native:true, size:f.size||0, _path:f.relativePath};
-      const isVid=isVideo(fname)||(f.mimeType&&f.mimeType.startsWith('video/'));
-      const isCnt=!isVid&&(isContent(fname)||f.mimeType==='application/pdf'||f.mimeType==='text/html');
-      if(isVid)      { node.videos.push(nobj); count++; }
-      else if(isCnt) { node.extras.push({file:nobj, name:fname}); }
+      if(_insertNativeFile(root, nativeFiles[j])) count++;
     }
     updateLoadingCount(count);
     if(end<nativeFiles.length) await new Promise(r=>setTimeout(r,0));
   }
 
-  /* ── 2. Converte nó da árvore em objeto de módulo ── */
-  function nodeToMod(node){
-    const subs=Object.values(node.children)
-      .sort((a,b)=>naturalSort(a.name,b.name))
-      .map(nodeToMod).filter(Boolean);
-    const vids=node.videos.slice().sort((a,b)=>naturalSort(a.name,b.name));
-    if(!vids.length&&!subs.length&&!(node.extras&&node.extras.length)) return null;
-    return {name:node.name, lessons:vids, extras:node.extras||[], subModules:subs};
-  }
+  const nodeToMod=_nodeToMod;   /* ── 2. Converte nó da árvore em objeto de módulo ── */
 
   const hasRootVideos=root.videos.length>0;
   const subdirNames=Object.keys(root.children);
@@ -2970,6 +2991,218 @@ async function processNativeFiles(nativeFiles, rootName, merge){
   _p.then(()=>{ updatePlaylistActive(); scrollToActive(); }).catch(()=>{});
   const totalItems=normalizedModules.reduce((s,m)=>s+countFilesInRawModule(m),0);
   toast(`${totalItems} item(s) em ${normalizedModules.length} módulo(s)`);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VARREDURA PROGRESSIVA (APK, curso novo)
+   O Java manda a pasta aos poucos: scanRoot (raiz + lista de módulos), scanModule
+   (um módulo por vez, SEMPRE em ordem) e scanDone. O app acrescenta cada módulo ao
+   curso (índices das aulas já existentes não mudam), desenha só o módulo novo e começa
+   a tocar assim que a aula de partida existe, sem esperar a pasta inteira.
+   Durante a varredura o progresso NÃO é gravado (as chaves das aulas podem mudar quando
+   um módulo novo repete um nome); grava ao terminar.
+═══════════════════════════════════════════════════════════════ */
+let _scan = null;
+let _scanListeners = false;
+function _scanActive(){ return !!(_scan && _scan.active); }
+function _scanOwns(ev){ return !!(_scan && _scan.active && ev && ev.scanId===_scan.id); }
+function _scanWake(){ if(!_scan) return; const w=_scan.waiters; _scan.waiters=[]; w.forEach(r=>r()); }
+
+function showScanBanner(txt){
+  const b=document.getElementById('scan-banner'); if(!b) return;
+  document.getElementById('scan-banner-text').textContent=txt; b.hidden=false;
+}
+function hideScanBanner(){ const b=document.getElementById('scan-banner'); if(b) b.hidden=true; }
+function updateScanBanner(){
+  if(!_scanActive()) return;
+  showScanBanner(_scan.total>0 ? `Carregando curso… ${_scan.got} de ${_scan.total} módulos` : 'Carregando curso…');
+}
+
+function _ensureScanListeners(VF){
+  if(_scanListeners) return;
+  _scanListeners = true;
+  VF.addListener('scanRoot',   ev=>onScanRoot(ev));
+  VF.addListener('scanModule', ev=>onScanModule(ev));
+  VF.addListener('scanDone',   ev=>onScanDone(ev));
+  VF.addListener('scanError',  ev=>{ if(_scanOwns(ev)) _scanFail(ev.message); });
+}
+
+/* Limpa tudo do curso anterior antes de montar o novo */
+function _resetForNewCourse(){
+  _queueGen++; _nativePlaylistMode=false; _nativeQueue=[];
+  _courseKey=null; modules=[]; lessons=[]; sortedLessons=[]; extraFiles=[]; _lessonByFile=new Map();
+  done=new Set(); favorites=new Set(); currentIdx=-1;
+  Object.keys(lessonTimes).forEach(k=>delete lessonTimes[k]);
+  Object.keys(lessonDurations).forEach(k=>delete lessonDurations[k]);
+  notes=[]; chapters=[]; studyHistory=[];
+  try{ renderNotes(); }catch(e){}
+  isModular=true; document.body.classList.add('is-modular');
+  playlistEl.innerHTML='';
+}
+
+async function startProgressiveScan(VF, treeUri, rootName, t0){
+  cancelProgressiveScan();
+  _ensureScanListeners(VF);
+  _resetForNewCourse();
+  const id='scan_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  _scan={ id, VF, treeUri, rootName, t0, active:true, finished:false, flat:false, total:0, got:0,
+          flatFiles:[], keyed:false, started:false, stored:null, startP:null, rendered:0, waiters:[], dirty:false };
+  hideLoading();
+  showScanBanner('Lendo pasta…');
+  try{ await VF.scanFolder({treeUri, scanId:id}); }
+  catch(e){ _scanFail(e && e.message ? e.message : String(e)); }
+}
+
+/* Interrompe a varredura (trocar de curso, novo Abrir Pasta). Eventos atrasados são ignorados. */
+function cancelProgressiveScan(){
+  if(!_scanActive()) return;
+  _scan.active=false;
+  try{ _scan.VF.cancelScan({scanId:_scan.id}); }catch(e){}
+  _scanWake();
+  hideScanBanner();
+}
+
+function _scanFail(msg){
+  if(_scan) _scan.active=false;
+  _scanWake(); hideScanBanner(); hideLoading();
+  toast('Erro ao ler a pasta: '+(msg||'desconhecido'));
+}
+
+function onScanRoot(ev){
+  if(!_scanOwns(ev)) return;
+  _scan.rootName = ev.rootName || _scan.rootName;
+  _scan.flat  = !!ev.flat;
+  _scan.total = (ev.modules||[]).length;
+  if(_scan.flat) _scan.flatFiles.push(...(ev.rootFiles||[]));
+  updateScanBanner();
+}
+
+function onScanModule(ev){
+  if(!_scanOwns(ev)) return;
+  _scan.got++;
+  if(_scan.flat){ _scan.flatFiles.push(...(ev.files||[])); updateScanBanner(); return; }
+  const tmp={name:'',videos:[],extras:[],children:{}};
+  for(const f of (ev.files||[])) _insertNativeFile(tmp, f);
+  const raw = tmp.children[ev.name] ? _nodeToMod(tmp.children[ev.name]) : null;
+  if(raw){ modules.push(...normalizeModules([raw])); _scanAfterModules(); }
+  updateScanBanner();
+}
+
+/* Depois de acrescentar módulo(s): refaz a lista de aulas (só acrescenta), calcula a chave
+   do curso quando houver 5 aulas, começa a tocar e desenha o módulo novo. */
+function _scanAfterModules(){
+  rebuildLessonsFromModules(); buildSortedLessons();
+  if(!_scan.keyed){
+    if(lessons.length<5 && !_scan.finished) return;   /* a chave vem das 5 primeiras aulas */
+    freezeCourseKey();
+    _scan.stored = loadFromStorage();
+    if(_scan.stored) applyStoredProgress(_scan.stored);
+    _scan.keyed = true;
+  } else {
+    _scanMergeStored();
+  }
+  _scanTryStart();
+  const first = _scan.rendered===0;
+  if(first) renderModularPlaylist(); else renderModularPlaylist(_scan.rendered);
+  _scan.rendered = modules.length;
+  if(first && _scan.startP) _scan.startP.then(()=>{ updatePlaylistActive(); scrollToActive(); }).catch(()=>{});
+  _scanWake();
+}
+
+/* Aplica o progresso salvo às aulas que acabaram de chegar (só acrescenta, nunca remove) */
+function _scanMergeStored(){
+  const st=_scan.stored; if(!st) return;
+  const dn=new Set(st.done||[]), fv=new Set(st.favorites||[]), pos=st.positions||{};
+  lessons.forEach(l=>{
+    const k=l.key||l.name;
+    if(dn.has(k)) done.add(l.idx);
+    if(fv.has(k)) favorites.add(l.idx);
+    if(pos[k] && lessonTimes[l.idx]==null) lessonTimes[l.idx]=pos[k];
+  });
+  updateDoneCount();
+}
+
+/* Começa a tocar: na primeira aula (curso sem progresso) ou na aula onde parou,
+   assim que ela chegar. */
+function _scanTryStart(){
+  if(!_scan.keyed || _scan.started) return;
+  const st=_scan.stored;
+  let idx=0;
+  if(st && st.currentName){
+    const i=lessons.findIndex(l=>(l.key||l.name)===st.currentName);
+    if(i>=0) idx=i;
+    else if(!_scan.finished) return;      /* espera chegar o módulo onde parou */
+  }
+  _scan.started=true;
+  Diag.mark('pasta escolhida até iniciar a aula (app)', performance.now()-_scan.t0);
+  _scan.startP = playLesson(idx);
+}
+
+/* Fila nativa que acompanha o curso enquanto ele ainda está chegando: um único laço por
+   fila, sempre acrescentando as aulas seguintes na ordem. */
+async function _feedQueueGrowing(gen, startIdx, from){
+  const plug=window.Capacitor?.Plugins?.VideoPlayer;
+  if(!plug || typeof plug.appendPlaylist!=='function') return;
+  let pos=from, first=true;
+  for(;;){
+    await new Promise(r=>setTimeout(r, first ? 500 : 120)); first=false;
+    if(gen!==_queueGen || !_nativePlaylistMode) return;
+    const next=lessons.slice(startIdx+pos, startIdx+pos+QUEUE_CHUNK);
+    if(!next.length){
+      if(!_scanActive()) return;
+      await new Promise(r=>_scan.waiters.push(r));      /* acorda quando chega outro módulo */
+      first=false; continue;
+    }
+    const items=next.map(lo=>({uri:lo.file._uri, title:lo.name, artist:lo.module||'StudyPlay'}));
+    try{ await plug.appendPlaylist({items}); }catch(e){ return; }
+    if(gen!==_queueGen || !_nativePlaylistMode) return;
+    next.forEach(lo=>_nativeQueue.push(lo.file));
+    pos+=next.length;
+  }
+}
+
+async function onScanDone(ev){
+  if(!_scanOwns(ev)) return;
+  const sc=_scan;
+  sc.finished=true;
+  if(sc.flat){
+    /* Lista plana: junta tudo e usa o caminho de sempre */
+    sc.active=false; hideScanBanner(); _scanWake();
+    await processNativeFiles(sc.flatFiles, sc.rootName, false);
+    saveNativeSessionCache(sc.treeUri, sc.rootName);
+    Diag.mark('varredura completa (nativo)', ev.scanMs||0);
+    return;
+  }
+  if(!modules.length){
+    sc.active=false; hideScanBanner(); _scanWake();
+    toast('Nenhum vídeo encontrado na pasta selecionada'); return;
+  }
+  /* Cursos com menos de 5 aulas ainda não tinham chave nem partida */
+  if(!sc.keyed || !sc.started){
+    _scanAfterModules();
+  }
+  /* Ordem personalizada de módulos salva antes: aplica agora, mantendo o estado das aulas */
+  const saved = loadModuleOrder();
+  if(saved && saved.length){
+    const before = modules.map(m=>m.name).join('\u0001');
+    applyModuleOrder(saved);
+    if(modules.map(m=>m.name).join('\u0001')!==before){
+      rebuildLessonsKeepingState(); buildSortedLessons();
+      renderModularPlaylist(); sc.rendered=modules.length;
+      if(Platform.isCapacitor && currentIdx>=0){
+        /* a fila nativa seguiu a ordem da pasta: refaz a partir da aula atual na nova ordem */
+        lessonTimes[currentIdx] = video.currentTime||lessonTimes[currentIdx]||0;
+        _nativePlaylistMode=false; _queueGen++;
+        playLesson(currentIdx);
+      }
+    }
+  }
+  sc.active=false; hideScanBanner(); _scanWake();
+  saveNativeSessionCache(sc.treeUri, sc.rootName);
+  saveToStorage();                       /* grava com as chaves finais (o que ficou retido durante a varredura) */
+  Diag.mark('varredura completa (nativo, '+(ev.totalFiles||0)+' arquivos)', ev.scanMs||0);
+  const totalItems=modules.reduce((n,m)=>n+countFilesInRawModule(m),0);
+  toast(`${totalItems} item(s) em ${modules.length} módulo(s)`);
 }
 
 async function processDirectory(dir, merge){
@@ -3275,12 +3508,17 @@ function renderBatch(list, start, container, indent=0){
   if(end<list.length) requestAnimationFrame(()=>renderBatch(list, end, container, indent));
 }
 
-function renderModularPlaylist(){
+function renderModularPlaylist(appendFrom){
+  /* appendFrom (varredura progressiva): desenha só os módulos a partir deste índice,
+     sem refazer a lista inteira */
+  const append = appendFrom>0;
   ensureDurationCache();
   _scheduleWarmup(5000);                 /* lê o restante das durações depois que a aula já está tocando */
   totalCount.textContent = lessons.length; updateDoneCount();
-  playlistEl.innerHTML   = '';
-  renderFavoritesModule(playlistEl);
+  if(!append){
+    playlistEl.innerHTML   = '';
+    renderFavoritesModule(playlistEl);
+  }
 
   function renderMod(mod, container, depth, parentModArray){
     const key = mod.name;
@@ -3365,9 +3603,9 @@ function renderModularPlaylist(){
   }
 
   const _tr = performance.now();
-  modules.forEach(mod=>renderMod(mod, playlistEl, 0, modules));
+  (append ? modules.slice(appendFrom) : modules).forEach(mod=>renderMod(mod, playlistEl, 0, modules));
   updateCollapseAllBtn();
-  Diag.mark('desenhar a lista ('+lessons.length+' aulas)', performance.now()-_tr);
+  if(!append) Diag.mark('desenhar a lista ('+lessons.length+' aulas)', performance.now()-_tr);
 }
 
 function collectModuleLessonIdxs(mod){
@@ -3826,7 +4064,8 @@ async function playLesson(idx){
       const tq = performance.now();
       await plug.setPlaylist({items: items.slice(0,split)});
       Diag.mark('fila nativa (primeiras '+Math.min(split,items.length)+' aulas)', performance.now()-tq);
-      if(split<items.length) _appendRestOfQueue(gen, all, items, split);
+      if(_scanActive()) _feedQueueGrowing(gen, idx, Math.min(split, items.length));        /* varredura em andamento: a fila acompanha os módulos que chegam */
+      else if(split<items.length) _appendRestOfQueue(gen, all, items, split);
       if(_audioOnly) plug.hide().catch(()=>{}); // preserva modo áudio ao criar nova playlist
       /* Atualiza vs.src sem acionar loadVideo novamente (flag interna) */
       window._nativePlayerSkipSrc && window._nativePlayerSkipSrc();
