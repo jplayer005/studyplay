@@ -50,14 +50,16 @@ const mod = (nome, n, delay) => ({
   await blockExternal(page); await page.route(/_saf_/, r => r.fulfill({ status: 206, body: '' }));
   await page.goto(APP); await page.waitForTimeout(400);
   const calls = () => page.evaluate(() => window.__calls);
+  let n = 0;
   const run = async (plan, espera) => {
+    if (!plan.treeUri) plan = Object.assign({}, plan, { treeUri: 'content://curso' + (++n) });   // pasta nova a cada varredura
     await page.evaluate(p => { window.__plan = p; window.__calls.length = 0; window.__t0 = performance.now(); }, plan);
     await page.evaluate(() => pickAndLoadFolder(false));
     await page.waitForTimeout(espera);
   };
 
   console.log('# toca antes de a pasta terminar (modulo 2 demora 1,5 s)');
-  await page.evaluate(() => localStorage.clear());
+  await page.evaluate(() => { localStorage.clear(); CourseLibrary.uriToId = new Map(); CourseLibrary.ids = new Set(); });
   await run({ modules: [mod('Modulo 1', 8, 0), mod('Modulo 2', 8, 1500), mod('Modulo 3', 8, 0)] }, 600);
   let c = await calls();
   let sp = c.find(x => x.name === 'setPlaylist');
@@ -101,7 +103,7 @@ const mod = (nome, n, delay) => ({
   check('modulo de scanId antigo nao entra no curso', ign);
 
   console.log('# nova varredura cancela a anterior');
-  await page.evaluate(() => localStorage.clear());
+  await page.evaluate(() => { localStorage.clear(); CourseLibrary.uriToId = new Map(); CourseLibrary.ids = new Set(); });
   await run({ modules: [mod('Modulo 1', 6, 0), mod('Modulo 2', 6, 2000)] }, 400);
   await page.evaluate(() => { window.__plan = { modules: [mod2('Modulo 7', 6)] }; function mod2(n, k) { return { name: n, delay: 0, files: Array.from({ length: k }, (_, i) => ({ name: `Aula ${i + 1}.mp4`, relativePath: `${n}/Aula ${i + 1}.mp4`, uri: 'https://localhost/_saf_/?uri=' + n + i, mimeType: 'video/mp4', size: 1 })) }; } });
   await page.evaluate(() => pickAndLoadFolder(false));
@@ -112,7 +114,7 @@ const mod = (nome, n, delay) => ({
   check('curso final e so o da segunda varredura', JSON.stringify(nomes) === JSON.stringify(['Modulo 7']), JSON.stringify(nomes));
 
   console.log('# ordem personalizada de modulos aplicada no fim, sem perder progresso');
-  await page.evaluate(() => localStorage.clear());
+  await page.evaluate(() => { localStorage.clear(); CourseLibrary.uriToId = new Map(); CourseLibrary.ids = new Set(); });
   await run({ modules: [mod('Modulo 1', 6, 0), mod('Modulo 2', 6, 0)] }, 600);
   await page.evaluate(() => { setDone(1, true); modules.reverse(); rebuildLessonsKeepingState(); saveModuleOrder(); saveToStorage(); });
   await run({ modules: [mod('Modulo 1', 6, 0), mod('Modulo 2', 6, 300)] }, 1200);
@@ -121,7 +123,7 @@ const mod = (nome, n, delay) => ({
   check('aula concluida continua concluida', ord.doneKeys.length === 1 && /1\.02/.test(ord.doneKeys[0]), JSON.stringify(ord.doneKeys));
 
   console.log('# lista plana (videos na raiz) usa o caminho de sempre');
-  await page.evaluate(() => localStorage.clear());
+  await page.evaluate(() => { localStorage.clear(); CourseLibrary.uriToId = new Map(); CourseLibrary.ids = new Set(); });
   const rootFiles = Array.from({ length: 5 }, (_, i) => ({ name: `Aula ${i + 1}.mp4`, relativePath: `Aula ${i + 1}.mp4`, uri: 'https://localhost/_saf_/?uri=r' + i, mimeType: 'video/mp4', size: 1 }));
   await run({ flat: true, rootFiles, modules: [mod('Extras', 3, 0)] }, 800);
   const flat = await page.evaluate(() => ({ n: lessons.length, modular: isModular, banner: document.getElementById('scan-banner').hidden }));
@@ -131,7 +133,7 @@ const mod = (nome, n, delay) => ({
   console.log('# identidade do curso');
   const h = await page.evaluate(() => ({ a: fnv1a36('Curso A'), b: fnv1a36('Curso B'), a2: fnv1a36('Curso A') }));
   check('hash estavel e diferente por pasta', h.a === h.a2 && h.a !== h.b && /^[0-9a-z]+$/.test(h.a), JSON.stringify(h));
-  await page.evaluate(() => localStorage.clear());
+  await page.evaluate(() => { localStorage.clear(); CourseLibrary.uriToId = new Map(); CourseLibrary.ids = new Set(); });
   const mA = [mod('Modulo 1', 6, 0)];
   await run({ treeUri: 'content://A', rootName: 'Curso A', modules: mA }, 500);
   const DH = await page.evaluate(() => fnv1a36('Curso D'));
@@ -142,7 +144,7 @@ const mod = (nome, n, delay) => ({
   await run({ treeUri: 'content://A', rootName: 'Curso A', modules: mA }, 500);
   check('reabrir a mesma pasta mantem a chave', await page.evaluate(() => _courseKey) === kA);
 
-  await page.evaluate(() => localStorage.clear());
+  await page.evaluate(() => { localStorage.clear(); CourseLibrary.uriToId = new Map(); CourseLibrary.ids = new Set(); });
   const antigo = await page.evaluate(() => { const names = Array.from({ length: 5 }, (_, i) => 'Aula 1.0' + (i + 1)); return LS_KEY + '_' + btoa(unescape(encodeURIComponent(names.join('|')))).slice(0, 20); });
   await page.evaluate(k => localStorage.setItem(k, JSON.stringify({ done: ['Aula 1.02'], currentName: 'Aula 1.03' })), antigo);
   await run({ treeUri: 'content://C', rootName: 'Curso C', modules: mA }, 500);
