@@ -97,6 +97,13 @@ body.is-modular .btn-collapse-all{display:flex;}
 .cc-name{max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)!important;font-family:'Sora',sans-serif;font-weight:500!important;}
 .cc-name::after{content:'·';margin-left:6px;color:var(--text3);}
 body:not(.is-apk) .apk-only{display:none!important;}
+.course-switch{display:flex;align-items:center;gap:10px;width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:9px 12px;margin-bottom:10px;cursor:pointer;text-align:left;color:var(--text);font-family:inherit;}
+.course-switch:active{background:var(--bg4);}
+.course-switch>svg{width:18px;height:18px;flex-shrink:0;fill:none;stroke:var(--accent2);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.cs-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
+.cs-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;}
+.cs-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cs-action{flex-shrink:0;font-size:11px;font-weight:600;color:var(--accent2);}
 .courses-box{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;width:100%;max-width:460px;padding:18px;display:flex;flex-direction:column;gap:12px;max-height:86vh;}
 .courses-head{display:flex;align-items:center;justify-content:space-between;gap:10px;}
 .courses-head .modal-btn{flex:0;min-width:84px;padding:8px 14px;}
@@ -117,7 +124,8 @@ body:not(.is-apk) .apk-only{display:none!important;}
 @media (max-width:559px){
   #courses-modal{align-items:flex-end;padding:0;}
   #courses-modal .courses-box{max-width:none;border-radius:16px 16px 0 0;border-bottom:none;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px));}
-  .cc-name{max-width:84px;}
+  .cc-name{display:none;}
+  .progress-badge.is-button::after{content:'▾';color:var(--text3);font-size:9px;}
 }
 .module-count{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3);background:var(--bg4);border-radius:4px;padding:2px 6px;white-space:nowrap;flex-shrink:0;}
 .module-done-badge{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--green);background:rgba(52,211,153,.12);border-radius:4px;padding:2px 5px;white-space:nowrap;flex-shrink:0;}
@@ -430,7 +438,9 @@ body.keyboard-notes-open .notes-mobile-box .notes-list{display:none;}
 .modal-title{font-size:15px;font-weight:600;color:var(--text);}
 .modal-desc{font-size:13px;color:var(--text2);line-height:1.6;}
 .modal-actions{display:flex;gap:8px;flex-wrap:wrap;}
-.modal-btn{flex:1;min-width:110px;height:38px;border-radius:8px;border:1px solid var(--border);font-family:'Sora',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:opacity .2s;display:flex;align-items:center;justify-content:center;gap:6px;}
+.modal-actions.stack{flex-direction:column;}
+.modal-actions.stack .modal-btn{flex:none;width:100%;}
+.modal-btn{flex:1;min-width:110px;min-height:38px;padding:8px 12px;text-align:center;border-radius:8px;border:1px solid var(--border);font-family:'Sora',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:opacity .2s;display:flex;align-items:center;justify-content:center;gap:6px;}
 .modal-btn:hover{opacity:.85;}
 .modal-btn.primary{background:var(--accent);color:white;border-color:transparent;}
 .modal-btn.secondary{background:var(--bg3);color:var(--text2);}
@@ -1021,6 +1031,11 @@ body.is-modular .btn-organize{display:flex;}
   <!-- SIDEBAR -->
   <div class="sidebar" id="sidebar">
     <div class="sidebar-header">
+      <button class="course-switch apk-only" id="course-switch" onclick="openMyCourses()" title="Meus cursos: trocar de curso sem escolher a pasta de novo">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <span class="cs-text"><span class="cs-label">Meus cursos</span><span class="cs-name" id="course-switch-name">Nenhum curso aberto</span></span>
+        <span class="cs-action">Trocar</span>
+      </button>
       <div class="sidebar-title-row">
         <div class="sidebar-title">Playlist</div>
         <button class="btn-collapse-all btn-organize" id="btn-organize" onclick="toggleOrganizeMode()" title="Reordenar módulos arrastando">
@@ -2754,9 +2769,9 @@ async function openFolder(){
     const nome = _courseRootName || 'curso atual';
     showModal('Abrir pasta','Você já está estudando "'+nome+'". O que deseja fazer?',[
       {label:'Adicionar como novo curso',           cls:'primary',   action:loadNewCourse},
-      {label:'Acrescentar módulos a "'+nome+'"',     cls:'secondary', action:addModules},
+      {label:'Acrescentar módulos a este curso',  cls:'secondary', action:addModules},
       {label:'Cancelar',                             cls:'secondary', action:closeModal}
-    ]);
+    ], true);
     return;
   }
   if(lessons.length>0){
@@ -3244,6 +3259,8 @@ function updateCourseChip(){
   const el=document.getElementById('cc-name'); if(!el) return;
   const nome = Platform.isCapacitor ? (_courseRootName||'') : '';
   el.textContent = nome; el.hidden = !nome;
+  const cs=document.getElementById('course-switch-name');
+  if(cs) cs.textContent = nome || 'Nenhum curso aberto';
 }
 function _courseDateLabel(ts){
   if(!ts) return '';
@@ -3406,7 +3423,7 @@ function showCourseMissing(){
     {label:'Escolher a pasta de novo', cls:'primary', action:()=>{ closeModal(); reselectCourseFolder(id); }},
     {label:'Remover da lista',         cls:'danger',  action:async()=>{ closeModal(); await removeCourse(id); }},
     {label:'Agora não',                cls:'secondary', action:closeModal}
-  ]);
+  ], true);
 }
 /* Confere a pasta sem atrasar a abertura: roda em paralelo com a reprodução */
 function verifyCourseFolder(){
@@ -4859,12 +4876,12 @@ window.addEventListener('resize', ()=>{
 /* ═══════════════════════════════════════════
    MODAIS
 ═══════════════════════════════════════════ */
-function showModal(title, desc, actions){
+function showModal(title, desc, actions, stack){
   window._nativeHidePlayer?.();
   document.getElementById('modal-desc').style.whiteSpace='';
   document.getElementById('modal-title').textContent = title;
   document.getElementById('modal-desc').textContent  = desc;
-  const acts=document.getElementById('modal-actions'); acts.innerHTML='';
+  const acts=document.getElementById('modal-actions'); acts.innerHTML=''; acts.classList.toggle('stack', !!stack);
   actions.forEach(a=>{
     const btn=document.createElement('button'); btn.className='modal-btn '+(a.cls||'secondary');
     btn.textContent=a.label; btn.onclick=a.action; acts.appendChild(btn);

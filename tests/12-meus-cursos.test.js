@@ -107,6 +107,25 @@ const MOCK = () => {
   check('selo sem nome quando nao ha curso', await page.evaluate(() => document.getElementById('cc-name').hidden));
   await page.evaluate(() => closeMyCourses());
 
+  console.log('# nada vaza da tela em celulares estreitos');
+  for (const w of [320, 360, 393]) {
+    await page.setViewportSize({ width: w, height: 740 }); await page.waitForTimeout(250);
+    const v = await page.evaluate(() => {
+      const itens = [...document.querySelectorAll('header > *')].filter(e => getComputedStyle(e).display !== 'none');
+      const maxRight = Math.max(...itens.map(e => e.getBoundingClientRect().right));
+      return { maxRight: Math.round(maxRight), iw: innerWidth, sw: document.documentElement.scrollWidth, folder: document.getElementById('btn-load') ? Math.round(document.getElementById('btn-load').getBoundingClientRect().right) : null };
+    });
+    check(`${w}px: cabecalho inteiro dentro da tela (botao de pasta visivel)`, v.maxRight <= v.iw && v.sw <= v.iw && (v.folder === null || v.folder <= v.iw), JSON.stringify(v));
+  }
+  await page.evaluate(async k => { await openCourseById(k); }, ks.a).catch(() => {});
+  const cs = await page.evaluate(() => { const b = document.getElementById('course-switch'); const r = b.getBoundingClientRect(); return { visivel: getComputedStyle(b).display !== 'none', cabe: r.left >= 0 && r.right <= innerWidth, nome: document.getElementById('course-switch-name').textContent }; });
+  check('botao Meus cursos / Trocar visivel na lista de aulas', cs.visivel && cs.cabe, JSON.stringify(cs));
+  await page.evaluate(() => { makeCourse('Curso Novo Longo Para Testar', 'content://Z', 'Aula', 6); updateCourseChip(); openFolder(); });
+  const dg = await page.evaluate(() => [...document.querySelectorAll('#modal-actions .modal-btn')].map(b => { const r = b.getBoundingClientRect(), c = document.querySelector('#modal-overlay .modal-box, #modal-overlay > div').getBoundingClientRect(); return { ok: b.scrollHeight <= b.clientHeight + 1 && r.left >= c.left - 1 && r.right <= c.right + 1 }; }));
+  check('botoes do dialogo Abrir pasta cabem (texto nao estoura)', dg.length === 3 && dg.every(x => x.ok), JSON.stringify(dg));
+  await page.evaluate(() => closeModal());
+  await page.setViewportSize({ width: 393, height: 780 });
+
   console.log('# celular na horizontal: item no menu ⋮');
   await page.setViewportSize({ width: 844, height: 390 }); await page.waitForTimeout(300);
   const land = await page.evaluate(() => { const b = document.getElementById('menu-courses-btn'); return { exibe: getComputedStyle(b).display !== 'none', cabecalho: getComputedStyle(document.querySelector('header')).display }; });
