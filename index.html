@@ -97,12 +97,16 @@ body.is-modular .btn-collapse-all{display:flex;}
 .cc-name{max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)!important;font-family:'Sora',sans-serif;font-weight:500!important;}
 .cc-name::after{content:'·';margin-left:6px;color:var(--text3);}
 body:not(.is-apk) .apk-only{display:none!important;}
-.course-switch{display:flex;align-items:center;gap:10px;width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:9px 12px;margin-bottom:10px;cursor:pointer;text-align:left;color:var(--text);font-family:inherit;}
+.course-switch{display:flex;align-items:center;gap:10px;width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:7px 12px;margin-bottom:8px;min-height:40px;cursor:pointer;text-align:left;color:var(--text);font-family:inherit;}
 .course-switch:active{background:var(--bg4);}
 .course-switch>svg{width:18px;height:18px;flex-shrink:0;fill:none;stroke:var(--accent2);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
 .cs-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
-.cs-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;}
-.cs-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cs-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;}
+.cs-name-in{display:inline-block;will-change:transform;}
+/* nome maior que o botão: desliza da direita para a esquerda (e volta), com pausa nas pontas, para dar para ler tudo */
+.cs-name.marquee .cs-name-in{animation:cs-scroll var(--cs-dur,10s) ease-in-out infinite alternate;}
+@keyframes cs-scroll{0%,12%{transform:translateX(0);}88%,100%{transform:translateX(var(--cs-dist,0px));}}
+@media (prefers-reduced-motion:reduce){.cs-name.marquee .cs-name-in{animation:none;}.cs-name{text-overflow:ellipsis;}}
 .cs-action{flex-shrink:0;font-size:11px;font-weight:600;color:var(--accent2);}
 .courses-box{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;width:100%;max-width:460px;padding:18px;display:flex;flex-direction:column;gap:12px;max-height:86vh;}
 .courses-head{display:flex;align-items:center;justify-content:space-between;gap:10px;}
@@ -1031,9 +1035,9 @@ body.is-modular .btn-organize{display:flex;}
   <!-- SIDEBAR -->
   <div class="sidebar" id="sidebar">
     <div class="sidebar-header">
-      <button class="course-switch apk-only" id="course-switch" onclick="openMyCourses()" title="Meus cursos: trocar de curso sem escolher a pasta de novo">
+      <button class="course-switch apk-only" id="course-switch" onclick="openMyCourses()" title="Meus cursos: trocar de curso sem escolher a pasta de novo" aria-label="Meus cursos, curso atual. Toque para trocar">
         <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-        <span class="cs-text"><span class="cs-label">Meus cursos</span><span class="cs-name" id="course-switch-name">Nenhum curso aberto</span></span>
+        <span class="cs-text"><span class="cs-name" id="course-switch-name"><span class="cs-name-in" id="course-switch-name-in">Nenhum curso aberto</span></span></span>
         <span class="cs-action">Trocar</span>
       </button>
       <div class="sidebar-title-row">
@@ -3259,9 +3263,27 @@ function updateCourseChip(){
   const el=document.getElementById('cc-name'); if(!el) return;
   const nome = Platform.isCapacitor ? (_courseRootName||'') : '';
   el.textContent = nome; el.hidden = !nome;
-  const cs=document.getElementById('course-switch-name');
-  if(cs) cs.textContent = nome || 'Nenhum curso aberto';
+  const csIn=document.getElementById('course-switch-name-in');
+  if(csIn){ csIn.textContent = nome || 'Nenhum curso aberto'; fitCourseMarquee(); }
 }
+/* Liga o deslizamento só quando o nome não cabe; distância e tempo seguem o tamanho do nome */
+function fitCourseMarquee(){
+  const box=document.getElementById('course-switch-name'), inn=document.getElementById('course-switch-name-in');
+  if(!box||!inn) return;
+  box.classList.remove('marquee');
+  requestAnimationFrame(()=>{
+    const over = inn.offsetWidth - box.clientWidth;
+    if(over>2 && box.clientWidth>0){
+      box.style.setProperty('--cs-dist', (-over-4)+'px');
+      box.style.setProperty('--cs-dur', Math.max(6, over/22+4).toFixed(1)+'s');
+      box.classList.add('marquee');
+    }
+  });
+}
+try{
+  const _csBox=document.getElementById('course-switch-name');
+  if(_csBox && window.ResizeObserver) new ResizeObserver(()=>fitCourseMarquee()).observe(document.getElementById('course-switch'));
+}catch(e){}
 function _courseDateLabel(ts){
   if(!ts) return '';
   const d=new Date(ts), hoje=new Date();

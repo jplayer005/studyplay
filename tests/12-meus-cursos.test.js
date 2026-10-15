@@ -126,6 +126,15 @@ const MOCK = () => {
   await page.evaluate(() => closeModal());
   await page.setViewportSize({ width: 393, height: 780 });
 
+  console.log('# nome longo desliza no botao Trocar');
+  await page.evaluate(() => { makeCourse('Curso Completo de Eletrica Industrial Avancada Parte Um e Dois', 'content://L', 'Aula', 6); updateCourseChip(); });
+  await page.waitForTimeout(400);
+  const mq = await page.evaluate(() => { const b = document.getElementById('course-switch-name'); return { liga: b.classList.contains('marquee'), dist: parseFloat(b.style.getPropertyValue('--cs-dist')), anim: getComputedStyle(document.getElementById('course-switch-name-in')).animationName }; });
+  check('nome maior que o botao: liga o deslizamento ate o fim do nome', mq.liga && mq.dist < -20 && mq.anim === 'cs-scroll', JSON.stringify(mq));
+  await page.evaluate(() => { makeCourse('Curso B', 'content://B2', 'Aula', 6); updateCourseChip(); });
+  await page.waitForTimeout(300);
+  check('nome curto: parado', await page.evaluate(() => !document.getElementById('course-switch-name').classList.contains('marquee')));
+
   console.log('# celular na horizontal: item no menu ⋮');
   await page.setViewportSize({ width: 844, height: 390 }); await page.waitForTimeout(300);
   const land = await page.evaluate(() => { const b = document.getElementById('menu-courses-btn'); return { exibe: getComputedStyle(b).display !== 'none', cabecalho: getComputedStyle(document.querySelector('header')).display }; });
