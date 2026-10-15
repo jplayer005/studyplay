@@ -179,6 +179,7 @@ const entry = (key, nome, uri, aulas) => ({
   check('adicionar a mesma pasta de novo recupera a chave e o progresso de B', back.k === ks.kB && back.done.length === 1, JSON.stringify(back));
 
   console.log('# remover todos: tela inicial');
+  await page.waitForTimeout(500);                      // deixa a gravacao do curso B (recriado acima) terminar
   await page.evaluate(async () => { for (const s of await CourseLibrary.listSummaries()) await removeCourse(s.id); });
   const vazio = await page.evaluate(() => ({ lessons: lessons.length, vazio: !!document.querySelector('#playlist .empty-state'), ptr: localStorage.getItem('splay_last_course'), sess: localStorage.getItem('splay_native_session') }));
   check('sem cursos: tela inicial, sem ponteiro nem reserva', vazio.lessons === 0 && vazio.vazio && vazio.ptr === null && vazio.sess === null, JSON.stringify(vazio));
