@@ -28,6 +28,7 @@ node run-all.js layout            # só os arquivos que têm "layout" no nome
 | `11-abertura-progressiva` | curso novo toca antes de a pasta terminar, módulos aparecendo aos poucos, retomar módulo posterior, lista plana, cancelar, identidade do curso |
 | `12-meus-cursos` | selo, painel, ordem, progresso, trocar, remover com confirmação, botão Voltar, horizontal |
 | `14-vertical` | celular na vertical: busca e ícones na mesma linha, controles compactos, barra que esconde ao rolar e volta, casos em que não esconde, horizontal e desktop intactos |
+| `15-telas-basicas` | abre Estatísticas (cartões, gráfico de 7 dias, Histórico), Configurações, Progresso e Tema em celular e desktop, sem erro de JS |
 | `13-erros-curso` | pasta movida/apagada, escolher a pasta de novo mantendo o progresso, armazenamento cheio, falha do banco |
 
 Também há `bench-abertura.js` (fora do `run-all`): `node bench-abertura.js` mede, com CPU 4x mais lenta e 850 aulas, reabrir um curso, trocar entre 5 cursos e abrir a lista. Compare **medianas**.

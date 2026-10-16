@@ -55,6 +55,14 @@ const MOCK = () => {
   check('segunda linha de controles com 40px (minimo de toque)', aux.length >= 6 && aux.every(h => h >= 40 && h <= 40), JSON.stringify(aux));
   check('linha principal com 44px ou mais', main.every(h => h >= 44), JSON.stringify(main));
 
+  console.log('# 2b. ordem da segunda linha: o mais usado a direita');
+  const ordem = await page.evaluate(() => ['loop-btn', 'pip-btn', 'audio-only-btn', 'fav-btn', 'mark-btn', 'unified-more-btn', 'fs-btn']
+    .map(id => { const e = document.getElementById(id); const r = e.getBoundingClientRect(); return { id, x: Math.round(r.left), vis: getComputedStyle(e).display !== 'none' && r.width > 0 }; })
+    .filter(b => b.vis).sort((a, b) => a.x - b.x).map(b => b.id));
+  const esperado = ['loop-btn', 'pip-btn', 'audio-only-btn', 'fav-btn', 'mark-btn', 'unified-more-btn', 'fs-btn'].filter(id => ordem.includes(id));
+  check('esq → dir: Repetir, PiP, Fones, Favoritar, Concluir, Mais, Tela cheia', JSON.stringify(ordem) === JSON.stringify(esperado) && ordem.length >= 5, JSON.stringify(ordem));
+  check('Tela cheia e o ultimo da direita, Repetir o primeiro da esquerda', ordem[ordem.length - 1] === 'fs-btn' && ordem[0] === 'loop-btn', JSON.stringify(ordem));
+
   console.log('# 3. esconde ao rolar para baixo, mostra ao rolar para cima');
   const antes = await rect('#playlist'), cab0 = await rect('.sidebar-header');
   check('no topo a barra aparece', !(await compact()) && cab0.h > 80, JSON.stringify(cab0));
@@ -98,6 +106,10 @@ const MOCK = () => {
   check('abrir/trocar de curso traz a barra de volta', !(await compact()));
 
   console.log('# 5. horizontal e desktop nao mudam');
+  await page.setViewportSize({ width: 844, height: 390 }); await page.waitForTimeout(300);
+  const hzOrd = await page.evaluate(() => ['loop-btn', 'fs-btn', 'unified-more-btn', 'fav-btn', 'mark-btn'].map(id => getComputedStyle(document.getElementById(id)).order));
+  check('horizontal: ordem dos botoes nao muda', hzOrd.every(o => o === '0'), JSON.stringify(hzOrd));
+  await page.setViewportSize({ width: 393, height: 780 }); await page.waitForTimeout(200);
   await page.setViewportSize({ width: 844, height: 390 }); await page.waitForTimeout(300);
   await scrollTo(100); await scrollTo(300);
   check('horizontal: barra nunca esconde', !(await compact()));

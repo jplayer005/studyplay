@@ -688,6 +688,17 @@ body.is-modular .btn-organize{display:flex;}
   .ctrl-main .ctrl-btn.primary{width:58px;height:50px;border-radius:14px;}
   .ctrl-main .ctrl-btn svg{width:19px;height:19px;}
   .ctrl-aux .ctrl-btn,.ctrl-aux .fav-ctrl-btn,.ctrl-aux .mark-done-btn{flex:1 1 0;min-width:0;max-width:56px;height:40px;width:auto;border-radius:11px;padding:0;justify-content:center;}
+  /* Ordem da segunda linha pelo uso: o que se toca mais fica à direita, perto do polegar;
+     o que se toca menos, à esquerda. (esq → dir) Repetir, PiP, Fones, Favoritar, Concluir, Mais, Tela cheia.
+     Só na vertical do celular: horizontal e desktop seguem a ordem do HTML. */
+  #frame-badge{order:0;}
+  #loop-btn{order:1;}
+  #pip-btn{order:2;}
+  #audio-only-btn{order:3;}
+  #fav-btn{order:4;}
+  #mark-btn{order:5;}
+  #unified-more-btn{order:6;}
+  #fs-btn{order:7;}
   .mark-done-btn .mark-label{display:none;}
   .vol-row,.ab-label{display:none;}
   #frame-badge{height:30px;}
@@ -2151,7 +2162,7 @@ function renderStatsModal(activeTab){
   let d = new Date(); d.setHours(0,0,0,0);
   while(true){ const k=localDate(d); if(daily[k]&&daily[k]>0){streak++;d.setDate(d.getDate()-1);}else break; if(streak>365)break; }
   const days7=[]; const now=new Date(); now.setHours(0,0,0,0);
-  for(let i=6;i>=0;i--){ const dd=new Date(now); dd.setDate(dd.getDate()-i); const k=dlocalDate(d); days7.push({label:dd.toLocaleDateString('pt-BR',{weekday:'short'}),sec:daily[k]||0}); }
+  for(let i=6;i>=0;i--){ const dd=new Date(now); dd.setDate(dd.getDate()-i); const k=localDate(dd); days7.push({label:dd.toLocaleDateString('pt-BR',{weekday:'short'}),sec:daily[k]||0}); }
   const maxSec = Math.max(...days7.map(d=>d.sec),1);
 
   const statsHTML = `
