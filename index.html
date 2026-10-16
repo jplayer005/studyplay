@@ -89,6 +89,48 @@ body.is-modular .btn-collapse-all{display:flex;}
 .module-arrow{width:13px;height:13px;stroke:var(--text3);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s;flex-shrink:0;}
 .module-header.collapsed .module-arrow{transform:rotate(-90deg);}
 .module-title{flex:1;font-size:12px;font-weight:600;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.scan-banner{display:flex;align-items:center;gap:8px;padding:7px 14px;font-size:12px;color:var(--text2);background:var(--bg3);border-bottom:1px solid var(--border);flex-shrink:0;}
+.scan-banner[hidden]{display:none;}
+.scan-dot{width:8px;height:8px;border-radius:50%;background:var(--accent2);animation:pulse 1s ease-in-out infinite;flex-shrink:0;}
+.progress-badge.is-button{cursor:pointer;display:flex;align-items:center;gap:6px;border-color:var(--border2);max-width:52vw;}
+.progress-badge.is-button:active{background:var(--bg4);}
+.cc-name{max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)!important;font-family:'Sora',sans-serif;font-weight:500!important;}
+.cc-name::after{content:'·';margin-left:6px;color:var(--text3);}
+body:not(.is-apk) .apk-only{display:none!important;}
+.course-switch{display:flex;align-items:center;gap:10px;width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:7px 12px;margin-bottom:8px;min-height:40px;cursor:pointer;text-align:left;color:var(--text);font-family:inherit;}
+.course-switch:active{background:var(--bg4);}
+.course-switch>svg{width:18px;height:18px;flex-shrink:0;fill:none;stroke:var(--accent2);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.cs-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
+.cs-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;}
+.cs-name-in{display:inline-block;will-change:transform;}
+/* nome maior que o botão: desliza da direita para a esquerda (e volta), com pausa nas pontas, para dar para ler tudo */
+.cs-name.marquee .cs-name-in{animation:cs-scroll var(--cs-dur,10s) ease-in-out infinite alternate;}
+@keyframes cs-scroll{0%,12%{transform:translateX(0);}88%,100%{transform:translateX(var(--cs-dist,0px));}}
+@media (prefers-reduced-motion:reduce){.cs-name.marquee .cs-name-in{animation:none;}.cs-name{text-overflow:ellipsis;}}
+.cs-action{flex-shrink:0;font-size:11px;font-weight:600;color:var(--accent2);}
+.courses-box{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;width:100%;max-width:460px;padding:18px;display:flex;flex-direction:column;gap:12px;max-height:86vh;}
+.courses-head{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.courses-head .modal-btn{flex:0;min-width:84px;padding:8px 14px;}
+.courses-list{display:flex;flex-direction:column;gap:8px;overflow-y:auto;min-height:60px;}
+.courses-empty{font-size:13px;color:var(--text3);text-align:center;padding:22px 8px;}
+.course-item{display:flex;align-items:stretch;background:var(--bg3);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.course-item.current{border-color:var(--accent);}
+.course-main{flex:1;min-width:0;padding:11px 13px;cursor:pointer;display:flex;flex-direction:column;gap:5px;}
+.course-main:active{background:var(--bg4);}
+.course-name{font-size:13px;font-weight:600;color:var(--text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word;}
+.course-tag{font-size:10px;font-weight:600;color:var(--accent2);margin-left:6px;}
+.course-sub{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.course-bar{height:4px;border-radius:2px;background:var(--bg4);overflow:hidden;}
+.course-bar-fill{height:100%;background:var(--green);border-radius:2px;}
+.course-meta{display:flex;justify-content:space-between;gap:8px;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--text3);}
+.course-more{width:44px;flex-shrink:0;background:none;border:none;border-left:1px solid var(--border);color:var(--text3);font-size:18px;cursor:pointer;}
+.course-more:active{background:var(--bg4);}
+@media (max-width:559px){
+  #courses-modal{align-items:flex-end;padding:0;}
+  #courses-modal .courses-box{max-width:none;border-radius:16px 16px 0 0;border-bottom:none;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px));}
+  .cc-name{display:none;}
+  .progress-badge.is-button::after{content:'▾';color:var(--text3);font-size:9px;}
+}
 .module-count{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3);background:var(--bg4);border-radius:4px;padding:2px 6px;white-space:nowrap;flex-shrink:0;}
 .module-done-badge{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--green);background:rgba(52,211,153,.12);border-radius:4px;padding:2px 5px;white-space:nowrap;flex-shrink:0;}
 .module-body.collapsed{display:none;}
@@ -400,7 +442,9 @@ body.keyboard-notes-open .notes-mobile-box .notes-list{display:none;}
 .modal-title{font-size:15px;font-weight:600;color:var(--text);}
 .modal-desc{font-size:13px;color:var(--text2);line-height:1.6;}
 .modal-actions{display:flex;gap:8px;flex-wrap:wrap;}
-.modal-btn{flex:1;min-width:110px;height:38px;border-radius:8px;border:1px solid var(--border);font-family:'Sora',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:opacity .2s;display:flex;align-items:center;justify-content:center;gap:6px;}
+.modal-actions.stack{flex-direction:column;}
+.modal-actions.stack .modal-btn{flex:none;width:100%;}
+.modal-btn{flex:1;min-width:110px;min-height:38px;padding:8px 12px;text-align:center;border-radius:8px;border:1px solid var(--border);font-family:'Sora',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:opacity .2s;display:flex;align-items:center;justify-content:center;gap:6px;}
 .modal-btn:hover{opacity:.85;}
 .modal-btn.primary{background:var(--accent);color:white;border-color:transparent;}
 .modal-btn.secondary{background:var(--bg3);color:var(--text2);}
@@ -614,7 +658,24 @@ body.is-modular .btn-organize{display:flex;}
   .module-header{padding:10px 10px;}
   .module-title{font-size:13px;}
 
-  .controls-bar{padding:8px 12px 6px;}
+
+  /* Linha única: busca + Organizar + Recolher (só ícones). O título "Playlist" sai:
+     o botão de curso e a lista já dizem onde o usuário está. */
+  .sidebar .sidebar-header{display:flex;flex-wrap:wrap;align-items:center;gap:8px;overflow:hidden;max-height:260px;transition:max-height .22s ease,padding .22s ease,opacity .18s ease,border-color .22s ease;}
+  .sidebar-header .course-switch{flex:1 1 100%;margin-bottom:0;}
+  .sidebar-title-row{display:contents;}
+  .sidebar-title{display:none;}
+  .sidebar-header .search-box{order:3;flex:1 1 0;min-width:0;height:40px;}
+  .sidebar-header .btn-collapse-all{order:4;width:40px;height:40px;padding:0;justify-content:center;border-radius:10px;}
+  .sidebar-header .btn-collapse-all span{display:none;}
+  .sidebar-header .btn-collapse-all svg{width:16px;height:16px;}
+  /* Rolando a lista para baixo, a barra de curso e a busca saem e a lista ganha a altura toda;
+     rolar para cima (ou voltar ao topo) traz de volta. Controlado por JS (sb-compact). */
+  body.sb-compact .sidebar .sidebar-header{max-height:0;padding-top:0;padding-bottom:0;opacity:0;border-bottom-color:transparent;pointer-events:none;}
+  /* Controles mais compactos (botões continuam com 40px ou mais de toque) */
+  .controls-bar{padding:6px 12px 4px;}
+  .now-playing{margin-bottom:4px;}
+  .ctrl-row{gap:4px;}
   /* Digitando na busca (teclado aberto): recolhe os controles e encolhe o vídeo
      para sobrar espaço para os resultados. */
   body.search-open .controls-bar{display:none;}
@@ -626,7 +687,18 @@ body.is-modular .btn-organize{display:flex;}
   .ctrl-main .ctrl-btn{width:46px;height:46px;border-radius:12px;}
   .ctrl-main .ctrl-btn.primary{width:58px;height:50px;border-radius:14px;}
   .ctrl-main .ctrl-btn svg{width:19px;height:19px;}
-  .ctrl-aux .ctrl-btn,.ctrl-aux .fav-ctrl-btn,.ctrl-aux .mark-done-btn{flex:1 1 0;min-width:0;max-width:56px;height:42px;width:auto;border-radius:11px;padding:0;justify-content:center;}
+  .ctrl-aux .ctrl-btn,.ctrl-aux .fav-ctrl-btn,.ctrl-aux .mark-done-btn{flex:1 1 0;min-width:0;max-width:56px;height:40px;width:auto;border-radius:11px;padding:0;justify-content:center;}
+  /* Ordem da segunda linha pelo uso: o que se toca mais fica à direita, perto do polegar;
+     o que se toca menos, à esquerda. (esq → dir) Repetir, PiP, Fones, Favoritar, Concluir, Mais, Tela cheia.
+     Só na vertical do celular: horizontal e desktop seguem a ordem do HTML. */
+  #frame-badge{order:0;}
+  #loop-btn{order:1;}
+  #pip-btn{order:2;}
+  #audio-only-btn{order:3;}
+  #fav-btn{order:4;}
+  #mark-btn{order:5;}
+  #unified-more-btn{order:6;}
+  #fs-btn{order:7;}
   .mark-done-btn .mark-label{display:none;}
   .vol-row,.ab-label{display:none;}
   #frame-badge{height:30px;}
@@ -711,6 +783,18 @@ body.is-modular .btn-organize{display:flex;}
     <div class="modal-title" id="modal-title"></div>
     <div class="modal-desc" id="modal-desc"></div>
     <div class="modal-actions" id="modal-actions"></div>
+  </div>
+</div>
+
+<!-- Meus cursos (APK) -->
+<div class="modal-overlay" id="courses-modal">
+  <div class="courses-box">
+    <div class="courses-head">
+      <div class="progress-modal-title">Meus cursos</div>
+      <button class="modal-btn primary" onclick="coursesAddNew()">+ Novo</button>
+    </div>
+    <div class="courses-list" id="courses-list"></div>
+    <div class="progress-close-row"><button class="modal-btn secondary" style="flex:0;min-width:80px;" onclick="closeMyCourses()">Fechar</button></div>
   </div>
 </div>
 
@@ -929,7 +1013,7 @@ body.is-modular .btn-organize{display:flex;}
     <span class="logo-text">StudyPlay</span>
   </div>
   <div class="header-spacer"></div>
-  <div class="progress-badge" title="Aulas concluídas"><span class="pb-label">Concluídas: </span><span id="done-count">0</span> / <span id="total-count">0</span></div>
+  <div class="progress-badge" id="progress-badge" title="Aulas concluídas"><span class="cc-name" id="cc-name" hidden></span><span class="pb-label">Concluídas: </span><span id="done-count">0</span> / <span id="total-count">0</span></div>
 
   <!-- Botões secundários: visíveis no desktop, acessíveis via ⋮ no mobile -->
   <button class="btn-icon overflow-item" id="review-btn" onclick="openReviewMode()" title="Modo revisão (R)">
@@ -979,13 +1063,18 @@ body.is-modular .btn-organize{display:flex;}
   <!-- SIDEBAR -->
   <div class="sidebar" id="sidebar">
     <div class="sidebar-header">
+      <button class="course-switch apk-only" id="course-switch" onclick="openMyCourses()" title="Meus cursos: trocar de curso sem escolher a pasta de novo" aria-label="Meus cursos, curso atual. Toque para trocar">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <span class="cs-text"><span class="cs-name" id="course-switch-name"><span class="cs-name-in" id="course-switch-name-in">Nenhum curso aberto</span></span></span>
+        <span class="cs-action">Trocar</span>
+      </button>
       <div class="sidebar-title-row">
         <div class="sidebar-title">Playlist</div>
-        <button class="btn-collapse-all btn-organize" id="btn-organize" onclick="toggleOrganizeMode()" title="Reordenar módulos arrastando">
+        <button class="btn-collapse-all btn-organize" id="btn-organize" onclick="toggleOrganizeMode()" title="Reordenar módulos arrastando" aria-label="Organizar: reordenar módulos arrastando">
           <svg viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
           <span id="organize-label">Organizar</span>
         </button>
-        <button class="btn-collapse-all expanded" id="btn-collapse-all" onclick="toggleCollapseAll()" title="Recolher / expandir todos os módulos">
+        <button class="btn-collapse-all expanded" id="btn-collapse-all" onclick="toggleCollapseAll()" title="Recolher / expandir todos os módulos" aria-label="Recolher ou expandir todos os módulos">
           <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
           <span id="collapse-all-label">Recolher</span>
         </button>
@@ -996,6 +1085,7 @@ body.is-modular .btn-organize{display:flex;}
         <input type="text" placeholder="Buscar aula…" id="search-input" oninput="filterLessonsDebounced()">
       </div>
     </div>
+    <div class="scan-banner" id="scan-banner" hidden><span class="scan-dot"></span><span id="scan-banner-text">Carregando curso…</span></div>
     <div class="playlist" id="playlist">
       <div class="empty-state" style="padding:32px 16px;">
         <div class="empty-icon" style="width:48px;height:48px;">
@@ -1173,6 +1263,10 @@ body.is-modular .btn-organize{display:flex;}
               Google Drive
             </button>
             <!-- Itens do cabeçalho: no celular na horizontal o cabeçalho é ocultado para dar altura ao vídeo -->
+            <button class="unified-menu-btn menu-land-only apk-only" id="menu-courses-btn" onclick="closeMoreMenu();openMyCourses()">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+              Meus cursos
+            </button>
             <button class="unified-menu-btn menu-land-only" onclick="closeMoreMenu();openFolder()">
               <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
               Abrir pasta
@@ -1385,9 +1479,21 @@ const Diag = {
   }
 };
 let _playT0 = 0;
+function _localStorageKB(){
+  let n=0; try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); n+=(k.length+(localStorage.getItem(k)||'').length)*2; } }catch(e){}
+  return Math.round(n/1024);
+}
 function openDiag(){
-  showModal('Tempos de abertura', Diag.text(), [{label:'Fechar', cls:'secondary', action:closeModal}]);
-  document.getElementById('modal-desc').style.whiteSpace='pre-line';
+  const base = Diag.text()+'\n\nArmazenamento do app (progresso, notas): '+_localStorageKB()+' KB';
+  showModal('Tempos de abertura', base, [{label:'Fechar', cls:'secondary', action:closeModal}]);
+  const desc = document.getElementById('modal-desc');
+  desc.style.whiteSpace='pre-line';
+  if(navigator.storage && navigator.storage.estimate){
+    navigator.storage.estimate().then(es=>{
+      if(es && es.usage!=null && document.getElementById('modal-overlay').classList.contains('active'))
+        desc.textContent = base+'\nBiblioteca de cursos e arquivos: '+Math.round(es.usage/1024)+' KB'+(es.quota?' de '+Math.round(es.quota/1048576)+' MB':'');
+    }).catch(()=>{});
+  }
 }
 
 /* ═══════════════════════════════════════════
@@ -1465,7 +1571,35 @@ function legacyStorageKey(){
   catch(e){ return LS_KEY+'_default'; }
 }
 function buildStorageKey(){ return _courseKey || legacyStorageKey(); }
-function freezeCourseKey(){ _courseKey = legacyStorageKey(); }
+/* Identidade de curso NOVO aberto pela varredura progressiva: {treeUri, rootName}.
+   Dois cursos que começam com "Aula 01...05" não podem dividir o mesmo progresso, então a
+   chave ganha um sufixo com o hash do nome da pasta. O progresso de antes desta versão é
+   adotado quando é seguro (nenhum outro curso usa a chave antiga). */
+let _courseIdentity = null;
+function fnv1a36(str){
+  let h = 0x811c9dc5;
+  for(let i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  return h.toString(36);
+}
+function _sessionCourse(){
+  try{ return JSON.parse(localStorage.getItem('splay_native_session')||'null'); }catch(e){ return null; }
+}
+function resolveCourseKey(oldKey, id){
+  if(id.forceKey) return id.forceKey;                                              /* "Escolher a pasta de novo": mantém o curso */
+  const sess = _sessionCourse();
+  const known = CourseLibrary.uriToId.get(id.treeUri);
+  if(known) return known;                                                          /* pasta já na biblioteca */
+  if(sess && sess.treeUri===id.treeUri && sess.courseKey) return sess.courseKey;   /* pasta já conhecida */
+  const nova = oldKey+'_'+fnv1a36(id.rootName||'');
+  const has = k=>{ try{ return localStorage.getItem(k)!==null; }catch(e){ return false; } };
+  if(has(nova)) return nova;
+  if(has(oldKey) && !CourseLibrary.ids.has(oldKey) && !(sess && sess.courseKey===oldKey)) return oldKey;             /* progresso de antes desta versão */
+  return nova;
+}
+function freezeCourseKey(){
+  const old = legacyStorageKey();
+  _courseKey = _courseIdentity ? resolveCourseKey(old, _courseIdentity) : old;
+}
 
 /* Identificador único de cada aula para salvar progresso.
    Aulas com nome único usam só o nome (compatível com dados antigos).
@@ -1508,6 +1642,7 @@ function lessonTagText(item){
   return (item.module && _dupNames.has(item.lessonName)) ? item.lessonName+' · '+item.module : item.lessonName;
 }
 function saveToStorage(){
+  if(_scanActive()){ _scan.dirty = true; return; }   /* as chaves das aulas ainda podem mudar; grava ao terminar a varredura */
   try{
     const positions = {};
     lessons.forEach(l=>{ const t=lessonTimes[l.idx]; if(t&&t>2) positions[l.key||l.name]=t; });
@@ -1520,7 +1655,17 @@ function saveToStorage(){
       studyHistory
     };
     localStorage.setItem(buildStorageKey(), JSON.stringify(data));
-  }catch(e){}
+    libraryTouchSoon();
+  }catch(e){ warnStorageFull(e); }
+}
+/* Sem espaço para gravar: avisa uma vez, em vez de perder o progresso em silêncio */
+let _storageWarned = false;
+function warnStorageFull(e){
+  if(_storageWarned || !e) return;
+  if(e.name==='QuotaExceededError' || e.code===22 || e.code===1014 || /quota/i.test(String(e.message||''))){
+    _storageWarned = true;
+    toast('O app está sem espaço para salvar o progresso. Libere espaço no aparelho.');
+  }
 }
 function loadFromStorage(){
   try{ const r=localStorage.getItem(buildStorageKey()); return r?JSON.parse(r):null; }
@@ -2017,7 +2162,7 @@ function renderStatsModal(activeTab){
   let d = new Date(); d.setHours(0,0,0,0);
   while(true){ const k=localDate(d); if(daily[k]&&daily[k]>0){streak++;d.setDate(d.getDate()-1);}else break; if(streak>365)break; }
   const days7=[]; const now=new Date(); now.setHours(0,0,0,0);
-  for(let i=6;i>=0;i--){ const dd=new Date(now); dd.setDate(dd.getDate()-i); const k=dlocalDate(d); days7.push({label:dd.toLocaleDateString('pt-BR',{weekday:'short'}),sec:daily[k]||0}); }
+  for(let i=6;i>=0;i--){ const dd=new Date(now); dd.setDate(dd.getDate()-i); const k=localDate(dd); days7.push({label:dd.toLocaleDateString('pt-BR',{weekday:'short'}),sec:daily[k]||0}); }
   const maxSec = Math.max(...days7.map(d=>d.sec),1);
 
   const statsHTML = `
@@ -2652,6 +2797,15 @@ function hideLoading(){ document.getElementById('loading-overlay').classList.rem
 function updateLoadingCount(n){ document.getElementById('loading-sub').textContent=`${n} arquivo(s) encontrado(s)…`; }
 
 async function openFolder(){
+  if(lessons.length>0 && Platform.isCapacitor){
+    const nome = _courseRootName || 'curso atual';
+    showModal('Abrir pasta','Você já está estudando "'+nome+'". O que deseja fazer?',[
+      {label:'Adicionar como novo curso',           cls:'primary',   action:loadNewCourse},
+      {label:'Acrescentar módulos a este curso',  cls:'secondary', action:addModules},
+      {label:'Cancelar',                             cls:'secondary', action:closeModal}
+    ], true);
+    return;
+  }
   if(lessons.length>0){
     showModal('Já existe um curso carregado','O que você deseja fazer?',[
       {label:'Acrescentar módulos', cls:'primary',   action:addModules},
@@ -2662,7 +2816,11 @@ async function openFolder(){
   }
   loadNewCourse();
 }
-async function loadNewCourse(){ closeModal(); _nativePlaylistMode=false; _courseKey=null; await pickAndLoadFolder(false); }
+async function loadNewCourse(){
+  closeModal();
+  if(!Platform.isCapacitor){ _nativePlaylistMode=false; _courseKey=null; }   /* APK: o curso atual só sai de cena depois que a nova pasta for escolhida */
+  await pickAndLoadFolder(false);
+}
 async function addModules()   { closeModal(); _nativePlaylistMode=false; await pickAndLoadFolder(true);  }
 
 async function pickAndLoadFolder(merge){
@@ -2675,6 +2833,22 @@ async function pickAndLoadFolder(merge){
          o plugin varre os arquivos em background — o loading é visível nesse período */
       showLoading('Lendo pasta…');
       Diag.reset();
+      /* Curso novo: escolhe a pasta sem varrer e monta o curso módulo a módulo,
+         começando a aula assim que o primeiro módulo chega. */
+      if(!merge && typeof VideoFolder.pickFolderOnly==='function' && typeof VideoFolder.scanFolder==='function'){
+        const picked = await VideoFolder.pickFolderOnly();
+        if(!picked || !picked.treeUri){ hideLoading(); return; }
+        const known = CourseLibrary.uriToId.get(picked.treeUri);
+        if(known){                               /* mesma pasta: abre o curso guardado, sem duplicar */
+          hideLoading();
+          if(known===_courseKey) toast('Esse curso já está aberto');
+          else { toast('Esse curso já está em Meus cursos'); await openCourseById(known); }
+          return;
+        }
+        await persistCurrentCourse();
+        await startProgressiveScan(VideoFolder, picked.treeUri, picked.rootName||'', performance.now());
+        return;
+      }
       const result = await VideoFolder.pickFolder();
       if(!result || !result.files){ hideLoading(); return; }
       if(result.scanMs!=null) Diag.mark('varredura da pasta (nativo, '+result.files.length+' arquivos)', result.scanMs);
@@ -2699,7 +2873,7 @@ async function pickAndLoadFolder(merge){
     await processDirectory(dir, merge);
   }catch(e){
     hideLoading();
-    if(e.name!=='AbortError') toast('Erro ao abrir pasta: '+e.message);
+    if(e.name!=='AbortError' && e.message!=='cancelled') toast('Erro ao abrir pasta: '+e.message);
   }
 }
 
@@ -2708,12 +2882,128 @@ async function pickAndLoadFolder(merge){
    para restauração instantânea sem re-escanear a pasta.
    Chamada após processNativeFiles() em carga nova (merge=false).
 ───────────────────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   BIBLIOTECA DE CURSOS (APK) — IndexedDB `studyplay_library`
+   courses   (pesado, lido só ao abrir aquele curso): o mesmo formato do cache de sessão
+   summaries (leve, lido pela tela Meus cursos): nome, progresso, aula atual, último uso
+   Progresso, notas, capítulos e durações NÃO ficam aqui: continuam no localStorage,
+   separados por chave de curso. Ponteiro do último curso: localStorage splay_last_course.
+   Qualquer falha do banco vira `null` (broken=true) e o app segue com o curso em memória.
+═══════════════════════════════════════════════════════════════ */
+const CourseLibrary = {
+  broken: false,
+  _p: null,
+  uriToId: new Map(),     /* pasta -> id do curso (consulta síncrona) */
+  ids: new Set(),
+  _warned: false,
+  _fail(){
+    this.broken = true;
+    if(!this._warned && Platform.isCapacitor){
+      this._warned = true;
+      try{ toast('Não consegui guardar a lista de cursos neste aparelho. O curso atual continua funcionando.'); }catch(e){}
+    }
+  },
+  open(){
+    if(this._p) return this._p;
+    this._p = new Promise(res=>{
+      let settled = false;
+      const fin = v=>{ if(!settled){ settled = true; res(v); } };
+      const fail = ()=>{ this._fail(); this._p = null; fin(null); };
+      try{
+        const rq = indexedDB.open('studyplay_library', 1);
+        rq.onupgradeneeded = ()=>{
+          const d = rq.result;
+          d.createObjectStore('courses',   {keyPath:'id'});
+          d.createObjectStore('summaries', {keyPath:'id'});
+        };
+        rq.onsuccess = ()=>fin(rq.result);
+        rq.onerror = rq.onblocked = fail;
+        setTimeout(fail, 3000);
+      }catch(e){ fail(); }
+    });
+    return this._p;
+  },
+  /* Executa `fn(tx)` (que devolve um IDBRequest ou nada) e resolve com o resultado, ou null em falha */
+  _run(stores, mode, fn){
+    return this.open().then(db=>{
+      if(!db) return null;
+      return new Promise(res=>{
+        let settled = false, out;
+        const fin = v=>{ if(!settled){ settled = true; clearTimeout(timer); res(v); } };
+        const timer = setTimeout(()=>{ this._fail(); fin(null); }, 3000);
+        try{
+          const tx = db.transaction(stores, mode);
+          out = fn(tx);
+          tx.oncomplete = ()=>fin(out && 'result' in out ? out.result : true);
+          tx.onerror = tx.onabort = ()=>{ this._fail(); fin(null); };
+        }catch(e){ this._fail(); fin(null); }
+      });
+    }).catch(()=>null);
+  },
+  getCourse(id){  return this._run('courses',   'readonly', tx=>tx.objectStore('courses').get(id)); },
+  getSummary(id){ return this._run('summaries', 'readonly', tx=>tx.objectStore('summaries').get(id)); },
+  async listSummaries(){
+    const all = await this._run('summaries', 'readonly', tx=>tx.objectStore('summaries').getAll());
+    if(all) this.lastList = all.slice().sort((a,b)=>(b.lastOpenedAt||0)-(a.lastOpenedAt||0));
+    if(all){ this.uriToId = new Map(all.map(x=>[x.treeUri, x.id])); this.ids = new Set(all.map(x=>x.id)); }
+    return (all||[]).sort((a,b)=>(b.lastOpenedAt||0)-(a.lastOpenedAt||0));
+  },
+  async findByTreeUri(uri){ return (await this.listSummaries()).find(x=>x.treeUri===uri) || null; },
+  putSummary(sum){ return this._run('summaries', 'readwrite', tx=>tx.objectStore('summaries').put(sum)); },
+  /* Grava o curso inteiro + resumo na mesma transação */
+  async saveCourse(entry){
+    const id = entry.courseKey; if(!id) return false;
+    const agora = _summaryNow();                 /* antes de qualquer await: o estado pode mudar para outro curso */
+    const old = await this.getSummary(id);
+    const rec = {id, treeUri:entry.treeUri, rootName:entry.rootName, isModular:entry.isModular,
+                 modulesCache:entry.modulesCache, lessonsCache:entry.lessonsCache, extrasCache:entry.extrasCache,
+                 savedAt:entry.savedAt};
+    const sum = Object.assign({id, name:entry.rootName||'Curso', treeUri:entry.treeUri,
+                               addedAt: old ? old.addedAt : Date.now(), lastOpenedAt: Date.now()}, agora);
+    const ok = await this._run(['courses','summaries'], 'readwrite', tx=>{
+      tx.objectStore('courses').put(rec);
+      return tx.objectStore('summaries').put(sum);
+    });
+    if(ok!==null){
+      for(const [u,i] of [...this.uriToId]) if(i===id) this.uriToId.delete(u);      /* pasta antiga (escolhida de novo) */
+      this.uriToId.set(entry.treeUri, id); this.ids.add(id);
+    }
+    return ok!==null;
+  },
+  /* Remove da lista; progresso, notas e capítulos (localStorage) ficam guardados */
+  async remove(id){
+    const r = await this._run(['courses','summaries'], 'readwrite', tx=>{
+      tx.objectStore('courses').delete(id);
+      return tx.objectStore('summaries').delete(id);
+    });
+    this.ids.delete(id);
+    for(const [u,i] of [...this.uriToId]) if(i===id) this.uriToId.delete(u);
+    return r;
+  }
+};
+try{ if(Platform.isCapacitor) CourseLibrary.open(); }catch(e){}
+/* Resumo leve do curso aberto agora */
+function _summaryNow(){
+  const cur = currentIdx>=0 ? lessons[currentIdx] : null;
+  return {total:lessons.length, done:done.size, currentName:cur?cur.name:'', currentModule:cur?(cur.module||''):''};
+}
+/* Atualiza o resumo (progresso e último uso) no máximo a cada 3 s, só o registro leve */
+let _libTouchTimer = null;
+function libraryTouchSoon(){
+  if(!Platform.isCapacitor || !_courseKey || _scanActive() || _libTouchTimer) return;
+  _libTouchTimer = setTimeout(async ()=>{
+    _libTouchTimer = null;
+    const id = _courseKey; if(!id) return;
+    const sum = await CourseLibrary.getSummary(id);
+    if(sum) CourseLibrary.putSummary(Object.assign(sum, {lastOpenedAt:Date.now()}, _summaryNow()));
+  }, 3000);
+}
+
 function _serFile(f){
   return {_uri:f._uri||'',_native:true,name:f.name||'',size:f.size||0,
           _displayName:f._displayName||null,_path:f._path||null};
 }
-function saveNativeSessionCache(treeUri, rootName){
-  try{
+function _buildSessionEntry(treeUri, rootName){
     const entry={treeUri, rootName, savedAt:Date.now(), isModular, courseKey:_courseKey||null};
     const nativeOnly = f=>f && f._uri;
     if(isModular){
@@ -2736,7 +3026,20 @@ function saveNativeSessionCache(treeUri, rootName){
       }));
       entry.extrasCache=extraFiles.filter(e=>nativeOnly(e.file)).map(e=>({name:e.name,file:_serFile(e.file)}));
     }
+    return entry;
+}
+let _courseTreeUri = '', _courseRootName = '';      /* pasta e nome do curso aberto agora */
+function saveNativeSessionCache(treeUri, rootName){
+  _courseTreeUri = treeUri; _courseRootName = rootName||'';
+  updateCourseChip();
+  try{
+    const entry=_buildSessionEntry(treeUri, rootName);
     localStorage.setItem('splay_native_session', JSON.stringify(entry));
+    /* Biblioteca de cursos (IndexedDB): guarda o curso inteiro e o resumo leve */
+    if(Platform.isCapacitor && entry.courseKey){
+      try{ localStorage.setItem('splay_last_course', entry.courseKey); }catch(e){}
+      CourseLibrary.saveCourse(entry);
+    }
   }catch(e){
     /* quota exceeded — salva ao menos treeUri para o fallback lento */
     try{ localStorage.setItem('splay_native_session', JSON.stringify({treeUri,rootName,savedAt:Date.now(),courseKey:_courseKey||null})); }catch(e2){}
@@ -2747,6 +3050,7 @@ function saveNativeSessionCache(treeUri, rootName){
 function refreshNativeSessionCache(){
   if(!Platform.isCapacitor) return;
   try{
+    if(_courseTreeUri){ saveNativeSessionCache(_courseTreeUri, _courseRootName); return; }
     const sess=JSON.parse(localStorage.getItem('splay_native_session')||'null');
     if(sess && sess.treeUri) saveNativeSessionCache(sess.treeUri, sess.rootName||'');
   }catch(e){}
@@ -2828,6 +3132,35 @@ function _cacheHasDuplicateNames(sess){
   return new Set(names).size !== names.length;
 }
 
+/* Insere um arquivo nativo ({name, relativePath, uri, mimeType, size}) na árvore de pastas.
+   Devolve true quando é um vídeo. Compartilhado pela carga completa e pela varredura
+   progressiva (um módulo por vez). */
+function _insertNativeFile(root, f){
+  const parts=f.relativePath.split('/');
+  let node=root;
+  for(let k=0;k<parts.length-1;k++){
+    const d=parts[k];
+    if(!node.children[d]) node.children[d]={name:d,videos:[],extras:[],children:{}};
+    node=node.children[d];
+  }
+  const fname=parts[parts.length-1];
+  const nobj={name:fname, _uri:f.uri, _native:true, size:f.size||0, _path:f.relativePath};
+  const isVid=isVideo(fname)||(f.mimeType&&f.mimeType.startsWith('video/'));
+  const isCnt=!isVid&&(isContent(fname)||f.mimeType==='application/pdf'||f.mimeType==='text/html');
+  if(isVid)      { node.videos.push(nobj); return true; }
+  if(isCnt)      { node.extras.push({file:nobj, name:fname}); }
+  return false;
+}
+/* Converte um nó da árvore em objeto de módulo */
+function _nodeToMod(node){
+  const subs=Object.values(node.children)
+    .sort((a,b)=>naturalSort(a.name,b.name))
+    .map(_nodeToMod).filter(Boolean);
+  const vids=node.videos.slice().sort((a,b)=>naturalSort(a.name,b.name));
+  if(!vids.length&&!subs.length&&!(node.extras&&node.extras.length)) return null;
+  return {name:node.name, lessons:vids, extras:node.extras||[], subModules:subs};
+}
+
 /* ═══════════════════════════════════════════════════════════════
    processNativeFiles — processa a lista retornada pelo plugin
    VideoFolder (ACTION_OPEN_DOCUMENT_TREE). Cada entry tem:
@@ -2852,34 +3185,13 @@ async function processNativeFiles(nativeFiles, rootName, merge){
   for(let i=0;i<nativeFiles.length;i+=BATCH){
     const end=Math.min(i+BATCH, nativeFiles.length);
     for(let j=i;j<end;j++){
-      const f=nativeFiles[j];
-      const parts=f.relativePath.split('/');
-      let node=root;
-      for(let k=0;k<parts.length-1;k++){
-        const d=parts[k];
-        if(!node.children[d]) node.children[d]={name:d,videos:[],extras:[],children:{}};
-        node=node.children[d];
-      }
-      const fname=parts[parts.length-1];
-      const nobj={name:fname, _uri:f.uri, _native:true, size:f.size||0, _path:f.relativePath};
-      const isVid=isVideo(fname)||(f.mimeType&&f.mimeType.startsWith('video/'));
-      const isCnt=!isVid&&(isContent(fname)||f.mimeType==='application/pdf'||f.mimeType==='text/html');
-      if(isVid)      { node.videos.push(nobj); count++; }
-      else if(isCnt) { node.extras.push({file:nobj, name:fname}); }
+      if(_insertNativeFile(root, nativeFiles[j])) count++;
     }
     updateLoadingCount(count);
     if(end<nativeFiles.length) await new Promise(r=>setTimeout(r,0));
   }
 
-  /* ── 2. Converte nó da árvore em objeto de módulo ── */
-  function nodeToMod(node){
-    const subs=Object.values(node.children)
-      .sort((a,b)=>naturalSort(a.name,b.name))
-      .map(nodeToMod).filter(Boolean);
-    const vids=node.videos.slice().sort((a,b)=>naturalSort(a.name,b.name));
-    if(!vids.length&&!subs.length&&!(node.extras&&node.extras.length)) return null;
-    return {name:node.name, lessons:vids, extras:node.extras||[], subModules:subs};
-  }
+  const nodeToMod=_nodeToMod;   /* ── 2. Converte nó da árvore em objeto de módulo ── */
 
   const hasRootVideos=root.videos.length>0;
   const subdirNames=Object.keys(root.children);
@@ -2970,6 +3282,461 @@ async function processNativeFiles(nativeFiles, rootName, merge){
   _p.then(()=>{ updatePlaylistActive(); scrollToActive(); }).catch(()=>{});
   const totalItems=normalizedModules.reduce((s,m)=>s+countFilesInRawModule(m),0);
   toast(`${totalItems} item(s) em ${normalizedModules.length} módulo(s)`);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MEUS CURSOS (APK): selo do cabeçalho + painel com a lista da biblioteca
+═══════════════════════════════════════════════════════════════ */
+function updateCourseChip(){
+  const el=document.getElementById('cc-name'); if(!el) return;
+  const nome = Platform.isCapacitor ? (_courseRootName||'') : '';
+  el.textContent = nome; el.hidden = !nome;
+  const csIn=document.getElementById('course-switch-name-in');
+  if(csIn){ csIn.textContent = nome || 'Nenhum curso aberto'; fitCourseMarquee(); }
+}
+/* Liga o deslizamento só quando o nome não cabe; distância e tempo seguem o tamanho do nome */
+function fitCourseMarquee(){
+  const box=document.getElementById('course-switch-name'), inn=document.getElementById('course-switch-name-in');
+  if(!box||!inn) return;
+  box.classList.remove('marquee');
+  requestAnimationFrame(()=>{
+    const over = inn.offsetWidth - box.clientWidth;
+    if(over>2 && box.clientWidth>0){
+      box.style.setProperty('--cs-dist', (-over-4)+'px');
+      box.style.setProperty('--cs-dur', Math.max(6, over/22+4).toFixed(1)+'s');
+      box.classList.add('marquee');
+    }
+  });
+}
+try{
+  const _csBox=document.getElementById('course-switch-name');
+  if(_csBox && window.ResizeObserver) new ResizeObserver(()=>fitCourseMarquee()).observe(document.getElementById('course-switch'));
+}catch(e){}
+function _courseDateLabel(ts){
+  if(!ts) return '';
+  const d=new Date(ts), hoje=new Date();
+  const dia = x=>new Date(x.getFullYear(),x.getMonth(),x.getDate()).getTime();
+  const diff = Math.round((dia(hoje)-dia(d))/86400000);
+  if(diff<=0) return 'Hoje';
+  if(diff===1) return 'Ontem';
+  return d.toLocaleDateString('pt-BR');
+}
+function renderMyCourses(list){
+  const box=document.getElementById('courses-list'); if(!box) return;
+  box.innerHTML='';
+  if(!list.length){
+    const e=document.createElement('div'); e.className='courses-empty';
+    e.textContent='Nenhum curso na lista ainda. Toque em + Novo e escolha a pasta do curso.';
+    box.appendChild(e); return;
+  }
+  list.forEach(c=>{
+    const atual = (c.id===_courseKey);
+    const sum = atual ? Object.assign({}, c, _summaryNow()) : c;      /* o curso aberto mostra os números ao vivo */
+    const pct = sum.total>0 ? Math.round(sum.done/sum.total*100) : 0;
+    const item=document.createElement('div'); item.className='course-item'+(atual?' current':'');
+    const main=document.createElement('div'); main.className='course-main';
+    main.onclick=()=>coursesOpen(c.id);
+    const nome=document.createElement('div'); nome.className='course-name'; nome.textContent=c.name||'Curso';
+    if(atual){ const t=document.createElement('span'); t.className='course-tag'; t.textContent='Estudando'; nome.appendChild(t); }
+    const sub=document.createElement('div'); sub.className='course-sub';
+    sub.textContent = sum.currentName ? ((sum.currentModule?sum.currentModule+' · ':'')+sum.currentName) : 'Ainda não começou';
+    const bar=document.createElement('div'); bar.className='course-bar';
+    const fill=document.createElement('div'); fill.className='course-bar-fill'; fill.style.width=pct+'%'; bar.appendChild(fill);
+    const meta=document.createElement('div'); meta.className='course-meta';
+    const m1=document.createElement('span'); m1.textContent=`${sum.done}/${sum.total} · ${pct}%`;
+    const m2=document.createElement('span'); m2.textContent=_courseDateLabel(c.lastOpenedAt);
+    meta.append(m1,m2);
+    main.append(nome,sub,bar,meta);
+    const more=document.createElement('button'); more.className='course-more'; more.textContent='⋮';
+    more.title='Remover da lista'; more.setAttribute('aria-label','Remover da lista');
+    more.onclick=e=>{ e.stopPropagation(); coursesAskRemove(c.id, c.name); };
+    item.append(main,more); box.appendChild(item);
+  });
+}
+async function openMyCourses(){
+  if(!Platform.isCapacitor) return;
+  window._nativeHidePlayer?.();
+  document.getElementById('courses-modal').classList.add('active');
+  if(CourseLibrary.lastList) renderMyCourses(CourseLibrary.lastList);     /* aparece na hora; atualiza em seguida */
+  const list = await CourseLibrary.listSummaries();
+  renderMyCourses(list);
+}
+function closeMyCourses(){
+  document.getElementById('courses-modal').classList.remove('active');
+  window._nativeShowPlayer?.();
+}
+async function coursesOpen(id){
+  closeMyCourses();
+  if(id===_courseKey) return;
+  await openCourseById(id);
+}
+function coursesAddNew(){ closeMyCourses(); loadNewCourse(); }
+function coursesAskRemove(id, nome){
+  closeMyCourses();
+  showModal('Remover da lista', '"'+(nome||'Curso')+'" sai de Meus cursos. O progresso, as notas e os capítulos ficam guardados. Se abrir a mesma pasta de novo, tudo volta.', [
+    {label:'Remover da lista', cls:'danger', action:async()=>{ closeModal(); await removeCourse(id); openMyCourses(); }},
+    {label:'Cancelar', cls:'secondary', action:()=>{ closeModal(); openMyCourses(); }}
+  ]);
+}
+(function initCourseChip(){
+  document.body.classList.toggle('is-apk', !!Platform.isCapacitor);
+  if(!Platform.isCapacitor) return;
+  const b=document.getElementById('progress-badge');
+  b.classList.add('is-button'); b.title='Meus cursos'; b.onclick=openMyCourses;
+  updateCourseChip();
+})();
+
+/* ═══════════════════════════════════════════════════════════════
+   VÁRIOS CURSOS — abrir, trocar e remover (APK)
+═══════════════════════════════════════════════════════════════ */
+/* Grava o progresso do curso aberto e atualiza o resumo antes de sair dele */
+async function persistCurrentCourse(){
+  if(!_courseKey || !lessons.length || _scanActive()) return;
+  if(currentIdx>=0 && video.currentTime>2) lessonTimes[currentIdx]=video.currentTime;
+  closeHistorySession();
+  saveToStorage();
+  if(Platform.isCapacitor){
+    const sum = await CourseLibrary.getSummary(_courseKey);
+    if(sum) await CourseLibrary.putSummary(Object.assign(sum, {lastOpenedAt:Date.now()}, _summaryNow()));
+  }
+}
+
+/* Depois de abrir um curso da biblioteca: ponteiro, último uso e reserva da sessão */
+function afterCourseOpened(rec){
+  _courseTreeUri = rec.treeUri; _courseRootName = rec.rootName||''; updateCourseChip();
+  try{ localStorage.setItem('splay_last_course', rec.id); }catch(e){}
+  CourseLibrary.getSummary(rec.id).then(sum=>{
+    if(sum) CourseLibrary.putSummary(Object.assign(sum, {lastOpenedAt:Date.now()}, _summaryNow()));
+  });
+  verifyCourseFolder();                                  /* em paralelo; não atrasa a aula */
+  /* reserva para quando o banco falhar (adiado para não pesar na abertura) */
+  setTimeout(()=>{
+    if(_courseKey!==rec.id) return;
+    try{
+      localStorage.setItem('splay_native_session', JSON.stringify({treeUri:rec.treeUri, rootName:rec.rootName, savedAt:rec.savedAt||Date.now(),
+        isModular:rec.isModular, courseKey:rec.id, modulesCache:rec.modulesCache, lessonsCache:rec.lessonsCache, extrasCache:rec.extrasCache}));
+    }catch(e){}
+  }, 1500);
+}
+
+/* Abre um curso guardado na biblioteca (troca de curso). Devolve true se abriu. */
+async function openCourseById(id){
+  if(!Platform.isCapacitor) return false;
+  if(id===_courseKey && lessons.length) return true;
+  const rec = await CourseLibrary.getCourse(id);
+  if(!rec){ toast('Não encontrei este curso na lista.'); return false; }
+  if(_scanActive()) cancelProgressiveScan(); else await persistCurrentCourse();
+  resetCourseState();
+  const sess = Object.assign({}, rec, {courseKey:rec.id});
+  if(!quickRestore(sess)){
+    /* cache ilegível: varre a pasta de novo (a chave do curso é mantida pela pasta) */
+    const VF = window.Capacitor?.Plugins?.VideoFolder;
+    if(VF && typeof VF.scanFolder==='function'){ await startProgressiveScan(VF, rec.treeUri, rec.rootName||'', performance.now()); return true; }
+    toast('Não foi possível abrir este curso.'); return false;
+  }
+  afterCourseOpened(rec);
+  return true;
+}
+
+/* Tira da lista; progresso, notas e capítulos continuam guardados no aparelho */
+async function removeCourse(id){
+  const sum = await CourseLibrary.getSummary(id);
+  const wasOpen = (id===_courseKey);
+  await CourseLibrary.remove(id);
+  const rest = await CourseLibrary.listSummaries();
+  const VF = window.Capacitor?.Plugins?.VideoFolder;
+  if(sum && VF && typeof VF.releaseFolder==='function' && !rest.some(x=>x.treeUri===sum.treeUri)){
+    try{ VF.releaseFolder({treeUri:sum.treeUri}); }catch(e){}
+  }
+  try{
+    if(localStorage.getItem('splay_last_course')===id){
+      if(rest[0]) localStorage.setItem('splay_last_course', rest[0].id); else localStorage.removeItem('splay_last_course');
+    }
+    const ss=_sessionCourse(); if(ss && ss.courseKey===id) localStorage.removeItem('splay_native_session');
+  }catch(e){}
+  if(wasOpen){
+    if(_scanActive()) cancelProgressiveScan();
+    _courseKey = null;                                  /* não grava de volta o curso removido */
+    if(rest[0]) await openCourseById(rest[0].id); else showEmptyCourseState();
+  }
+  return true;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PASTA DO CURSO NÃO ENCONTRADA (movida, apagada, cartão SD removido, permissão perdida)
+═══════════════════════════════════════════════════════════════ */
+let _missingShownFor = null;
+function showCourseMissing(){
+  const id = _courseKey; if(!id || _missingShownFor===id) return;
+  _missingShownFor = id;
+  showModal('Não encontrei os arquivos deste curso', 'A pasta pode ter sido movida ou apagada. Escolha a pasta de novo: o progresso, as notas e os capítulos são mantidos.', [
+    {label:'Escolher a pasta de novo', cls:'primary', action:()=>{ closeModal(); reselectCourseFolder(id); }},
+    {label:'Remover da lista',         cls:'danger',  action:async()=>{ closeModal(); await removeCourse(id); }},
+    {label:'Agora não',                cls:'secondary', action:closeModal}
+  ], true);
+}
+/* Confere a pasta sem atrasar a abertura: roda em paralelo com a reprodução */
+function verifyCourseFolder(){
+  const VF = window.Capacitor?.Plugins?.VideoFolder;
+  const uri = _courseTreeUri, id = _courseKey;
+  if(!VF || typeof VF.checkFolder!=='function' || !uri || !id) return Promise.resolve(true);
+  return VF.checkFolder({treeUri:uri}).then(r=>{
+    const ok = !r || r.ok!==false;
+    if(!ok && _courseKey===id) showCourseMissing();
+    return ok;
+  }).catch(()=>true);
+}
+/* Varre a pasta de novo mantendo a chave (e por isso o progresso) do curso */
+async function reselectCourseFolder(id){
+  const VF = window.Capacitor?.Plugins?.VideoFolder;
+  if(!VF || typeof VF.pickFolderOnly!=='function') return;
+  try{
+    showLoading('Lendo pasta…');
+    const picked = await VF.pickFolderOnly();
+    if(!picked || !picked.treeUri){ hideLoading(); return; }
+    _missingShownFor = null;
+    await startProgressiveScan(VF, picked.treeUri, picked.rootName||'', performance.now(), id);
+  }catch(e){
+    hideLoading();
+    if(e && e.message!=='cancelled') toast('Erro ao abrir pasta: '+(e.message||e));
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VARREDURA PROGRESSIVA (APK, curso novo)
+   O Java manda a pasta aos poucos: scanRoot (raiz + lista de módulos), scanModule
+   (um módulo por vez, SEMPRE em ordem) e scanDone. O app acrescenta cada módulo ao
+   curso (índices das aulas já existentes não mudam), desenha só o módulo novo e começa
+   a tocar assim que a aula de partida existe, sem esperar a pasta inteira.
+   Durante a varredura o progresso NÃO é gravado (as chaves das aulas podem mudar quando
+   um módulo novo repete um nome); grava ao terminar.
+═══════════════════════════════════════════════════════════════ */
+let _scan = null;
+let _scanListeners = false;
+function _scanActive(){ return !!(_scan && _scan.active); }
+function _scanOwns(ev){ return !!(_scan && _scan.active && ev && ev.scanId===_scan.id); }
+function _scanWake(){ if(!_scan) return; const w=_scan.waiters; _scan.waiters=[]; w.forEach(r=>r()); }
+
+function showScanBanner(txt){
+  const b=document.getElementById('scan-banner'); if(!b) return;
+  document.getElementById('scan-banner-text').textContent=txt; b.hidden=false;
+}
+function hideScanBanner(){ const b=document.getElementById('scan-banner'); if(b) b.hidden=true; }
+function updateScanBanner(){
+  if(!_scanActive()) return;
+  showScanBanner(_scan.total>0 ? `Carregando curso… ${_scan.got} de ${_scan.total} módulos` : 'Carregando curso…');
+}
+
+function _ensureScanListeners(VF){
+  if(_scanListeners) return;
+  _scanListeners = true;
+  VF.addListener('scanRoot',   ev=>onScanRoot(ev));
+  VF.addListener('scanModule', ev=>onScanModule(ev));
+  VF.addListener('scanDone',   ev=>onScanDone(ev));
+  VF.addListener('scanError',  ev=>{ if(_scanOwns(ev)) _scanFail(ev.message); });
+}
+
+/* Limpa tudo do curso anterior (memória e player) antes de abrir outro.
+   O progresso já foi gravado em localStorage pela chave do curso; nada disso é apagado de lá.
+   O timer de sono NÃO é tocado: continua valendo entre cursos. */
+const _EMPTY_PLAYLIST_HTML = playlistEl.innerHTML;
+function resetCourseState(){
+  try{ closeHistorySession(); }catch(e){}
+  try{ if(abState>0) clearAB(); exitFrameMode(); }catch(e){}
+  _queueGen++; _nativePlaylistMode=false; _nativeQueue=[];
+  const plug = Platform.isCapacitor ? window.Capacitor?.Plugins?.VideoPlayer : null;
+  if(plug && typeof plug.stop==='function'){ try{ plug.stop().catch(()=>{}); }catch(e){} }
+  try{ video.pause(); }catch(e){}
+  _courseKey=null; _courseTreeUri=''; _courseRootName='';
+  modules=[]; lessons=[]; sortedLessons=[]; extraFiles=[]; _lessonByFile=new Map();
+  done=new Set(); favorites=new Set(); currentIdx=-1;
+  Object.keys(lessonTimes).forEach(k=>delete lessonTimes[k]);
+  Object.keys(lessonDurations).forEach(k=>delete lessonDurations[k]);
+  _metaQueue.length=0; _durKey=null;
+  collapsedModules={};
+  notes=[]; chapters=[]; studyHistory=[];
+  studyStats={totalWatchedSec:0,sessionsCount:0,lastStudyDate:null,dailySec:{}};
+  try{ renderNotes(); }catch(e){}
+  isModular=true; document.body.classList.add('is-modular');
+  playlistEl.innerHTML='';
+}
+/* Sem nenhum curso: volta à tela inicial */
+function showEmptyCourseState(){
+  resetCourseState();
+  isModular=false; document.body.classList.remove('is-modular');
+  playlistEl.innerHTML=_EMPTY_PLAYLIST_HTML; updateCourseChip();
+  video.style.display='none'; emptyState.style.display='';
+  totalCount.textContent='0'; doneCount.textContent='0';
+  try{ updateNowTitle(''); }catch(e){}
+}
+
+async function startProgressiveScan(VF, treeUri, rootName, t0, forceKey){
+  cancelProgressiveScan();
+  _ensureScanListeners(VF);
+  resetCourseState();
+  _courseTreeUri=treeUri; _courseRootName=rootName||''; updateCourseChip();
+  _courseIdentity={treeUri, rootName, forceKey:forceKey||null};
+  const id='scan_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  _scan={ id, VF, treeUri, rootName, t0, active:true, finished:false, flat:false, total:0, got:0,
+          flatFiles:[], keyed:false, started:false, stored:null, startP:null, rendered:0, waiters:[], dirty:false };
+  hideLoading();
+  showScanBanner('Lendo pasta…');
+  try{ await VF.scanFolder({treeUri, scanId:id}); }
+  catch(e){ _scanFail(e && e.message ? e.message : String(e)); }
+}
+
+/* Interrompe a varredura (trocar de curso, novo Abrir Pasta). Eventos atrasados são ignorados. */
+function cancelProgressiveScan(){
+  if(!_scanActive()) return;
+  _scan.active=false; _courseIdentity=null;
+  try{ _scan.VF.cancelScan({scanId:_scan.id}); }catch(e){}
+  _scanWake();
+  hideScanBanner();
+}
+
+function _scanFail(msg){
+  if(_scan) _scan.active=false;
+  _courseIdentity=null;
+  _scanWake(); hideScanBanner(); hideLoading();
+  toast('Erro ao ler a pasta: '+(msg||'desconhecido'));
+}
+
+function onScanRoot(ev){
+  if(!_scanOwns(ev)) return;
+  _scan.rootName = ev.rootName || _scan.rootName;
+  _scan.flat  = !!ev.flat;
+  _scan.total = (ev.modules||[]).length;
+  if(_scan.flat) _scan.flatFiles.push(...(ev.rootFiles||[]));
+  updateScanBanner();
+}
+
+function onScanModule(ev){
+  if(!_scanOwns(ev)) return;
+  _scan.got++;
+  if(_scan.flat){ _scan.flatFiles.push(...(ev.files||[])); updateScanBanner(); return; }
+  const tmp={name:'',videos:[],extras:[],children:{}};
+  for(const f of (ev.files||[])) _insertNativeFile(tmp, f);
+  const raw = tmp.children[ev.name] ? _nodeToMod(tmp.children[ev.name]) : null;
+  if(raw){ modules.push(...normalizeModules([raw])); _scanAfterModules(); }
+  updateScanBanner();
+}
+
+/* Depois de acrescentar módulo(s): refaz a lista de aulas (só acrescenta), calcula a chave
+   do curso quando houver 5 aulas, começa a tocar e desenha o módulo novo. */
+function _scanAfterModules(){
+  rebuildLessonsFromModules(); buildSortedLessons();
+  if(!_scan.keyed){
+    if(lessons.length<5 && !_scan.finished) return;   /* a chave vem das 5 primeiras aulas */
+    freezeCourseKey();
+    _scan.stored = loadFromStorage();
+    if(_scan.stored) applyStoredProgress(_scan.stored);
+    _scan.keyed = true;
+  } else {
+    _scanMergeStored();
+  }
+  _scanTryStart();
+  const first = _scan.rendered===0;
+  if(first) renderModularPlaylist(); else renderModularPlaylist(_scan.rendered);
+  _scan.rendered = modules.length;
+  if(first && _scan.startP) _scan.startP.then(()=>{ updatePlaylistActive(); scrollToActive(); }).catch(()=>{});
+  _scanWake();
+}
+
+/* Aplica o progresso salvo às aulas que acabaram de chegar (só acrescenta, nunca remove) */
+function _scanMergeStored(){
+  const st=_scan.stored; if(!st) return;
+  const dn=new Set(st.done||[]), fv=new Set(st.favorites||[]), pos=st.positions||{};
+  lessons.forEach(l=>{
+    const k=l.key||l.name;
+    if(dn.has(k)) done.add(l.idx);
+    if(fv.has(k)) favorites.add(l.idx);
+    if(pos[k] && lessonTimes[l.idx]==null) lessonTimes[l.idx]=pos[k];
+  });
+  updateDoneCount();
+}
+
+/* Começa a tocar: na primeira aula (curso sem progresso) ou na aula onde parou,
+   assim que ela chegar. */
+function _scanTryStart(){
+  if(!_scan.keyed || _scan.started) return;
+  const st=_scan.stored;
+  let idx=0;
+  if(st && st.currentName){
+    const i=lessons.findIndex(l=>(l.key||l.name)===st.currentName);
+    if(i>=0) idx=i;
+    else if(!_scan.finished) return;      /* espera chegar o módulo onde parou */
+  }
+  _scan.started=true;
+  Diag.mark('pasta escolhida até iniciar a aula (app)', performance.now()-_scan.t0);
+  _scan.startP = playLesson(idx);
+}
+
+/* Fila nativa que acompanha o curso enquanto ele ainda está chegando: um único laço por
+   fila, sempre acrescentando as aulas seguintes na ordem. */
+async function _feedQueueGrowing(gen, startIdx, from){
+  const plug=window.Capacitor?.Plugins?.VideoPlayer;
+  if(!plug || typeof plug.appendPlaylist!=='function') return;
+  let pos=from, first=true;
+  for(;;){
+    await new Promise(r=>setTimeout(r, first ? 500 : 120)); first=false;
+    if(gen!==_queueGen || !_nativePlaylistMode) return;
+    const next=lessons.slice(startIdx+pos, startIdx+pos+QUEUE_CHUNK);
+    if(!next.length){
+      if(!_scanActive()) return;
+      await new Promise(r=>_scan.waiters.push(r));      /* acorda quando chega outro módulo */
+      first=false; continue;
+    }
+    const items=next.map(lo=>({uri:lo.file._uri, title:lo.name, artist:lo.module||'StudyPlay'}));
+    try{ await plug.appendPlaylist({items}); }catch(e){ return; }
+    if(gen!==_queueGen || !_nativePlaylistMode) return;
+    next.forEach(lo=>_nativeQueue.push(lo.file));
+    pos+=next.length;
+  }
+}
+
+async function onScanDone(ev){
+  if(!_scanOwns(ev)) return;
+  const sc=_scan;
+  sc.finished=true;
+  if(sc.flat){
+    /* Lista plana: junta tudo e usa o caminho de sempre */
+    sc.active=false; hideScanBanner(); _scanWake();
+    try{ await processNativeFiles(sc.flatFiles, sc.rootName, false); }
+    finally{ _courseIdentity=null; }
+    saveNativeSessionCache(sc.treeUri, sc.rootName);
+    Diag.mark('varredura completa (nativo)', ev.scanMs||0);
+    return;
+  }
+  if(!modules.length){
+    sc.active=false; _courseIdentity=null; hideScanBanner(); _scanWake();
+    toast('Nenhum vídeo encontrado na pasta selecionada'); return;
+  }
+  /* Cursos com menos de 5 aulas ainda não tinham chave nem partida */
+  if(!sc.keyed || !sc.started){
+    _scanAfterModules();
+  }
+  /* Ordem personalizada de módulos salva antes: aplica agora, mantendo o estado das aulas */
+  const saved = loadModuleOrder();
+  if(saved && saved.length){
+    const before = modules.map(m=>m.name).join('\u0001');
+    applyModuleOrder(saved);
+    if(modules.map(m=>m.name).join('\u0001')!==before){
+      rebuildLessonsKeepingState(); buildSortedLessons();
+      renderModularPlaylist(); sc.rendered=modules.length;
+      if(Platform.isCapacitor && currentIdx>=0){
+        /* a fila nativa seguiu a ordem da pasta: refaz a partir da aula atual na nova ordem */
+        lessonTimes[currentIdx] = video.currentTime||lessonTimes[currentIdx]||0;
+        _nativePlaylistMode=false; _queueGen++;
+        playLesson(currentIdx);
+      }
+    }
+  }
+  sc.active=false; _courseIdentity=null; hideScanBanner(); _scanWake();
+  saveNativeSessionCache(sc.treeUri, sc.rootName);
+  saveToStorage();                       /* grava com as chaves finais (o que ficou retido durante a varredura) */
+  Diag.mark('varredura completa (nativo, '+(ev.totalFiles||0)+' arquivos)', ev.scanMs||0);
+  const totalItems=modules.reduce((n,m)=>n+countFilesInRawModule(m),0);
+  toast(`${totalItems} item(s) em ${modules.length} módulo(s)`);
 }
 
 async function processDirectory(dir, merge){
@@ -3275,12 +4042,18 @@ function renderBatch(list, start, container, indent=0){
   if(end<list.length) requestAnimationFrame(()=>renderBatch(list, end, container, indent));
 }
 
-function renderModularPlaylist(){
+function renderModularPlaylist(appendFrom){
+  /* appendFrom (varredura progressiva): desenha só os módulos a partir deste índice,
+     sem refazer a lista inteira */
+  const append = appendFrom>0;
   ensureDurationCache();
   _scheduleWarmup(5000);                 /* lê o restante das durações depois que a aula já está tocando */
   totalCount.textContent = lessons.length; updateDoneCount();
-  playlistEl.innerHTML   = '';
-  renderFavoritesModule(playlistEl);
+  if(!append){
+    document.body.classList.remove('sb-compact');
+    playlistEl.innerHTML   = '';
+    renderFavoritesModule(playlistEl);
+  }
 
   function renderMod(mod, container, depth, parentModArray){
     const key = mod.name;
@@ -3365,9 +4138,9 @@ function renderModularPlaylist(){
   }
 
   const _tr = performance.now();
-  modules.forEach(mod=>renderMod(mod, playlistEl, 0, modules));
+  (append ? modules.slice(appendFrom) : modules).forEach(mod=>renderMod(mod, playlistEl, 0, modules));
   updateCollapseAllBtn();
-  Diag.mark('desenhar a lista ('+lessons.length+' aulas)', performance.now()-_tr);
+  if(!append) Diag.mark('desenhar a lista ('+lessons.length+' aulas)', performance.now()-_tr);
 }
 
 function collectModuleLessonIdxs(mod){
@@ -3826,7 +4599,8 @@ async function playLesson(idx){
       const tq = performance.now();
       await plug.setPlaylist({items: items.slice(0,split)});
       Diag.mark('fila nativa (primeiras '+Math.min(split,items.length)+' aulas)', performance.now()-tq);
-      if(split<items.length) _appendRestOfQueue(gen, all, items, split);
+      if(_scanActive()) _feedQueueGrowing(gen, idx, Math.min(split, items.length));        /* varredura em andamento: a fila acompanha os módulos que chegam */
+      else if(split<items.length) _appendRestOfQueue(gen, all, items, split);
       if(_audioOnly) plug.hide().catch(()=>{}); // preserva modo áudio ao criar nova playlist
       /* Atualiza vs.src sem acionar loadVideo novamente (flag interna) */
       window._nativePlayerSkipSrc && window._nativePlayerSkipSrc();
@@ -3991,7 +4765,11 @@ video.addEventListener('ended', ()=>{
 
 video.addEventListener('error', ()=>{
   if(video.src && video.src !== window.location.href){
-    toast('Erro ao carregar vídeo. Tente reabrir a pasta.');
+    if(Platform.isCapacitor && _courseTreeUri){
+      verifyCourseFolder().then(ok=>{ if(ok) toast('Erro ao carregar vídeo. Tente reabrir a pasta.'); });
+    } else {
+      toast('Erro ao carregar vídeo. Tente reabrir a pasta.');
+    }
   }
 });
 
@@ -4095,6 +4873,35 @@ function updateFavBtn(){
   inp.addEventListener('blur',  ()=>{ t = setTimeout(()=>document.body.classList.remove('search-open'), 300); });
 })();
 
+
+/* ═══════════════════════════════════════════
+   LISTA DE AULAS (celular na vertical): esconde a barra de curso e a busca ao rolar para baixo
+   e mostra de novo ao rolar para cima ou voltar ao topo.
+═══════════════════════════════════════════ */
+(function(){
+  const pl = document.getElementById('playlist'), head = document.querySelector('.sidebar-header');
+  if(!pl || !head || !window.matchMedia) return;
+  const mq = window.matchMedia('(max-width:559px) and (orientation:portrait)');
+  let last = 0, lock = 0;
+  const set = on => { document.body.classList.toggle('sb-compact', on); lock = performance.now()+380; };
+  pl.addEventListener('scroll', ()=>{
+    const y = pl.scrollTop, d = y-last; last = y;
+    const compact = document.body.classList.contains('sb-compact');
+    if(!mq.matches){ if(compact) set(false); return; }
+    if(performance.now() < lock) return;                         /* a própria animação mexe na altura */
+    if(!compact){
+      const busca = document.body.classList.contains('search-open') || (document.getElementById('search-input')||{}).value;
+      const folga = pl.scrollHeight - pl.clientHeight - head.offsetHeight;   /* sobra rolagem depois de esconder? */
+      if(d>8 && y>80 && !busca && folga>120) set(true);
+    } else if(d<-8 || y<=0){
+      set(false);
+    }
+  }, {passive:true});
+  mq.addEventListener && mq.addEventListener('change', ()=>{ if(!mq.matches) document.body.classList.remove('sb-compact'); });
+  /* focar na busca sempre mostra a barra */
+  document.getElementById('search-input').addEventListener('focus', ()=>document.body.classList.remove('sb-compact'));
+})();
+
 let _filterTimer = null;
 function filterLessonsDebounced(){
   clearTimeout(_filterTimer);
@@ -4149,12 +4956,12 @@ window.addEventListener('resize', ()=>{
 /* ═══════════════════════════════════════════
    MODAIS
 ═══════════════════════════════════════════ */
-function showModal(title, desc, actions){
+function showModal(title, desc, actions, stack){
   window._nativeHidePlayer?.();
   document.getElementById('modal-desc').style.whiteSpace='';
   document.getElementById('modal-title').textContent = title;
   document.getElementById('modal-desc').textContent  = desc;
-  const acts=document.getElementById('modal-actions'); acts.innerHTML='';
+  const acts=document.getElementById('modal-actions'); acts.innerHTML=''; acts.classList.toggle('stack', !!stack);
   actions.forEach(a=>{
     const btn=document.createElement('button'); btn.className='modal-btn '+(a.cls||'secondary');
     btn.textContent=a.label; btn.onclick=a.action; acts.appendChild(btn);
@@ -4163,12 +4970,13 @@ function showModal(title, desc, actions){
 }
 function closeModal(){ document.getElementById('modal-overlay').classList.remove('active'); }
 
-['modal-overlay','progress-modal','stats-modal','shortcuts-modal','theme-modal','xlsx-modal','settings-modal'].forEach(id=>{
+['modal-overlay','progress-modal','courses-modal','stats-modal','shortcuts-modal','theme-modal','xlsx-modal','settings-modal'].forEach(id=>{
   const el=document.getElementById(id); if(!el) return;
   el.addEventListener('click', e=>{
     if(e.target===el){
       if(id==='modal-overlay')       closeModal();
       else if(id==='progress-modal') closeProgressModal();
+      else if(id==='courses-modal')  closeMyCourses();
       else el.classList.remove('active');
     }
   });
@@ -5251,44 +6059,48 @@ window.addEventListener('pipModeChanged', (e)=>{
     navigator.mediaSession.setActionHandler('previoustrack', prevLesson);
   }
 
-  /* ── Restauração automática via SAF (treeUri persistida) ── */
+  /* ── Reabre o último curso sozinho (biblioteca de cursos; sem perguntar) ── */
   try{
-    const sess=JSON.parse(localStorage.getItem('splay_native_session')||'null');
-    if(!sess||!sess.treeUri) return;
     const VideoFolder=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.VideoFolder;
     if(!VideoFolder) return;
-
-    const ago=Math.round((Date.now()-(sess.savedAt||0))/60000);
-    const agoTxt=ago<2?'agora mesmo':ago<60?`${ago} min atrás`:`${Math.round(ago/60)}h atrás`;
-
-    showModal(
-      `📚 Curso anterior encontrado`,
-      `Pasta "${sess.rootName||'?'}" (aberta ${agoTxt}). Deseja reabrir sem precisar selecionar novamente?`,
-      [
-        {label:'▶ Reabrir',        cls:'primary',  action:async()=>{
-          closeModal();
-          /* ── Caminho rápido: restaura do cache salvo (sem re-escanear) ── */
-          if(quickRestore(sess)) return;
-          /* ── Fallback lento: re-escaneia a pasta via Java ── */
-          showLoading('Restaurando curso…');
-          try{
-            const r=await VideoFolder.listPersistedFolder({treeUri:sess.treeUri});
-            if(r&&r.files&&r.files.length){
-              await processNativeFiles(r.files, r.rootName||sess.rootName, false);
-              saveNativeSessionCache(sess.treeUri, sess.rootName||r.rootName||'');
-            } else {
-              toast('Pasta não acessível. Abra novamente.');
-              localStorage.removeItem('splay_native_session');
-            }
-          }catch(e){
-            toast('Erro ao restaurar: '+e.message);
-            localStorage.removeItem('splay_native_session');
-          }
-          hideLoading();
-        }},
-        {label:'Abrir outra pasta', cls:'secondary', action:()=>closeModal()}
-      ]
-    );
+    (async()=>{
+      CourseLibrary.listSummaries();                       /* preenche os mapas pasta→curso */
+      const ptr = localStorage.getItem('splay_last_course');
+      /* 1) biblioteca: o último curso usado */
+      if(ptr){
+        const rec = await CourseLibrary.getCourse(ptr);
+        if(rec && quickRestore(Object.assign({}, rec, {courseKey:rec.id}))){ afterCourseOpened(rec); return; }
+      }
+      /* 2) migração / reserva: sessão antiga (splay_native_session) */
+      const sess = _sessionCourse();
+      if(!sess || !sess.treeUri) return;
+      if(quickRestore(sess)){
+        /* entra na biblioteca sem pesar na abertura */
+        setTimeout(async()=>{
+          const key = _courseKey; if(!key) return;
+          if(!(await CourseLibrary.getSummary(key)) && _courseKey===key) saveNativeSessionCache(sess.treeUri, sess.rootName||'');
+        }, 1500);
+        _courseTreeUri = sess.treeUri; _courseRootName = sess.rootName||''; updateCourseChip();
+        verifyCourseFolder();
+        return;
+      }
+      /* 3) cache ilegível: re-escaneia a pasta */
+      showLoading('Restaurando curso…');
+      try{
+        const r=await VideoFolder.listPersistedFolder({treeUri:sess.treeUri});
+        if(r&&r.files&&r.files.length){
+          await processNativeFiles(r.files, r.rootName||sess.rootName, false);
+          saveNativeSessionCache(sess.treeUri, sess.rootName||r.rootName||'');
+        } else {
+          toast('Pasta não acessível. Abra novamente.');
+          localStorage.removeItem('splay_native_session');
+        }
+      }catch(e){
+        toast('Erro ao restaurar: '+e.message);
+        localStorage.removeItem('splay_native_session');
+      }
+      hideLoading();
+    })();
   }catch(e){}
 })();
 

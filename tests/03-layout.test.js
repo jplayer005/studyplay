@@ -94,7 +94,7 @@ const SETUP = () => {
   await l.click('#ctrl-sidebar-btn');
   check('botao de lista mostra de novo', await l.evaluate(() => getComputedStyle(document.getElementById('sidebar')).display) !== 'none');
   await l.evaluate(() => toggleMoreMenu());
-  const vis = await l.evaluate(() => [...document.querySelectorAll('.menu-land-only')].every(b => b.offsetParent !== null));
+  const vis = await l.evaluate(() => [...document.querySelectorAll('.menu-land-only:not(.apk-only)')].every(b => b.offsetParent !== null));
   check('menu mostra Abrir pasta/Notas/Estatisticas/Configuracoes', vis);
   await ctxL.close();
 
