@@ -658,7 +658,24 @@ body.is-modular .btn-organize{display:flex;}
   .module-header{padding:10px 10px;}
   .module-title{font-size:13px;}
 
-  .controls-bar{padding:8px 12px 6px;}
+
+  /* Linha única: busca + Organizar + Recolher (só ícones). O título "Playlist" sai:
+     o botão de curso e a lista já dizem onde o usuário está. */
+  .sidebar .sidebar-header{display:flex;flex-wrap:wrap;align-items:center;gap:8px;overflow:hidden;max-height:260px;transition:max-height .22s ease,padding .22s ease,opacity .18s ease,border-color .22s ease;}
+  .sidebar-header .course-switch{flex:1 1 100%;margin-bottom:0;}
+  .sidebar-title-row{display:contents;}
+  .sidebar-title{display:none;}
+  .sidebar-header .search-box{order:3;flex:1 1 0;min-width:0;height:40px;}
+  .sidebar-header .btn-collapse-all{order:4;width:40px;height:40px;padding:0;justify-content:center;border-radius:10px;}
+  .sidebar-header .btn-collapse-all span{display:none;}
+  .sidebar-header .btn-collapse-all svg{width:16px;height:16px;}
+  /* Rolando a lista para baixo, a barra de curso e a busca saem e a lista ganha a altura toda;
+     rolar para cima (ou voltar ao topo) traz de volta. Controlado por JS (sb-compact). */
+  body.sb-compact .sidebar .sidebar-header{max-height:0;padding-top:0;padding-bottom:0;opacity:0;border-bottom-color:transparent;pointer-events:none;}
+  /* Controles mais compactos (botões continuam com 40px ou mais de toque) */
+  .controls-bar{padding:6px 12px 4px;}
+  .now-playing{margin-bottom:4px;}
+  .ctrl-row{gap:4px;}
   /* Digitando na busca (teclado aberto): recolhe os controles e encolhe o vídeo
      para sobrar espaço para os resultados. */
   body.search-open .controls-bar{display:none;}
@@ -670,7 +687,7 @@ body.is-modular .btn-organize{display:flex;}
   .ctrl-main .ctrl-btn{width:46px;height:46px;border-radius:12px;}
   .ctrl-main .ctrl-btn.primary{width:58px;height:50px;border-radius:14px;}
   .ctrl-main .ctrl-btn svg{width:19px;height:19px;}
-  .ctrl-aux .ctrl-btn,.ctrl-aux .fav-ctrl-btn,.ctrl-aux .mark-done-btn{flex:1 1 0;min-width:0;max-width:56px;height:42px;width:auto;border-radius:11px;padding:0;justify-content:center;}
+  .ctrl-aux .ctrl-btn,.ctrl-aux .fav-ctrl-btn,.ctrl-aux .mark-done-btn{flex:1 1 0;min-width:0;max-width:56px;height:40px;width:auto;border-radius:11px;padding:0;justify-content:center;}
   .mark-done-btn .mark-label{display:none;}
   .vol-row,.ab-label{display:none;}
   #frame-badge{height:30px;}
@@ -1042,11 +1059,11 @@ body.is-modular .btn-organize{display:flex;}
       </button>
       <div class="sidebar-title-row">
         <div class="sidebar-title">Playlist</div>
-        <button class="btn-collapse-all btn-organize" id="btn-organize" onclick="toggleOrganizeMode()" title="Reordenar módulos arrastando">
+        <button class="btn-collapse-all btn-organize" id="btn-organize" onclick="toggleOrganizeMode()" title="Reordenar módulos arrastando" aria-label="Organizar: reordenar módulos arrastando">
           <svg viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
           <span id="organize-label">Organizar</span>
         </button>
-        <button class="btn-collapse-all expanded" id="btn-collapse-all" onclick="toggleCollapseAll()" title="Recolher / expandir todos os módulos">
+        <button class="btn-collapse-all expanded" id="btn-collapse-all" onclick="toggleCollapseAll()" title="Recolher / expandir todos os módulos" aria-label="Recolher ou expandir todos os módulos">
           <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
           <span id="collapse-all-label">Recolher</span>
         </button>
@@ -4022,6 +4039,7 @@ function renderModularPlaylist(appendFrom){
   _scheduleWarmup(5000);                 /* lê o restante das durações depois que a aula já está tocando */
   totalCount.textContent = lessons.length; updateDoneCount();
   if(!append){
+    document.body.classList.remove('sb-compact');
     playlistEl.innerHTML   = '';
     renderFavoritesModule(playlistEl);
   }
@@ -4842,6 +4860,35 @@ function updateFavBtn(){
   inp.addEventListener('focus', ()=>{ clearTimeout(t); document.body.classList.add('search-open'); });
   /* atraso: o toque num resultado precisa chegar antes de o layout voltar ao normal */
   inp.addEventListener('blur',  ()=>{ t = setTimeout(()=>document.body.classList.remove('search-open'), 300); });
+})();
+
+
+/* ═══════════════════════════════════════════
+   LISTA DE AULAS (celular na vertical): esconde a barra de curso e a busca ao rolar para baixo
+   e mostra de novo ao rolar para cima ou voltar ao topo.
+═══════════════════════════════════════════ */
+(function(){
+  const pl = document.getElementById('playlist'), head = document.querySelector('.sidebar-header');
+  if(!pl || !head || !window.matchMedia) return;
+  const mq = window.matchMedia('(max-width:559px) and (orientation:portrait)');
+  let last = 0, lock = 0;
+  const set = on => { document.body.classList.toggle('sb-compact', on); lock = performance.now()+380; };
+  pl.addEventListener('scroll', ()=>{
+    const y = pl.scrollTop, d = y-last; last = y;
+    const compact = document.body.classList.contains('sb-compact');
+    if(!mq.matches){ if(compact) set(false); return; }
+    if(performance.now() < lock) return;                         /* a própria animação mexe na altura */
+    if(!compact){
+      const busca = document.body.classList.contains('search-open') || (document.getElementById('search-input')||{}).value;
+      const folga = pl.scrollHeight - pl.clientHeight - head.offsetHeight;   /* sobra rolagem depois de esconder? */
+      if(d>8 && y>80 && !busca && folga>120) set(true);
+    } else if(d<-8 || y<=0){
+      set(false);
+    }
+  }, {passive:true});
+  mq.addEventListener && mq.addEventListener('change', ()=>{ if(!mq.matches) document.body.classList.remove('sb-compact'); });
+  /* focar na busca sempre mostra a barra */
+  document.getElementById('search-input').addEventListener('focus', ()=>document.body.classList.remove('sb-compact'));
 })();
 
 let _filterTimer = null;

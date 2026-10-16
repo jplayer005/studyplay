@@ -42,7 +42,7 @@ Capacitor 8 Android app. Toda a lógica e o CSS do app estão em `www/index.html
 
 ### Layout responsivo
 
-- **Celular na vertical** (`max-width:559px` + portrait): vídeo 16:9 no topo, controles em duas linhas (`.ctrl-main` / `.ctrl-aux`) e lista de aulas abaixo. Não há gaveta lateral.
+- **Celular na vertical** (`max-width:559px` + portrait): vídeo 16:9 no topo, controles em duas linhas (`.ctrl-main` / `.ctrl-aux`, botões com no mínimo 40px) e lista de aulas abaixo. Não há gaveta lateral. O cabeçalho da lista é uma barra de curso (*Meus cursos / Trocar*) e uma linha única com busca + Organizar + Recolher só com ícones (título "Playlist" escondido). Rolando a lista para baixo a barra inteira some (`body.sb-compact`, controlado por JS) e volta ao rolar para cima, ao voltar ao topo, ao focar na busca ou ao abrir outro curso; não esconde com busca ativa nem em lista curta. Horizontal e desktop não mudam.
 - **Celular na horizontal** (`orientation:landscape` + `max-height:520px`): cabeçalho oculto; ações dele ficam no menu ⋮ (`.menu-land-only`); playlist à esquerda, ocultável.
 - **Tablet/desktop**: cabeçalho + playlist lateral.
 
