@@ -9,6 +9,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Build;
@@ -31,6 +32,8 @@ import androidx.media3.session.MediaSession;
 import androidx.media3.session.MediaSessionService;
 
 import com.getcapacitor.JSObject;
+
+import org.json.JSONArray;
 
 /**
  * PlaybackService — MediaSessionService com ExoPlayer.
@@ -128,6 +131,74 @@ public class PlaybackService extends MediaSessionService {
      */
     private android.media.session.MediaSession.Token platformSessionToken = null;
 
+    // ── Progresso gravado pelo próprio serviço ─────────────────────────────────
+    // O ExoPlayer segue tocando com o app fechado (o serviço vive sem o WebView).
+    // Nesse caso o JS não recebe nenhum evento e o progresso ficava no ponto em que o app
+    // foi fechado. Aqui o serviço grava sozinho: aula atual (mediaId = a URI original do
+    // JS), posição e a lista de aulas que terminaram sozinhas. O JS lê isso ao reabrir.
+    static final Object PROGRESS_LOCK = new Object();
+    static final String PROGRESS_PREFS = "splay_progress";
+    private final Handler progressHandler = new Handler(Looper.getMainLooper());
+    private String lastItemId = null;
+    private final Runnable progressTick = new Runnable() {
+        @Override public void run() {
+            saveProgress();
+            if (player != null && player.isPlaying()) progressHandler.postDelayed(this, 5000);
+        }
+    };
+
+    private void saveProgress() {
+        ExoPlayer p = player;
+        if (p == null) return;
+        MediaItem it = p.getCurrentMediaItem();
+        if (it == null || it.mediaId == null || it.mediaId.isEmpty()
+                || MediaItem.DEFAULT_MEDIA_ID.equals(it.mediaId)) return;
+        synchronized (PROGRESS_LOCK) {
+            getSharedPreferences(PROGRESS_PREFS, MODE_PRIVATE).edit()
+                .putString("mediaId", it.mediaId)
+                .putLong("positionMs", Math.max(0L, p.getCurrentPosition()))
+                .putLong("durationMs", Math.max(0L, p.getDuration()))
+                .putLong("savedAt", System.currentTimeMillis())
+                .apply();
+        }
+    }
+
+    /** Aula terminou sozinha: guarda para o JS marcar como concluída ao voltar. */
+    private void addCompleted(String id) {
+        if (id == null || id.isEmpty()) return;
+        synchronized (PROGRESS_LOCK) {
+            SharedPreferences sp = getSharedPreferences(PROGRESS_PREFS, MODE_PRIVATE);
+            try {
+                JSONArray arr = new JSONArray(sp.getString("completed", "[]"));
+                for (int i = 0; i < arr.length(); i++) if (id.equals(arr.optString(i))) return;
+                arr.put(id);
+                // limite: só as últimas 400
+                if (arr.length() > 400) {
+                    JSONArray cut = new JSONArray();
+                    for (int i = arr.length() - 400; i < arr.length(); i++) cut.put(arr.optString(i));
+                    arr = cut;
+                }
+                sp.edit().putString("completed", arr.toString()).apply();
+            } catch (Exception ignored) {}
+        }
+    }
+
+    /** Remove da lista de concluídas as aulas que o JS já aplicou. */
+    static void ackCompleted(Context ctx, java.util.Set<String> applied) {
+        synchronized (PROGRESS_LOCK) {
+            SharedPreferences sp = ctx.getSharedPreferences(PROGRESS_PREFS, MODE_PRIVATE);
+            try {
+                JSONArray arr = new JSONArray(sp.getString("completed", "[]"));
+                JSONArray keep = new JSONArray();
+                for (int i = 0; i < arr.length(); i++) {
+                    String v = arr.optString(i);
+                    if (!applied.contains(v)) keep.put(v);
+                }
+                sp.edit().putString("completed", keep.toString()).apply();
+            } catch (Exception ignored) {}
+        }
+    }
+
     @androidx.annotation.OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)
     @Override
     public void onCreate() {
@@ -197,6 +268,28 @@ public class PlaybackService extends MediaSessionService {
             @Override
             public void onMediaItemTransition(@Nullable MediaItem item, int reason) {
                 postNotificationUpdate();
+            }
+        });
+
+        // Grava o progresso mesmo sem o WebView (ver comentário em PROGRESS_LOCK).
+        player.addListener(new Player.Listener() {
+            @Override
+            public void onIsPlayingChanged(boolean isPlaying) {
+                progressHandler.removeCallbacks(progressTick);
+                saveProgress();
+                if (isPlaying) progressHandler.postDelayed(progressTick, 5000);
+            }
+            @Override
+            public void onMediaItemTransition(@Nullable MediaItem item, int reason) {
+                if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) addCompleted(lastItemId);
+                lastItemId = (item != null) ? item.mediaId : null;
+                saveProgress();
+            }
+            @Override
+            public void onPlaybackStateChanged(int state) {
+                // Última aula da fila terminou: não há transição, só o fim da fila
+                if (state == Player.STATE_ENDED) addCompleted(lastItemId);
+                saveProgress();
             }
         });
 
@@ -337,6 +430,7 @@ public class PlaybackService extends MediaSessionService {
 
     @Override
     public void onTaskRemoved(Intent rootIntent) {
+        saveProgress();
         if (player == null || !player.getPlayWhenReady()) {
             stopSelf();
         }
@@ -345,6 +439,8 @@ public class PlaybackService extends MediaSessionService {
     @androidx.annotation.OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)
     @Override
     public void onDestroy() {
+        saveProgress();
+        progressHandler.removeCallbacks(progressTick);
         cancelSleep();
         if (notifActionReceiver != null) {
             try { unregisterReceiver(notifActionReceiver); } catch (Exception ignored) {}

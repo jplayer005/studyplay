@@ -1641,6 +1641,7 @@ function itemBelongsToCurrent(item){ return currentIdx>=0 && lessonIdxOfItem(ite
 function lessonTagText(item){
   return (item.module && _dupNames.has(item.lessonName)) ? item.lessonName+' · '+item.module : item.lessonName;
 }
+let _saveThrottle = null;
 function saveToStorage(){
   if(_scanActive()){ _scan.dirty = true; return; }   /* as chaves das aulas ainda podem mudar; grava ao terminar a varredura */
   try{
@@ -2511,7 +2512,9 @@ video.addEventListener('timeupdate',()=>{
   timeDur.textContent  = fmtTime(video.duration);
   if(currentIdx>=0 && video.currentTime>2){
     lessonTimes[currentIdx] = video.currentTime;
-    clearTimeout(saveTimer); saveTimer = setTimeout(saveToStorage, 5000);
+    /* A cada 5 s (throttle). Antes era debounce: o timeupdate chega a cada 250 ms e reiniciava a
+       contagem para sempre, então nada era gravado enquanto a aula tocava. */
+    if(!_saveThrottle) _saveThrottle = setTimeout(()=>{ _saveThrottle=null; saveToStorage(); }, 5000);
   }
   checkABLoop();
 
@@ -3973,7 +3976,58 @@ function rebuildLessonsKeepingState(){
   });
 }
 
+/* ── Progresso gravado pelo serviço nativo ────────────────────────────────────
+   O ExoPlayer segue tocando com o app fechado (o serviço vive sem o WebView), então o JS
+   não recebe nada e o progresso ficava no ponto em que o app foi fechado. O serviço grava
+   sozinho a aula atual (mediaId = a URI original do JS), a posição e as aulas que terminaram
+   sozinhas. Aqui isso é lido ao reabrir (uso único) e ao voltar do segundo plano. */
+function _vpPlugin(){ return Platform.isCapacitor ? window.Capacitor?.Plugins?.VideoPlayer : null; }
+function applyNativeProgress(np, stored, completionsOnly){
+  if(!np || !lessons.length) return -1;
+  const idxOf = id => id ? lessons.findIndex(l=>l.file && l.file._uri===id) : -1;
+  let resume = -1, changed = false;
+  (np.completed||[]).forEach(id=>{
+    const i = idxOf(id);
+    if(i<0) return;
+    if(!done.has(i)){ done.add(i); changed = true; }
+    delete lessonTimes[i];
+  });
+  if(!completionsOnly){
+    const i = idxOf(np.mediaId);
+    const maisNovo = !stored || (np.savedAt||0) >= (stored.savedAt||0);
+    if(i>=0 && maisNovo){
+      resume = i;
+      if((np.positionMs||0) > 2000) lessonTimes[i] = np.positionMs/1000; else delete lessonTimes[i];
+      changed = true;
+    }
+  }
+  if(changed){
+    try{ updateDoneCount(); }catch(e){}
+    if(currentIdx>=0) saveToStorage();     /* na abertura ainda não há aula atual: o playLesson grava logo depois */
+  }
+  const vp = _vpPlugin();
+  if(vp && typeof vp.ackSavedProgress==='function' && (np.completed||[]).length){
+    vp.ackSavedProgress({completed:np.completed}).catch(()=>{});
+  }
+  return resume;
+}
+/* Uso único, só no começo (vale por 15 s: depois disso o registro lido já é velho) */
+function nativeResumeIdx(stored){
+  const np = window.__nativeProgress, at = window.__nativeProgressAt||0;
+  window.__nativeProgress = null;
+  if(!np || Date.now()-at > 15000) return -1;
+  return applyNativeProgress(np, stored, false);
+}
+/* Ao voltar do segundo plano: aulas que terminaram sozinhas enquanto o app estava fora */
+async function syncNativeProgress(){
+  const vp = _vpPlugin();
+  if(!vp || typeof vp.getSavedProgress!=='function' || !lessons.length) return;
+  try{ applyNativeProgress(await vp.getSavedProgress(), null, true); }catch(e){}
+}
+
 function getResumeIdx(stored){
+  const nat = nativeResumeIdx(stored);
+  if(nat>=0) return nat;
   if(!stored||!stored.currentName) return 0;
   const i = lessons.findIndex(l=>(l.key||l.name)===stored.currentName);
   return i>=0?i:0;
@@ -5682,6 +5736,13 @@ function installNativePlayer(plugin){
   });
   plugin.addListener('error', ()=> video.dispatchEvent(new Event('error')));
 
+  /* Progresso gravado pelo serviço nativo: lido já no início, em paralelo com a biblioteca */
+  if(typeof plugin.getSavedProgress==='function'){
+    window.__nativeProgressP = plugin.getSavedProgress()
+      .then(np=>{ window.__nativeProgress = np; window.__nativeProgressAt = Date.now(); return np; })
+      .catch(()=>null);
+  }
+
   /* ── Java → JS: pede resincronização de rect (após rotação / retorno do background) ── */
   plugin.addListener('requestSyncRect', ()=> syncRect(200));
 
@@ -5756,6 +5817,7 @@ function installNativePlayer(plugin){
       requestAnimationFrame(updatePlayerOverlay);
       if(vs.src) syncRect(300);
     }
+    syncNativeProgress();            /* aulas que terminaram sozinhas com o app fora da tela */
     /* Sync de posição da playlist após retornar do background */
     if(_nativePlaylistMode && typeof plugin.getCurrentIndex==='function'){
       try{
@@ -6065,15 +6127,19 @@ window.addEventListener('pipModeChanged', (e)=>{
     if(!VideoFolder) return;
     (async()=>{
       CourseLibrary.listSummaries();                       /* preenche os mapas pasta→curso */
+      /* progresso do serviço nativo: roda junto com a leitura do banco (não soma tempo) */
+      const npWait = Promise.race([window.__nativeProgressP||null, new Promise(r=>setTimeout(r,300))]);
       const ptr = localStorage.getItem('splay_last_course');
       /* 1) biblioteca: o último curso usado */
       if(ptr){
         const rec = await CourseLibrary.getCourse(ptr);
+        await npWait;
         if(rec && quickRestore(Object.assign({}, rec, {courseKey:rec.id}))){ afterCourseOpened(rec); return; }
       }
       /* 2) migração / reserva: sessão antiga (splay_native_session) */
       const sess = _sessionCourse();
       if(!sess || !sess.treeUri) return;
+      await npWait;
       if(quickRestore(sess)){
         /* entra na biblioteca sem pesar na abertura */
         setTimeout(async()=>{

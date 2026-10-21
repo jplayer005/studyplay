@@ -53,6 +53,8 @@ Capacitor 8 Android app. Toda a lógica e o CSS do app estão em `www/index.html
 - Aulas são ligadas aos módulos pelo **objeto do arquivo** (`_lessonByFile`), nunca pelo nome.
 - `setDone(idx, valor)` define a conclusão; `markDone()` só alterna (botão/atalho M). O fim do vídeo usa `setDone(...,true)`.
 - Cada curso do APK fica na **biblioteca** (IndexedDB `studyplay_library`, ver *Vários cursos*). `splay_native_session` continua sendo gravado para o curso aberto: é a reserva de quando o IndexedDB falha e a origem da migração.
+- **Progresso com o app fechado:** o ExoPlayer segue tocando sem o WebView (o serviço vive sozinho; `onTaskRemoved` só o encerra se estiver pausado), então o JS não recebe `trackChanged` nem `timeupdate` e o progresso ficava no ponto em que o app foi fechado. `PlaybackService` grava sozinho em `SharedPreferences` (`splay_progress`): aula atual (`mediaId` = a URI original do JS, definida em `setPlaylist`/`loadVideo`), posição (a cada 5 s tocando, ao pausar, ao trocar de aula, ao remover a tarefa) e as aulas que terminaram sozinhas (`completed`). O JS lê com `getSavedProgress()` já no início (em paralelo com a biblioteca) e aplica em `getResumeIdx` → `nativeResumeIdx` (uso único, só se o registro nativo for mais novo que `savedAt` do progresso salvo e a aula existir no curso aberto), e ao voltar do segundo plano (`syncNativeProgress`, só conclusões). Depois `ackSavedProgress` limpa o que foi aplicado.
+- **Gravação enquanto toca:** `timeupdate` grava o progresso no máximo a cada 5 s (throttle `_saveThrottle`). Não voltar para debounce: o evento chega a cada 250 ms e o debounce nunca disparava durante a reprodução.
 - Preferências: `splay_set_auto90`, `splay_set_autofs`.
 
 ### Velocidade de abertura (não regredir)
