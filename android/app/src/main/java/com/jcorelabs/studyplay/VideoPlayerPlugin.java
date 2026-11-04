@@ -261,6 +261,7 @@ public class VideoPlayerPlugin extends Plugin {
 
             MediaItem mediaItem = new MediaItem.Builder()
                 .setUri(contentUri)
+                .setMediaId(uriStr)
                 .setMediaMetadata(buildMetadata(title, artist, album))
                 .build();
 
@@ -480,6 +481,7 @@ public class VideoPlayerPlugin extends Plugin {
                 // Inclui artwork do app em cada faixa da playlist
                 mediaItems.add(new MediaItem.Builder()
                     .setUri(uri)
+                    .setMediaId(uriStr)     // a URI original do JS: o serviço grava o progresso por ela
                     .setMediaMetadata(buildMetadata(title, artist, ""))
                     .build());
             } catch (Exception e) {
@@ -510,6 +512,44 @@ public class VideoPlayerPlugin extends Plugin {
                 call.reject("Failed: " + e.getMessage());
             }
         });
+    }
+
+    /**
+     * getSavedProgress() — o que o PlaybackService gravou sozinho (mesmo com o app fechado):
+     * {mediaId, positionMs, durationMs, savedAt, completed[]}. mediaId é a URI original do JS.
+     */
+    @PluginMethod
+    public void getSavedProgress(PluginCall call) {
+        JSObject r = new JSObject();
+        synchronized (PlaybackService.PROGRESS_LOCK) {
+            android.content.SharedPreferences sp =
+                getContext().getSharedPreferences(PlaybackService.PROGRESS_PREFS, Context.MODE_PRIVATE);
+            r.put("mediaId",    sp.getString("mediaId", ""));
+            r.put("positionMs", sp.getLong("positionMs", 0L));
+            r.put("durationMs", sp.getLong("durationMs", 0L));
+            r.put("savedAt",    sp.getLong("savedAt", 0L));
+            JSArray done = new JSArray();
+            try {
+                org.json.JSONArray arr = new org.json.JSONArray(sp.getString("completed", "[]"));
+                for (int i = 0; i < arr.length(); i++) done.put(arr.optString(i));
+            } catch (Exception ignored) {}
+            r.put("completed", done);
+        }
+        call.resolve(r);
+    }
+
+    /** ackSavedProgress({completed:[...]}) — o JS já aplicou essas aulas concluídas. */
+    @PluginMethod
+    public void ackSavedProgress(PluginCall call) {
+        java.util.Set<String> applied = new java.util.HashSet<>();
+        JSArray arr = call.getArray("completed");
+        if (arr != null) {
+            for (int i = 0; i < arr.length(); i++) {
+                try { applied.add(arr.getString(i)); } catch (Exception ignored) {}
+            }
+        }
+        PlaybackService.ackCompleted(getContext(), applied);
+        call.resolve();
     }
 
     /**
