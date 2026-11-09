@@ -30,6 +30,7 @@ node run-all.js layout            # só os arquivos que têm "layout" no nome
 | `14-vertical` | celular na vertical: busca e ícones na mesma linha, controles compactos, barra que esconde ao rolar e volta, casos em que não esconde, horizontal e desktop intactos |
 | `15-telas-basicas` | abre Estatísticas (cartões, gráfico de 7 dias, Histórico), Configurações, Progresso e Tema em celular e desktop, sem erro de JS |
 | `16-progresso-nativo` | fechar o app com o player tocando e reabrir: volta na aula e posição que o serviço nativo gravou, aulas que terminaram sozinhas ficam concluídas, registro velho ou de outro curso é ignorado, grava a cada 5 s tocando |
+| `17-audio` | mp3/m4a/flac como aula (pasta nova, lista plana e curso já guardado), painel de áudio no lugar do vídeo, player nativo escondido, volta ao vídeo, avanço automático para áudio |
 | `13-erros-curso` | pasta movida/apagada, escolher a pasta de novo mantendo o progresso, armazenamento cheio, falha do banco |
 
 Também há `bench-abertura.js` (fora do `run-all`): `node bench-abertura.js` mede, com CPU 4x mais lenta e 850 aulas, reabrir um curso, trocar entre 5 cursos e abrir a lista. Compare **medianas**.

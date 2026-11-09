@@ -173,7 +173,13 @@ public class VideoWebViewClient extends BridgeWebViewClient {
         if (s.contains(".xlsx")) return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
         if (s.contains(".docx")) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
         if (s.contains(".mp3"))  return "audio/mpeg";
-        if (s.contains(".ogg"))  return "audio/ogg";
+        if (s.contains(".m4a"))  return "audio/mp4";
+        if (s.contains(".aac"))  return "audio/aac";
+        if (s.contains(".wav"))  return "audio/wav";
+        if (s.contains(".flac")) return "audio/flac";
+        if (s.contains(".opus")) return "audio/opus";
+        if (s.contains(".oga") || s.contains(".ogg")) return "audio/ogg";
+        if (s.contains(".mka"))  return "audio/x-matroska";
         return null;
     }
 

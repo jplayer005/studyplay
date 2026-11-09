@@ -89,6 +89,16 @@ body.is-modular .btn-collapse-all{display:flex;}
 .module-arrow{width:13px;height:13px;stroke:var(--text3);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s;flex-shrink:0;}
 .module-header.collapsed .module-arrow{transform:rotate(-90deg);}
 .module-title{flex:1;font-size:12px;font-weight:600;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* Aula só de áudio (mp3...): no lugar do vídeo preto, um painel com o nome da aula */
+.audio-art{display:none;position:absolute;inset:0;z-index:3;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:16px;text-align:center;background:linear-gradient(160deg,var(--bg3),var(--bg4));color:var(--text2);}
+body.audio-lesson .audio-art{display:flex;}
+body.audio-lesson .empty-state{display:none!important;}
+.audio-art svg{width:46px;height:46px;fill:none;stroke:var(--accent2);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;}
+.audio-art-title{font-size:14px;font-weight:600;color:var(--text);max-width:92%;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.audio-art-sub{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;}
+body.audio-lesson #pip-btn,body.audio-lesson #fs-btn,body.audio-lesson #audio-only-btn{display:none!important;}
+@media(min-width:560px){.lesson-thumb.is-audio{display:flex;align-items:center;justify-content:center;background:var(--bg4);}}   /* só onde a miniatura aparece (no celular ela é oculta) */
+.lesson-thumb.is-audio svg{width:18px;height:18px;fill:none;stroke:var(--accent2);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
 .scan-banner{display:flex;align-items:center;gap:8px;padding:7px 14px;font-size:12px;color:var(--text2);background:var(--bg3);border-bottom:1px solid var(--border);flex-shrink:0;}
 .scan-banner[hidden]{display:none;}
 .scan-dot{width:8px;height:8px;border-radius:50%;background:var(--accent2);animation:pulse 1s ease-in-out infinite;flex-shrink:0;}
@@ -1104,9 +1114,14 @@ body.is-modular .btn-organize{display:flex;}
         <div class="empty-icon"><svg viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div>
         <h2>Nenhum vídeo carregado</h2>
         <p>Clique em <strong style="color:var(--accent2)">Abrir Pasta</strong> ou arraste uma pasta de videoaulas para começar</p>
-        <p class="hint">Suporta .mp4 · .webm · .mkv · .avi · .mov · .xlsx · .csv · .pdf · .html · .docx</p>
+        <p class="hint">Suporta .mp4 · .webm · .mkv · .avi · .mov · .mp3 · .m4a · .xlsx · .csv · .pdf · .html · .docx</p>
       </div>
       <video id="main-video" style="display:none;" controls preload="metadata" playsinline></video>
+      <div class="audio-art" id="audio-art" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        <div class="audio-art-title" id="audio-art-title"></div>
+        <div class="audio-art-sub">Aula em áudio</div>
+      </div>
 
     </div>
 
@@ -1337,11 +1352,12 @@ window.onunhandledrejection = (ev)=>{
 };
 
 const VIDEO_EXTS = ['mp4','webm','mkv','avi','mov','m4v','ogv','flv'];
+const AUDIO_EXTS = ['mp3','m4a','aac','ogg','oga','opus','wav','flac','mka'];   /* aulas só de áudio */
 const PDF_EXTS   = ['pdf'];
 const WEB_EXTS   = ['html','htm','url'];
 const XLSX_EXTS  = ['xlsx','xls','ods','csv'];
 const DOCX_EXTS  = ['docx','doc','pptx','ppt'];
-const OTHER_EXTS = ['txt','zip','mp3','ogg','wav','m4a'];
+const OTHER_EXTS = ['txt','zip'];
 const ALL_CONTENT_EXTS = [...PDF_EXTS,...WEB_EXTS,...XLSX_EXTS,...DOCX_EXTS,...OTHER_EXTS];
 const LS_KEY   = 'videoaulas_v3';
 const MAX_DEPTH = 20; // profundidade máxima de subpastas (praticamente ilimitado)
@@ -1428,6 +1444,10 @@ const Platform = (function(){
 ═══════════════════════════════════════════ */
 function ext(n){ return (n||'').split('.').pop().toLowerCase(); }
 function isVideo(n)  { return VIDEO_EXTS.includes(ext(n)); }
+function isAudio(n)  { return AUDIO_EXTS.includes(ext(n)); }
+/* Aula = vídeo ou áudio (mp3, m4a...) */
+function isMedia(n)  { return isVideo(n) || isAudio(n); }
+function lessonIsAudio(l){ return !!(l && l.file && isAudio(l.file.name || '')); }
 function isPDF(n)    { return PDF_EXTS.includes(ext(n)); }
 function isWeb(n)    { return WEB_EXTS.includes(ext(n)); }
 function isXlsx(n)   { return XLSX_EXTS.includes(ext(n)); }
@@ -1909,7 +1929,7 @@ video.addEventListener('play', ()=>{
     /* Re-oculta o PlayerView se modo áudio estiver ativo (ExoPlayer pode reexibir ao trocar faixa) */
     const _p=window.Capacitor?.Plugins?.VideoPlayer;
     if(_p) _p.hide().catch(()=>{});
-  } else { requestWakeLock(); }
+  } else if(!document.body.classList.contains('audio-lesson')){ requestWakeLock(); }
 });
 video.addEventListener('pause', ()=>{
   playIcon.innerHTML=`<polygon points="5 3 19 12 5 21 5 3"/>`;
@@ -2866,7 +2886,7 @@ async function pickAndLoadFolder(merge){
     }
     /* ── Web: usa showDirectoryPicker normalmente ── */
     if(!window.showDirectoryPicker){
-      const inp=document.createElement('input'); inp.type='file'; inp.multiple=true; inp.accept='video/*';
+      const inp=document.createElement('input'); inp.type='file'; inp.multiple=true; inp.accept='video/*,audio/*';
       inp.onchange=e=>loadFiles(Array.from(e.target.files), merge);
       inp.click(); return;
     }
@@ -3065,8 +3085,26 @@ function refreshNativeSessionCache(){
    sucesso, false se o cache está ausente/inválido (fallback
    para o caminho lento via listPersistedFolder).
 ───────────────────────────────────────────────────────────── */
+/* Cursos guardados antes do suporte a áudio têm os mp3 como anexo (extras). Aqui eles viram aulas,
+   na ordem natural dos nomes, sem precisar escolher a pasta de novo. */
+function _promoteAudioExtras(mod){
+  const keep = [], moved = [];
+  (mod.extras||[]).forEach(e=>{
+    const nm = (e.file && e.file.name) || e.name || '';
+    if(isAudio(nm)) moved.push(e.file); else keep.push(e);
+  });
+  if(moved.length){
+    mod.lessons = [...(mod.lessons||[]), ...moved].sort((a,b)=>naturalSort(a.name||'', b.name||''));
+    mod.extras = keep;
+  }
+  (mod.subModules||[]).forEach(_promoteAudioExtras);
+  return moved.length>0;
+}
+
+let _audioPromoted = false;
 function quickRestore(sess){
   const _tq = performance.now();
+  _audioPromoted = false;
   Diag.reset();
   /* Cache salvo pela versão 2.0 (sem chave do curso nem caminhos de arquivo):
      refaz UMA varredura da pasta para gravar o cache novo. Evita identificadores
@@ -3094,6 +3132,11 @@ function quickRestore(sess){
       };
     }
     modules=sess.modulesCache.map(deserMod);
+    {
+      const antes = JSON.stringify(modules.map(m=>m.lessons.length));
+      modules.forEach(_promoteAudioExtras);
+      if(JSON.stringify(modules.map(m=>m.lessons.length))!==antes) _audioPromoted = true;
+    }
     rebuildLessonsFromModules();
     if(!_courseKey) freezeCourseKey();
     applyModuleOrder(loadModuleOrder());
@@ -3109,6 +3152,17 @@ function quickRestore(sess){
       const f=deserFile(e.file);
       return {name:e.name,file:f,type:fileType(e.name),url:_fileUrl(f)};
     });
+    /* lista plana: mp3 que estavam como anexo viram aulas */
+    {
+      const ex = extraFiles.filter(e=>isAudio((e.file&&e.file.name)||e.name));
+      if(ex.length){
+        extraFiles = extraFiles.filter(e=>!ex.includes(e));
+        ex.forEach(e=>lessons.push({file:e.file,url:e.url||_fileUrl(e.file),name:e.name.replace(/\.[^.]+$/,''),idx:0}));
+        lessons.sort((a,b)=>naturalSort(a.name,b.name));
+        lessons.forEach((l,i)=>{ l.idx=i; });
+        _audioPromoted = true;
+      }
+    }
     assignLessonKeys();
     if(!_courseKey) freezeCourseKey();
   }
@@ -3120,7 +3174,7 @@ function quickRestore(sess){
   const _p = playLesson(getResumeIdx(stored));
   if(isModular) renderModularPlaylist(); else renderPlaylist(sortedLessons);
   _p.then(()=>{ updatePlaylistActive(); scrollToActive(); }).catch(()=>{});
-  if(legacy) saveNativeSessionCache(sess.treeUri, sess.rootName||'');   /* atualiza o cache para o formato novo */
+  if(legacy || _audioPromoted) saveNativeSessionCache(sess.treeUri, sess.rootName||'');   /* atualiza o cache (formato novo / mp3 agora são aulas) */
   Diag.mark('reabrir pelo cache (app)', performance.now()-_tq);
   return true;
 }
@@ -3148,7 +3202,7 @@ function _insertNativeFile(root, f){
   }
   const fname=parts[parts.length-1];
   const nobj={name:fname, _uri:f.uri, _native:true, size:f.size||0, _path:f.relativePath};
-  const isVid=isVideo(fname)||(f.mimeType&&f.mimeType.startsWith('video/'));
+  const isVid=isMedia(fname)||(f.mimeType&&(f.mimeType.startsWith('video/')||f.mimeType.startsWith('audio/')));
   const isCnt=!isVid&&(isContent(fname)||f.mimeType==='application/pdf'||f.mimeType==='text/html');
   if(isVid)      { node.videos.push(nobj); return true; }
   if(isCnt)      { node.extras.push({file:nobj, name:fname}); }
@@ -3763,7 +3817,7 @@ async function processDirectory(dir, merge){
       const f = await entryGetFile(entry);
       if(!f) continue;
       try{ f._path = f.name; }catch(_){}
-      if(isVideo(f.name))        { topVideos.push(f); rootCount++; }
+      if(isMedia(f.name))        { topVideos.push(f); rootCount++; }
       else if(isContent(f.name)) { topExtras.push({file:f, name:f.name}); rootCount++; }
     }catch(e){}
   }
@@ -3887,7 +3941,7 @@ async function readModuleDir(dirHandle, depth, onFile, prefix=''){
       const f = await entryGetFile(entry);
       if(!f) continue;
       try{ f._path = here+'/'+f.name; }catch(_){}      /* identifica a aula mesmo com nomes repetidos */
-      if(isVideo(f.name))        { modLessons.push(f); onFile&&onFile(f); }
+      if(isMedia(f.name))        { modLessons.push(f); onFile&&onFile(f); }
       else if(isContent(f.name)) modExtras.push({file:f, name:f.name});
     }catch(e){}
   }
@@ -3916,7 +3970,7 @@ async function readDirFlat(dirHandle, outFiles, outExtras, depth, onFile){
       if(entryIsFile(entry)){
         const f = await entryGetFile(entry);
         if(!f) continue;
-        if(isVideo(f.name))        { outFiles.push(f); onFile&&onFile(f); }
+        if(isMedia(f.name))        { outFiles.push(f); onFile&&onFile(f); }
         else if(isContent(f.name)) outExtras.push({file:f, name:f.name});
       } else if(entryIsDir(entry)){
         subs.push(entry);
@@ -4034,7 +4088,7 @@ function getResumeIdx(stored){
 }
 
 function loadFiles(files, merge, extras=[]){
-  const vids = files.filter(f=>isVideo(f.name));
+  const vids = files.filter(f=>isMedia(f.name));
   if(!vids.length && !extras.length){ toast('Nenhum arquivo encontrado'); return; }
   if(!vids.length && !merge){
     extraFiles = extras.map(e=>({...e, type:fileType(e.name), url:_fileUrl(e.file)}));
@@ -4367,7 +4421,7 @@ function _drainMetaQueue(){
   }
 }
 function _readLessonMeta(l, thumb, meta, done){
-  const showThumb = !!(thumb && thumb.offsetParent !== null);   /* miniatura oculta no celular */
+  const showThumb = !!(thumb && thumb.offsetParent !== null) && !lessonIsAudio(l);   /* miniatura oculta no celular; áudio não tem quadro */
   const tvid = document.createElement('video');
   tvid.preload = 'metadata'; tvid.muted = true;
   let finished = false;
@@ -4428,6 +4482,10 @@ function buildLessonItem(l, indent=0, _favMode=false){
 
   const thumb = document.createElement('div');
   thumb.className = 'lesson-thumb'+(done.has(l.idx)?' done':'');
+  if(lessonIsAudio(l)){
+    thumb.classList.add('is-audio');
+    thumb.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
+  }
   const info   = document.createElement('div'); info.className='lesson-info';
   const nm     = document.createElement('div'); nm.className='lesson-name'; nm.textContent=l.name;
   const meta   = document.createElement('div'); meta.className='lesson-meta';
@@ -4608,6 +4666,18 @@ async function _appendRestOfQueue(gen, all, items, from){
 /* ═══════════════════════════════════════════
    PLAYER
 ═══════════════════════════════════════════ */
+/* Aula de áudio: mostra o painel de áudio e esconde o player nativo (seria só uma tela preta) */
+function applyLessonKind(idx){
+  const l = lessons[idx];
+  const aud = lessonIsAudio(l);
+  const was = document.body.classList.contains('audio-lesson');
+  document.body.classList.toggle('audio-lesson', aud);
+  const t = document.getElementById('audio-art-title'); if(t && l) t.textContent = l.name;
+  const vp = _vpPlugin();
+  if(aud){ if(vp) vp.hide().catch(()=>{}); }
+  else if(was){ window._nativeShowPlayer?.(); }
+}
+
 async function playLesson(idx){
   if(idx<0||idx>=lessons.length) return;
 
@@ -4616,6 +4686,7 @@ async function playLesson(idx){
   if(abState>0) clearAB();
   exitFrameMode();
   currentIdx=idx; const l=lessons[idx];
+  applyLessonKind(idx);
   _playT0 = performance.now();
   video.style.display='block'; emptyState.style.display='none';
 
@@ -4685,6 +4756,7 @@ async function playLesson(idx){
     navigator.mediaSession.setActionHandler('seekbackward', ()=>{ video.currentTime=Math.max(0,video.currentTime-10); });
   }
   updateNowTitle(l.name); video.playbackRate=speeds[speedIdx];
+  applyLessonKind(idx);          /* de novo: setPlaylist/loadVideo podem ter reexibido o player nativo */
 
   seekFill.style.width='0%';
   timeCur.textContent='0:00'; timeDur.textContent='0:00';
@@ -5070,7 +5142,7 @@ document.addEventListener('drop', async e=>{
       } else {
         const f=item.getAsFile();
         if(f){
-          if(isVideo(f.name))       files.push(f);
+          if(isMedia(f.name))       files.push(f);
           else if(isContent(f.name)) extras.push({file:f, name:f.name});
           count++;
         }
@@ -5099,7 +5171,7 @@ async function readDirDrop(entry, out, extras, depth, onFile){
       if(entryIsFile(e)){
         const f=await entryGetFile(e);
         if(!f) continue;
-        if(isVideo(f.name))        { out.push(f); onFile&&onFile(f); }
+        if(isMedia(f.name))        { out.push(f); onFile&&onFile(f); }
         else if(isContent(f.name)) extras.push({file:f, name:f.name});
       } else if(entryIsDir(e)) subs.push(e);
     }catch(_){}
@@ -5573,6 +5645,7 @@ function installNativePlayer(plugin){
     /* Modo áudio: player oculto — não chamar updateRect pois o plugin pode
        reexibir o PlayerView como efeito colateral (setVisibility interna). */
     if(_audioOnly) return;
+    if(document.body.classList.contains('audio-lesson')) return;     /* aula de áudio: sem player de vídeo */
     /* Mini player quando teclado de notas está aberto */
     if(document.body.classList.contains('keyboard-notes-open')){
       const hdr = document.querySelector('header')?.offsetHeight || 0;   /* 0 quando o cabeçalho está oculto (horizontal) */
@@ -5776,7 +5849,7 @@ function installNativePlayer(plugin){
       const isLandscape = window.innerWidth > window.innerHeight;
       const inFS = document.body.classList.contains('native-fullscreen');
 
-      if(isLandscape && !inFS && vs.src && _settings.autofs){
+      if(isLandscape && !inFS && vs.src && _settings.autofs && !document.body.classList.contains('audio-lesson')){
         /* Landscape + vídeo ativo + não está em fullscreen → entra automaticamente */
         _autoFS = true;
         plugin.enterFullscreen().catch(()=>{ _autoFS = false; });
@@ -5833,6 +5906,7 @@ function installNativePlayer(plugin){
           const nl = lessons[absIdx];
           vs.src = nl.file._uri || nl.url || '';
           vs.currentTime = position || 0;
+          applyLessonKind(absIdx);
           /* Sempre redesenha: o trackChanged recebido em segundo plano atualiza o
              índice mas não a tela. */
           updateNowTitle(nl.name);
@@ -5924,6 +5998,7 @@ function installNativePlayer(plugin){
     /* Atualiza vs.src para refletir a aula atual (sem disparar loadVideo) */
     vs.src = nl.file._uri || nl.url || '';
     vs.currentTime = 0;
+    applyLessonKind(absIdx);       /* painel de áudio x player de vídeo */
     /* UI — só atualiza se o app estiver visível (sem sobrecarga em background) */
     if(document.visibilityState==='visible'){
       updateNowTitle(nl.name);
@@ -5981,6 +6056,7 @@ function installNativePlayer(plugin){
     if(document.body.classList.contains('native-fullscreen')) return;
     if(document.body.classList.contains('pip-active')) return;
     if(_audioOnly) return;
+    if(document.body.classList.contains('audio-lesson')){ plugin.hide().catch(()=>{}); return; }
     // Sem vídeo ativo ou explicitamente oculto
     if(!vs.src || video.style.display==='none') return;
 

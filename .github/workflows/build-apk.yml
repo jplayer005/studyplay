@@ -4,7 +4,7 @@ name: Gerar APK (debug)
 # (aba Actions > Gerar APK (debug) > Run workflow).
 on:
   push:
-    branches: [main, claude/otimizacao-android, claude/varios-cursos]
+    branches: [main, claude/otimizacao-android, claude/varios-cursos, claude/suporte-audio]
   workflow_dispatch:
 
 jobs:
