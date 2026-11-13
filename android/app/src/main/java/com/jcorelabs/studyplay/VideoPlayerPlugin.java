@@ -514,6 +514,22 @@ public class VideoPlayerPlugin extends Plugin {
         });
     }
 
+    /** setRepeat({kind}) — repetição da faixa atual: 0 = não, 1 = 1 vez, 2 = sem parar. */
+    @PluginMethod
+    public void setRepeat(PluginCall call) {
+        final int kind = call.getInt("kind", 0);
+        getActivity().runOnUiThread(() -> PlaybackService.applyRepeat(kind));
+        call.resolve();
+    }
+
+    /** getRepeat() → {kind}: o modo que o serviço está usando agora. */
+    @PluginMethod
+    public void getRepeat(PluginCall call) {
+        JSObject r = new JSObject();
+        r.put("kind", PlaybackService.repeatKind);
+        call.resolve(r);
+    }
+
     /**
      * getSavedProgress() — o que o PlaybackService gravou sozinho (mesmo com o app fechado):
      * {mediaId, positionMs, durationMs, savedAt, completed[]}. mediaId é a URI original do JS.

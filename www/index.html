@@ -4880,7 +4880,7 @@ video.addEventListener('ended', ()=>{
   }
   /* Loop da aula atual — 3 estados: 0=off 1=repetir 1× 2=infinito */
   if(_loopLesson===2){ video.currentTime=0; video.play().catch(()=>{}); return; }
-  if(_loopLesson===1){ _loopLesson=0; updateLoopUI(); video.currentTime=0; video.play().catch(()=>{}); return; }
+  if(_loopLesson===1){ _loopLesson=0; updateLoopUI(true); video.currentTime=0; video.play().catch(()=>{}); return; }
   if(currentIdx>=0) lessonTimes[currentIdx]=0;
   closeHistorySession();
   /* Ao terminar, a aula SEMPRE fica concluída. markDone() alterna o estado e
@@ -5891,6 +5891,7 @@ function installNativePlayer(plugin){
       if(vs.src) syncRect(300);
     }
     syncNativeProgress();            /* aulas que terminaram sozinhas com o app fora da tela */
+    if(typeof plugin.getRepeat==='function') plugin.getRepeat().then(r=>{ if(r) setLoopState(r.kind, true); }).catch(()=>{});
     /* Sync de posição da playlist após retornar do background */
     if(_nativePlaylistMode && typeof plugin.getCurrentIndex==='function'){
       try{
@@ -5974,10 +5975,10 @@ function installNativePlayer(plugin){
     const absIdx = lessonIdxFromQueue(e.index||0);
     if(absIdx < 0 || absIdx >= lessons.length) return;
     /* Loop: ExoPlayer avançou para próxima faixa, mas loop está ativo → volta à atual */
-    if(_loopLesson > 0 && absIdx !== currentIdx){
+    if(!nativeRepeatAvailable() && _loopLesson > 0 && absIdx !== currentIdx){
       const selfPlaylistIdx = queueIndexOfLesson(currentIdx);
       if(selfPlaylistIdx >= 0) plugin.seekToItem({index: selfPlaylistIdx}).catch(()=>{});
-      if(_loopLesson===1){ _loopLesson=0; updateLoopUI(); }
+      if(_loopLesson===1){ _loopLesson=0; updateLoopUI(true); }
       if(_audioOnly) plugin.hide().catch(()=>{});
       return;
     }
@@ -6043,6 +6044,12 @@ function installNativePlayer(plugin){
      O PlaybackService dispara esses eventos via BroadcastReceiver quando o
      usuário toca nos botões da notificação na barra de status.               */
   plugin.addListener('sleepTimerFired', ()=>{ _onSleepFired(_sleepMinutes); });
+  /* O serviço desligou o "repetir 1 vez" depois de repetir */
+  plugin.addListener('repeatChanged', (e)=>{ setLoopState(e && e.kind, true); });
+  /* Serviço ainda vivo de uma sessão anterior com a repetição ligada: o botão acompanha */
+  if(typeof plugin.getRepeat==='function'){
+    plugin.getRepeat().then(r=>{ if(r) setLoopState(r.kind, true); }).catch(()=>{});
+  }
   plugin.addListener('prevTrack', ()=>{ prevLesson(); });
   plugin.addListener('nextTrack', ()=>{ nextLesson(); });
 
@@ -6259,33 +6266,54 @@ video.addEventListener('timeupdate', ()=>{
 
 
 /* ═══════════════════════════════════════════
-   LOOP DA AULA ATUAL — 3 estados
-   0 = desativado | 1 = repetir 1× | 2 = loop infinito
+   REPETIR A AULA ATUAL — 3 estados
+   0 = desligado | 1 = repetir 1 vez | 2 = sem parar (∞)
+   No APK quem repete é o ExoPlayer (setRepeat → REPEAT_MODE_ONE), por isso funciona com a
+   tela apagada e com o app fechado. Antes o JS esperava a aula seguinte começar e mandava
+   voltar; com o WebView suspenso isso não acontecia e a lista seguia em frente.
 ═══════════════════════════════════════════ */
 let _loopLesson = 0;
+const LOOP_ICON_REPEAT = '<svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="10" y1="8" x2="12" y2="8"/></svg>';
+const LOOP_ICON_INFINITE = '<svg viewBox="0 0 24 24"><path d="M18.178 8c5.096 0 5.096 8 0 8-5.095 0-7.133-8-12.739-8-4.585 0-4.585 8 0 8 5.606 0 7.644-8 12.74-8z"/></svg>';
+function nativeRepeatAvailable(){ const vp=_vpPlugin(); return !!(vp && typeof vp.setRepeat==='function'); }
+function _sendNativeRepeat(){ if(nativeRepeatAvailable()) _vpPlugin().setRepeat({kind:_loopLesson}).catch(()=>{}); }
 function toggleLoop(){
   _loopLesson = (_loopLesson + 1) % 3;
+  _sendNativeRepeat();
   updateLoopUI();
 }
-function updateLoopUI(){
+/* silent: mudança que não veio do toque no botão (o nativo desligou o "1 vez", volta do segundo plano) */
+function setLoopState(kind, silent){
+  kind = (kind===1||kind===2) ? kind : 0;
+  if(kind===_loopLesson) return;
+  _loopLesson = kind;
+  updateLoopUI(silent);
+}
+function updateLoopUI(silent){
   const btn = document.getElementById('loop-btn');
   if(!btn) return;
   const badge = btn.querySelector('.loop-count-badge');
   btn.classList.remove('active-ctrl','active-ctrl-green');
+  btn.dataset.loop = String(_loopLesson);
+  const svg = btn.querySelector('svg');
+  if(svg) svg.outerHTML = _loopLesson===2 ? LOOP_ICON_INFINITE : LOOP_ICON_REPEAT;
   if(badge) badge.style.display='none';
+  let msg;
   if(_loopLesson===1){
-    btn.classList.add('active-ctrl');                   /* âmbar = repetir 1× */
+    btn.classList.add('active-ctrl');                   /* âmbar = repetir 1 vez */
     if(badge){ badge.style.display='block'; badge.textContent='1×'; }
-    btn.title='Repetindo 1× — próximo clique: loop infinito';
-    toast('🔁 Repetir 1 vez');
+    btn.title='Repetindo esta aula 1 vez — próximo toque: repetir sem parar';
+    msg='🔁 Repetir esta aula 1 vez';
   } else if(_loopLesson===2){
-    btn.classList.add('active-ctrl-green');             /* verde = loop infinito */
-    btn.title='Loop infinito ativo — próximo clique: desativar';
-    toast('🔁 Loop infinito ativado');
+    btn.classList.add('active-ctrl-green');             /* verde + ∞ = sem parar */
+    btn.title='Repetindo esta aula sem parar — próximo toque: desligar';
+    msg='∞ Repetir esta aula sem parar';
   } else {
-    btn.title='Repetir esta aula em loop';
-    toast('🔁 Loop desativado');
+    btn.title='Repetir esta aula';
+    msg='🔁 Repetição desligada';
   }
+  btn.setAttribute('aria-label', btn.title);
+  if(!silent) toast(msg);
 }
 
 /* ═══════════════════════════════════════════

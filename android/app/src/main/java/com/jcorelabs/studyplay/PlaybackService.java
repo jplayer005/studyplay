@@ -136,6 +136,19 @@ public class PlaybackService extends MediaSessionService {
     // Nesse caso o JS não recebe nenhum evento e o progresso ficava no ponto em que o app
     // foi fechado. Aqui o serviço grava sozinho: aula atual (mediaId = a URI original do
     // JS), posição e a lista de aulas que terminaram sozinhas. O JS lê isso ao reabrir.
+    /**
+     * Repetição da faixa atual: 0 = não, 1 = repetir 1 vez, 2 = sem parar.
+     * Feita pelo próprio ExoPlayer (REPEAT_MODE_ONE), então funciona com a tela apagada e com
+     * o app fechado. Antes era o JS que mandava voltar quando a faixa seguinte começava, e
+     * isso falhava sempre que o WebView estava suspenso.
+     */
+    static volatile int repeatKind = 0;
+    static void applyRepeat(int kind) {
+        repeatKind = kind;
+        ExoPlayer p = getPlayer();
+        if (p != null) p.setRepeatMode(kind == 0 ? Player.REPEAT_MODE_OFF : Player.REPEAT_MODE_ONE);
+    }
+
     static final Object PROGRESS_LOCK = new Object();
     static final String PROGRESS_PREFS = "splay_progress";
     private final Handler progressHandler = new Handler(Looper.getMainLooper());
@@ -271,6 +284,8 @@ public class PlaybackService extends MediaSessionService {
             }
         });
 
+        if (repeatKind != 0) player.setRepeatMode(Player.REPEAT_MODE_ONE);   // serviço recriado com a repetição ligada
+
         // Grava o progresso mesmo sem o WebView (ver comentário em PROGRESS_LOCK).
         player.addListener(new Player.Listener() {
             @Override
@@ -282,6 +297,19 @@ public class PlaybackService extends MediaSessionService {
             @Override
             public void onMediaItemTransition(@Nullable MediaItem item, int reason) {
                 if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) addCompleted(lastItemId);
+                if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) {
+                    addCompleted(lastItemId);            // tocou até o fim e recomeçou
+                    if (repeatKind == 1) {               // "repetir 1 vez": já repetiu, desliga
+                        repeatKind = 0;
+                        if (player != null) player.setRepeatMode(Player.REPEAT_MODE_OFF);
+                        VideoPlayerPlugin vp = VideoPlayerPlugin.instance;
+                        if (vp != null) {
+                            JSObject d = new JSObject();
+                            d.put("kind", 0);
+                            try { vp.firePluginEvent("repeatChanged", d); } catch (Exception ignored) {}
+                        }
+                    }
+                }
                 lastItemId = (item != null) ? item.mediaId : null;
                 saveProgress();
             }
