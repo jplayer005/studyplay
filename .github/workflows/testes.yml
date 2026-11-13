@@ -9,7 +9,7 @@ on:
 
 jobs:
   testes:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # fixo: o Playwright 1.56.1 não instala o Chromium no Ubuntu 26.04 (ubuntu-latest)
     steps:
       - uses: actions/checkout@v4
 
